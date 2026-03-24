@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { fetchMyMeasurements, createMeasurement } from "../lib/apiMeasurements";
+import { createNewMyTicket, getMyTicket, getOrCreateMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 
 function fmtDate(iso: string) {
   try {
@@ -17,6 +18,11 @@ export default function Dashboard() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
+
+  function refreshTicket() {
+    setTicket(getMyTicket());
+  }
 
   async function load() {
     setErr(null);
@@ -33,6 +39,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
+    refreshTicket();
+
+    const timer = window.setInterval(() => {
+      refreshTicket();
+    }, 15000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   return (
@@ -68,6 +81,84 @@ export default function Dashboard() {
         </div>
 
         {err ? <div className="alert">{err}</div> : null}
+
+        <Card>
+          <div className="stack">
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <h2 className="h2" style={{ margin: 0 }}>Онлайн-талон</h2>
+              <Button variant="ghost" onClick={refreshTicket}>
+                Обновить
+              </Button>
+            </div>
+
+            {!ticket ? (
+              <div className="stack">
+                <p className="muted" style={{ margin: 0 }}>
+                  У вас пока нет активного талона.
+                </p>
+                <div className="row">
+                  <Button
+                    onClick={() => {
+                      const created = getOrCreateMyTicket();
+                      setTicket(created);
+                    }}
+                  >
+                    Взять новый талон
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="stack">
+                <div className="grid">
+                  <div className="metric">
+                    <div className="metric__label">Ваш номер</div>
+                    <div className="metric__value">A-{ticket.ticketNumber}</div>
+                  </div>
+                  <div className="metric">
+                    <div className="metric__label">Сейчас вызывают</div>
+                    <div className="metric__value">A-{ticket.servingNow}</div>
+                  </div>
+                  <div className="metric">
+                    <div className="metric__label">Перед вами</div>
+                    <div className="metric__value">{ticket.peopleAhead}</div>
+                  </div>
+                  <div className="metric">
+                    <div className="metric__label">Ожидание</div>
+                    <div className="metric__value">~{ticket.etaMinutes} мин</div>
+                  </div>
+                </div>
+
+                <div className="row">
+                  <Button
+                    onClick={() => {
+                      const next = createNewMyTicket();
+                      setTicket(next);
+                    }}
+                  >
+                    Взять новый талон
+                  </Button>
+                  <span className={`badge ${
+                    ticket.status === "invited"
+                      ? "badge--ok"
+                      : ticket.status === "waiting"
+                        ? "badge--warn"
+                        : "badge--danger"
+                  }`}>
+                    <span className="badge__dot" />
+                    {ticket.status === "invited"
+                      ? "Ваш номер вызывают"
+                      : ticket.status === "waiting"
+                        ? "Ожидайте вызова"
+                        : "Талон пропущен"}
+                  </span>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Выдан: {fmtDate(ticket.createdAt)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
 
         <Card>
           <div className="stack">

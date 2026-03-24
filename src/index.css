@@ -56,6 +56,12 @@ button, input{font:inherit}
   align-items:center;
   gap:10px;
 }
+.brand__logo{
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  object-fit: cover;
+}
 .brand__dot{
   width:10px;height:10px;border-radius:50%;
   background: linear-gradient(180deg, var(--primary), var(--primary2));

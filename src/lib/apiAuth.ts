@@ -1,7 +1,10 @@
-export const API_URL = "http://localhost:4000";
+export const API_URL = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
 export async function getGoogleAuthUrl(): Promise<string> {
   const res = await fetch(`${API_URL}/auth/google/url`);
+  if (!res.ok) {
+    throw new Error("Не удалось получить ссылку Google OAuth");
+  }
   const data = await res.json();
   return data.url;
 }

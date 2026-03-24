@@ -10,7 +10,7 @@ export default function AppLayout() {
     <div>
       <header className="topbar">
         <div className="brand">
-          <span className="brand__dot" />
+          <img src="/icon-192.png" alt="HealthAssist" className="brand__logo" />
           <div>
             <div className="brand__title">HealthAssist</div>
             <div className="brand__sub">
