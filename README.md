@@ -1,73 +1,126 @@
-# React + TypeScript + Vite
+# HealthAssist 🏥
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Веб-приложение для автоматизации работы клиники, объединяющее пациентов и врачей на единой платформе.
 
-Currently, two official plugins are available:
+## О проекте
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+HealthAssist позволяет пациентам записываться к врачам, отслеживать показатели здоровья и получать первичную AI-оценку симптомов. Врачи получают личный кабинет с расписанием, карточками пациентов и возможностью сканировать QR-код пациента для мгновенного доступа к его медицинской истории.
 
-## React Compiler
+## Возможности
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Для пациентов
+- 🔐 Авторизация через Google
+- 🗺️ AI-триаж симптомов по карте тела (Claude / Gemini / Groq)
+- 📊 Мониторинг показателей здоровья (давление, пульс, температура, SpO2)
+- 🎫 Электронная очередь с талонами
+- 📱 Персональный QR-код для быстрой идентификации у врача
+- 📅 Запись к врачу онлайн
 
-## Expanding the ESLint configuration
+### Для врачей
+- 👨‍⚕️ Личный кабинет с расписанием
+- 📋 Список пациентов на сегодня
+- 📷 Сканирование QR-кода пациента
+- 🗂️ Карточка пациента: симптомы, измерения, история визитов
+- 📝 Добавление заключений после приёма
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Стек технологий
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Фронтенд**
+- React + TypeScript + Vite
+- Tailwind CSS
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+**Бэкенд**
+- Node.js + Express
+- better-sqlite3
+- JWT + Google OAuth 2.0
+- Anthropic Claude API
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Деплой**
+- Vercel (фронтенд + бэкенд serverless)
+
+## Быстрый старт
+
+### Требования
+- Node.js 18+
+- npm
+
+### Установка
+
+```bash
+# Клонируйте репозиторий
+git clone https://github.com/damirzhumangali/healthcare-backend.git
+cd healthcare-backend
+
+# Установите зависимости
+npm install
+
+# Создайте .env файл
+cp .env.example .env
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Переменные окружения
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+FRONTEND_URL=http://localhost:5173
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+JWT_SECRET=your_jwt_secret
+ANTHROPIC_API_KEY=your_anthropic_api_key
+CORS_ORIGINS=http://localhost:5173
 ```
+
+### Запуск
+
+```bash
+# Бэкенд
+node api/index.js
+
+# Фронтенд (в папке фронтенда)
+npm run dev
+```
+
+## Структура проекта
+
+```
+api/
+├── index.js                    # Точка входа
+├── middleware/
+│   ├── auth.js                 # JWT авторизация
+│   └── roles.js                # Проверка ролей
+├── controllers/
+│   └── ticketsController.js    # Логика талонов
+├── routes/
+│   └── tickets.js              # Роуты очереди
+├── services/
+│   └── ticketService.js        # Сервис очереди
+└── db/
+    ├── sqlite.js               # Подключение к БД
+    └── migrations/
+        └── 001_queue.sql       # Миграции
+```
+
+## API
+
+| Метод | Роут | Описание |
+|-------|------|----------|
+| GET | `/auth/google/url` | URL для Google OAuth |
+| POST | `/auth/google/exchange` | Обмен кода на токен |
+| GET | `/api/measurements/my` | Мои измерения |
+| POST | `/api/measurements` | Добавить измерение |
+| POST | `/api/triage` | AI-триаж симптомов |
+| POST | `/api/tickets/my` | Взять талон |
+| GET | `/api/tickets/queue` | Текущая очередь |
+
+## Деплой
+
+```bash
+# Связать с проектом Vercel
+vercel link
+
+# Задеплоить в продакшн
+vercel --prod
+```
+
+## Лицензия
+
+MIT
