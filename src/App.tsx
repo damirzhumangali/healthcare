@@ -280,12 +280,12 @@ function Landing() {
             ) : (
               <>
                 <Link
-                  to="/register"
+                  to="/login"
                   className={`rounded-full px-3 py-1.5 text-xs border ${
                     theme === "dark" ? "border-white/20" : "border-slate-300"
                   }`}
                 >
-                  {t.navRegister}
+                  {t.navLogin}
                 </Link>
                 <button
                   onClick={async () => {
@@ -339,6 +339,53 @@ function Landing() {
               </>
             )}
           </nav>
+          
+          <div className={`flex items-center justify-between gap-2 mt-4 pt-3 border-t ${theme === "dark" ? "border-white/10" : "border-slate-200"}`}>
+            <div className="flex rounded-full border border-white/20 overflow-hidden">
+              {(["ru", "kk", "en"] as Locale[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={`px-2.5 py-1 text-xs font-medium ${
+                    locale === l
+                      ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+                      : ""
+                  }`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
+              className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
+                theme === "dark" ? "border-white/20" : "border-slate-300"
+              }`}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+          </div>
+          
+          {!isAuthed && (
+            <div className="flex flex-col gap-2 mt-4">
+              <Link 
+                to="/login" 
+                onClick={() => setMobileMenu(false)}
+                className={`rounded-full px-4 py-2 text-sm font-medium border ${
+                  theme === "dark" ? "border-white/20" : "border-slate-300"
+                }`}
+              >
+                {t.navLogin}
+              </Link>
+              <Link 
+                to="/register" 
+                onClick={() => setMobileMenu(false)}
+                className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+              >
+                {t.navRegister}
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

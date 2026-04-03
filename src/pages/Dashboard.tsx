@@ -5,6 +5,98 @@ import Button from "../components/Button";
 import { fetchMyMeasurements, createMeasurement } from "../lib/apiMeasurements";
 import { createNewMyTicket, getMyTicket, getOrCreateMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 
+type Locale = "ru" | "kk" | "en";
+
+const copy = {
+  ru: {
+    title: "Кабинет пациента",
+    subtitle: "Данные приходят с backend (симуляция машинки).",
+    newMeasurement: "Новое измерение",
+    qrStation: "К QR-станции",
+    onlineTicket: "Онлайн-талон",
+    refresh: "Обновить",
+    noTicket: "У вас пока нет активного талона.",
+    takeNewTicket: "Взять новый талон",
+    yourNumber: "Ваш номер",
+    nowCalling: "Сейчас вызывают",
+    ahead: "Перед вами",
+    waiting: "Ожидание",
+    minutes: "мин",
+    invited: "Ваш номер вызывают",
+    waitForCall: "Ожидайте вызова",
+    ticketMissed: "Талон пропущен",
+    issued: "Выдан",
+    history: "История",
+    loading: "Загрузка...",
+    noMeasurements: "Пока нет измерений. Нажми Новое измерение или зайди на QR-станцию.",
+    pressure: "Давление",
+    temp: "Темп",
+    pulse: "Пульс",
+    spo2: "SpO₂",
+    device: "device",
+    measurementError: "Не удалось загрузить измерения. Проверь backend :4000.",
+    createMeasurementError: "Не получилось создать измерение. Проверь backend :4000.",
+  },
+  kk: {
+    title: "Науқас кабинеты",
+    subtitle: "Деректер backend-тен келеді (машина симуляциясы).",
+    newMeasurement: "Жаңа өлшеу",
+    qrStation: "QR-станциясына",
+    onlineTicket: "Онлайн-талон",
+    refresh: "Жаңарту",
+    noTicket: "Сізде әлі белсенді талон жоқ.",
+    takeNewTicket: "Жаңа талон алу",
+    yourNumber: "Сіздің нөміріңіз",
+    nowCalling: "Қазір шақырады",
+    ahead: "Алдыңызда",
+    waiting: "Күту",
+    minutes: "мин",
+    invited: "Сіздің нөміріңізді шақырады",
+    waitForCall: "Шақыруды күтіңіз",
+    ticketMissed: "Талон өткізіп алды",
+    issued: "Шығарылған",
+    history: "Тарих",
+    loading: "Жүктелуде...",
+    noMeasurements: "Әлі өлшеулер жоқ. Жаңа өлшеу батырмасын басыңыз немесе QR-станциясына кіріңіз.",
+    pressure: "Қысым",
+    temp: "Темп",
+    pulse: "Пульс",
+    spo2: "SpO₂",
+    device: "device",
+    measurementError: "Өлшеулерді жүктей алмады. Backend-ті тексеріңіз :4000.",
+    createMeasurementError: "Өлшеуді жасай алмады. Backend-ті тексеріңіз :4000.",
+  },
+  en: {
+    title: "Patient Dashboard",
+    subtitle: "Data comes from backend (simulation of device).",
+    newMeasurement: "New Measurement",
+    qrStation: "To QR Station",
+    onlineTicket: "Online Ticket",
+    refresh: "Refresh",
+    noTicket: "You don't have an active ticket yet.",
+    takeNewTicket: "Take New Ticket",
+    yourNumber: "Your Number",
+    nowCalling: "Now Calling",
+    ahead: "Ahead",
+    waiting: "Waiting",
+    minutes: "min",
+    invited: "Your number is being called",
+    waitForCall: "Wait for call",
+    ticketMissed: "Ticket missed",
+    issued: "Issued",
+    history: "History",
+    loading: "Loading...",
+    noMeasurements: "No measurements yet. Click New Measurement or go to QR Station.",
+    pressure: "Pressure",
+    temp: "Temp",
+    pulse: "Pulse",
+    spo2: "SpO₂",
+    device: "device",
+    measurementError: "Failed to load measurements. Check backend :4000.",
+    createMeasurementError: "Failed to create measurement. Check backend :4000.",
+  },
+} as const;
+
 function fmtDate(iso: string) {
   try {
     return new Date(iso).toLocaleString();
@@ -15,10 +107,22 @@ function fmtDate(iso: string) {
 
 export default function Dashboard() {
   const nav = useNavigate();
+  const [locale, setLocale] = useState<Locale>(() => {
+    const v = window.localStorage.getItem("ha_locale");
+    if (v === "en" || v === "kk" || v === "ru") return v;
+    return "ru";
+  });
+
+  const t = copy[locale];
+
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
+
+  useEffect(() => {
+    window.localStorage.setItem("ha_locale", locale);
+  }, [locale]);
 
   function refreshTicket() {
     setTicket(getMyTicket());
@@ -49,13 +153,32 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="container">
+    <div className="container relative">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4 z-10">
+        <div className="flex rounded-full border border-white/20 overflow-hidden bg-slate-900/50 backdrop-blur-sm">
+          {(["ru", "kk", "en"] as Locale[]).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLocale(l)}
+              className={`px-3 py-1.5 text-xs font-medium transition ${
+                locale === l
+                  ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+                  : "text-slate-300 hover:text-white"
+              }`}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="stack">
         <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 className="h1" style={{ marginBottom: 4 }}>Кабинет пациента</h1>
+            <h1 className="h1" style={{ marginBottom: 4 }}>{t.title}</h1>
             <p className="muted" style={{ margin: 0 }}>
-              Данные приходят с backend (симуляция “машинки”).
+              {t.subtitle}
             </p>
           </div>
 
@@ -67,15 +190,15 @@ export default function Dashboard() {
                   await createMeasurement("device-001");
                   await load();
                 } catch {
-                  setErr("Не получилось создать измерение. Проверь backend :4000.");
+                  setErr(t.createMeasurementError);
                 }
               }}
             >
-              Новое измерение
+              {t.newMeasurement}
             </Button>
 
             <Button variant="ghost" onClick={() => nav("/scan/device-001")}>
-              К QR-станции
+              {t.qrStation}
             </Button>
           </div>
         </div>
@@ -85,16 +208,16 @@ export default function Dashboard() {
         <Card>
           <div className="stack">
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className="h2" style={{ margin: 0 }}>Онлайн-талон</h2>
+              <h2 className="h2" style={{ margin: 0 }}>{t.onlineTicket}</h2>
               <Button variant="ghost" onClick={refreshTicket}>
-                Обновить
+                {t.refresh}
               </Button>
             </div>
 
             {!ticket ? (
               <div className="stack">
                 <p className="muted" style={{ margin: 0 }}>
-                  У вас пока нет активного талона.
+                  {t.noTicket}
                 </p>
                 <div className="row">
                   <Button
@@ -103,7 +226,7 @@ export default function Dashboard() {
                       setTicket(created);
                     }}
                   >
-                    Взять новый талон
+                    {t.takeNewTicket}
                   </Button>
                 </div>
               </div>
@@ -111,20 +234,20 @@ export default function Dashboard() {
               <div className="stack">
                 <div className="grid">
                   <div className="metric">
-                    <div className="metric__label">Ваш номер</div>
+                    <div className="metric__label">{t.yourNumber}</div>
                     <div className="metric__value">A-{ticket.ticketNumber}</div>
                   </div>
                   <div className="metric">
-                    <div className="metric__label">Сейчас вызывают</div>
+                    <div className="metric__label">{t.nowCalling}</div>
                     <div className="metric__value">A-{ticket.servingNow}</div>
                   </div>
                   <div className="metric">
-                    <div className="metric__label">Перед вами</div>
+                    <div className="metric__label">{t.ahead}</div>
                     <div className="metric__value">{ticket.peopleAhead}</div>
                   </div>
                   <div className="metric">
-                    <div className="metric__label">Ожидание</div>
-                    <div className="metric__value">~{ticket.etaMinutes} мин</div>
+                    <div className="metric__label">{t.waiting}</div>
+                    <div className="metric__value">~{ticket.etaMinutes} {t.minutes}</div>
                   </div>
                 </div>
 
@@ -135,7 +258,7 @@ export default function Dashboard() {
                       setTicket(next);
                     }}
                   >
-                    Взять новый талон
+                    {t.takeNewTicket}
                   </Button>
                   <span className={`badge ${
                     ticket.status === "invited"
@@ -146,13 +269,13 @@ export default function Dashboard() {
                   }`}>
                     <span className="badge__dot" />
                     {ticket.status === "invited"
-                      ? "Ваш номер вызывают"
+                      ? t.invited
                       : ticket.status === "waiting"
-                        ? "Ожидайте вызова"
-                        : "Талон пропущен"}
+                        ? t.waitForCall
+                        : t.ticketMissed}
                   </span>
                   <span className="muted" style={{ fontSize: 12 }}>
-                    Выдан: {fmtDate(ticket.createdAt)}
+                    {t.issued}: {fmtDate(ticket.createdAt)}
                   </span>
                 </div>
               </div>
@@ -162,13 +285,13 @@ export default function Dashboard() {
 
         <Card>
           <div className="stack">
-            <h2 className="h2" style={{ margin: 0 }}>История</h2>
+            <h2 className="h2" style={{ margin: 0 }}>{t.history}</h2>
 
             {loading ? (
-              <p className="muted" style={{ margin: 0 }}>Загрузка...</p>
+              <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
             ) : items.length === 0 ? (
               <p className="muted" style={{ margin: 0 }}>
-                Пока нет измерений. Нажми “Новое измерение” или зайди на QR-станцию.
+                {t.noMeasurements}
               </p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
@@ -188,14 +311,14 @@ export default function Dashboard() {
                       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <div className="muted" style={{ fontSize: 13 }}>
-                            {fmtDate(m.createdAt)} • device: {m.deviceId}
+                            {fmtDate(m.createdAt)} • {t.device}: {m.deviceId}
                           </div>
                           <div style={{ fontWeight: 700, marginTop: 2 }}>
-                            Давление: {m.systolic}/{m.diastolic} • Темп: {m.tempC}°C
+                            {t.pressure}: {m.systolic}/{m.diastolic} • {t.temp}: {m.tempC}°C
                           </div>
                         </div>
                         <div className="muted" style={{ fontSize: 13 }}>
-                          Пульс {m.hr} • SpO₂ {m.spo2}%
+                          {t.pulse} {m.hr} • {t.spo2} {m.spo2}%
                         </div>
                       </div>
                     </div>
