@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { OverlayContent, ScrollAnimationSection } from "./components/ScrollAnimation";
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import BodyMap from "./pages/BodyMap";
 import AuthCallback from "./pages/AuthCallback";
 import Login from "./pages/Login";
@@ -20,6 +20,9 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ScanDevice from "./pages/ScanDevice";
 import MeasurementDetails from "./pages/MeasurementDetails";
+import AppointmentForm from "./pages/AppointmentForm";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
 import { getGoogleAuthUrl } from "./lib/apiAuth";
@@ -148,12 +151,14 @@ const text = {
 } as const;
 
 function Landing() {
+  const nav = useNavigate();
   const [theme, setTheme] = useState<Theme>("dark");
   const [locale, setLocale] = useState<Locale>("ru");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [isAuthed, setIsAuthed] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>("");
+  const [cabinetOpening, setCabinetOpening] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -170,6 +175,39 @@ function Landing() {
   }, []);
 
   const t = text[locale];
+
+  async function openPatientCabinet() {
+    const token = getToken();
+
+    if (!token) {
+      setIsAuthed(false);
+      nav("/login");
+      return;
+    }
+
+    setCabinetOpening(true);
+    try {
+      const response = await fetch("/api/doors/open", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ doorId: "main" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("door open failed");
+      }
+
+      setMobileMenu(false);
+      nav("/app");
+    } catch {
+      window.alert("Не удалось открыть кабинет пациента. Проверь backend и попробуй еще раз.");
+    } finally {
+      setCabinetOpening(false);
+    }
+  }
 
   const rootClass =
     theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900";
@@ -264,6 +302,13 @@ function Landing() {
                 <span className={`text-xs ${mutedClass}`}>
                   {currentUserName || "Google user"}
                 </span>
+                <button
+                  onClick={openPatientCabinet}
+                  disabled={cabinetOpening}
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
+                >
+                  {cabinetOpening ? "Открываем..." : "Кабинет пациента"}
+                </button>
                 <button
                   onClick={() => {
                     logout();
@@ -384,6 +429,17 @@ function Landing() {
               >
                 {t.navRegister}
               </Link>
+            </div>
+          )}
+          {isAuthed && (
+            <div className="flex flex-col gap-2 mt-4">
+              <button
+                onClick={openPatientCabinet}
+                disabled={cabinetOpening}
+                className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
+              >
+                {cabinetOpening ? "Открываем..." : "Кабинет пациента"}
+              </button>
             </div>
           )}
         </div>
@@ -574,6 +630,16 @@ export default function App() {
       <Route path="/body" element={<BodyMap />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
+        path="/appointments/new"
+        element={
+          <RequireAuth>
+            <AppointmentForm />
+          </RequireAuth>
+        }
+      />
+      <Route path="/doctor" element={<DoctorDashboard />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route
         path="/app"
         element={
           <RequireAuth>
@@ -588,4 +654,3 @@ export default function App() {
     </Routes>
   );
 }
-

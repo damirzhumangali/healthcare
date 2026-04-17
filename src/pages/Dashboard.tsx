@@ -183,6 +183,10 @@ export default function Dashboard() {
           </div>
 
           <div className="row">
+            <Button variant="ghost" onClick={() => nav("/appointments/new")}>
+              Записаться к врачу
+            </Button>
+
             <Button
               onClick={async () => {
                 setErr(null);
