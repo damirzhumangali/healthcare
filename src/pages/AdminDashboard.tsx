@@ -241,7 +241,7 @@ export default function AdminDashboard() {
             <Users size={18} />
             Пациенты
           </a>
-          <a className="doctor-admin__nav-item" href="http://10.202.24.194/">
+          <a className="doctor-admin__nav-item" href="http://10.202.25.141/">
             <Settings size={18} />
             Настроить BMO
           </a>

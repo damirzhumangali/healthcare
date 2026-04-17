@@ -7,12 +7,31 @@ import { createNewMyTicket, getMyTicket, getOrCreateMyTicket, type OnlineTicketV
 
 type Locale = "ru" | "kk" | "en";
 
+type StoredUser = {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
+type MeasurementItem = {
+  id: string;
+  createdAt: string;
+  deviceId: string;
+  systolic: number;
+  diastolic: number;
+  tempC: number;
+  hr: number;
+  spo2: number;
+};
+
 const copy = {
   ru: {
     title: "Кабинет пациента",
     subtitle: "Данные приходят с backend (симуляция машинки).",
     newMeasurement: "Новое измерение",
     qrStation: "К QR-станции",
+    adminPanel: "Зайти в админку",
     onlineTicket: "Онлайн-талон",
     refresh: "Обновить",
     noTicket: "У вас пока нет активного талона.",
@@ -42,6 +61,7 @@ const copy = {
     subtitle: "Деректер backend-тен келеді (машина симуляциясы).",
     newMeasurement: "Жаңа өлшеу",
     qrStation: "QR-станциясына",
+    adminPanel: "Админкаға кіру",
     onlineTicket: "Онлайн-талон",
     refresh: "Жаңарту",
     noTicket: "Сізде әлі белсенді талон жоқ.",
@@ -71,6 +91,7 @@ const copy = {
     subtitle: "Data comes from backend (simulation of device).",
     newMeasurement: "New Measurement",
     qrStation: "To QR Station",
+    adminPanel: "Open Admin",
     onlineTicket: "Online Ticket",
     refresh: "Refresh",
     noTicket: "You don't have an active ticket yet.",
@@ -105,8 +126,19 @@ function fmtDate(iso: string) {
   }
 }
 
+function readCurrentUser(): StoredUser | null {
+  try {
+    const raw = localStorage.getItem("healthassist_current_user");
+    return raw ? (JSON.parse(raw) as StoredUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Dashboard() {
   const nav = useNavigate();
+  const currentUser = readCurrentUser();
+  const isAdmin = currentUser?.role === "admin";
   const [locale, setLocale] = useState<Locale>(() => {
     const v = window.localStorage.getItem("ha_locale");
     if (v === "en" || v === "kk" || v === "ru") return v;
@@ -115,7 +147,7 @@ export default function Dashboard() {
 
   const t = copy[locale];
 
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<MeasurementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
@@ -183,6 +215,12 @@ export default function Dashboard() {
           </div>
 
           <div className="row">
+            {isAdmin ? (
+              <Button onClick={() => nav("/admin")}>
+                {t.adminPanel}
+              </Button>
+            ) : null}
+
             <Button variant="ghost" onClick={() => nav("/appointments/new")}>
               Записаться к врачу
             </Button>

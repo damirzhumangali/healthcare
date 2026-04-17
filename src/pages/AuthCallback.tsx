@@ -4,6 +4,8 @@ import Card from "../components/Card";
 import { exchangeGoogleCode } from "../lib/apiAuth";
 import { setToken } from "../lib/auth";
 
+const ADMIN_EMAILS = ["damirzhumangali125@gmail.com"];
+
 export default function AuthCallback() {
   const nav = useNavigate();
   const [msg, setMsg] = useState("Авторизация через Google...");
@@ -14,12 +16,12 @@ export default function AuthCallback() {
     const err = url.searchParams.get("error");
 
     if (err) {
-      setMsg(`Google error: ${err}`);
+      queueMicrotask(() => setMsg(`Google error: ${err}`));
       return;
     }
 
     if (!code) {
-      setMsg("Нет параметра code. Попробуй войти снова.");
+      queueMicrotask(() => setMsg("Нет параметра code. Попробуй войти снова."));
       return;
     }
 
@@ -27,7 +29,9 @@ export default function AuthCallback() {
       .then(({ token, user }) => {
         setToken(token);
         localStorage.setItem("healthassist_current_user", JSON.stringify(user));
-        nav("/app");
+        const email = String(user?.email || "").toLowerCase();
+        const isAdmin = user?.role === "admin" || ADMIN_EMAILS.includes(email);
+        nav(isAdmin ? "/admin" : "/app");
       })
       .catch(() => setMsg("Ошибка входа через Google. Попробуй снова."));
   }, [nav]);
