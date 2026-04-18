@@ -14,7 +14,7 @@ export default function AppLayout() {
           <div>
             <div className="brand__title">HealthAssist</div>
             <div className="brand__sub">
-              {user ? `Пациент: ${user.email}` : "Кабинет пациента"}
+              {user ? `Аккаунт: ${user.name || user.email}` : "Кабинет пациента"}
             </div>
           </div>
         </div>

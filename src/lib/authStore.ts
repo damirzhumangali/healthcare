@@ -26,7 +26,7 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function getCurrentUser(): { id: string; email: string } | null {
+export function getCurrentUser(): { id: string; email: string; name?: string; role?: string } | null {
   const raw = localStorage.getItem(CURRENT_USER_KEY);
   return raw ? JSON.parse(raw) : null;
 }

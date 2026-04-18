@@ -181,9 +181,86 @@ button, input{font:inherit}
 .metric__label{color:var(--muted); font-size:12px}
 .metric__value{font-size:18px; font-weight:900; margin-top:4px}
 
+.patient-hero{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding-top:18px;
+}
+.patient-account{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+  padding:7px 10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:rgba(255,255,255,.04);
+  color:var(--muted);
+  font-size:13px;
+}
+.patient-account strong{
+  color:var(--text);
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+.language-switcher{
+  display:flex;
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  background:rgba(0,0,0,.18);
+  flex:0 0 auto;
+}
+.language-switcher__item{
+  min-width:46px;
+  min-height:36px;
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  font-weight:900;
+  cursor:pointer;
+}
+.language-switcher__item--active{
+  background:linear-gradient(180deg, #5eead4, #4f8cff);
+  color:#071018;
+}
+.patient-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+}
+.patient-actions__buttons{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:10px;
+}
+
 @media (max-width: 640px){
   .grid{grid-template-columns: 1fr}
   .h1{font-size:24px}
+  .topbar,
+  .patient-hero,
+  .patient-actions{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .actions,
+  .patient-actions__buttons{
+    width:100%;
+  }
+  .patient-actions__buttons .btn{
+    width:100%;
+  }
+  .language-switcher{
+    width:100%;
+  }
+  .language-switcher__item{
+    flex:1;
+  }
 }
 
 .admin-shell{

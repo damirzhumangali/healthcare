@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { fetchMyMeasurements, createMeasurement } from "../lib/apiMeasurements";
-import { createNewMyTicket, getMyTicket, getOrCreateMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
+import { createNewMyTicket, getMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 
 type Locale = "ru" | "kk" | "en";
 
@@ -28,93 +28,105 @@ type MeasurementItem = {
 const copy = {
   ru: {
     title: "Кабинет пациента",
-    subtitle: "Данные приходят с backend (симуляция машинки).",
-    newMeasurement: "Новое измерение",
-    qrStation: "К QR-станции",
+    subtitle: "Записывайтесь к врачу, следите за талоном и храните историю измерений.",
+    hello: "Аккаунт",
+    quickActions: "Быстрые действия",
+    quickActionsHint: "Выберите, что нужно сделать сейчас.",
+    bookDoctor: "Записаться к врачу",
+    newMeasurement: "Добавить измерение",
+    qrStation: "Открыть QR-станцию",
     adminPanel: "Зайти в админку",
-    onlineTicket: "Онлайн-талон",
-    refresh: "Обновить",
-    noTicket: "У вас пока нет активного талона.",
-    takeNewTicket: "Взять новый талон",
-    yourNumber: "Ваш номер",
-    nowCalling: "Сейчас вызывают",
+    onlineTicket: "Очередь в клинике",
+    refresh: "Обновить статус",
+    noTicket: "Активного талона нет. Получите талон, если вы уже в клинике.",
+    takeNewTicket: "Получить талон",
+    yourNumber: "Ваш талон",
+    nowCalling: "Сейчас принимают",
     ahead: "Перед вами",
-    waiting: "Ожидание",
+    waiting: "Примерное ожидание",
     minutes: "мин",
-    invited: "Ваш номер вызывают",
-    waitForCall: "Ожидайте вызова",
+    invited: "Вас приглашают",
+    waitForCall: "Талон активен",
     ticketMissed: "Талон пропущен",
-    issued: "Выдан",
-    history: "История",
+    issued: "Получен",
+    history: "История измерений",
     loading: "Загрузка...",
-    noMeasurements: "Пока нет измерений. Нажми Новое измерение или зайди на QR-станцию.",
+    noMeasurements: "Измерений пока нет. Добавьте вручную или откройте QR-станцию.",
     pressure: "Давление",
     temp: "Темп",
     pulse: "Пульс",
     spo2: "SpO₂",
-    device: "device",
-    measurementError: "Не удалось загрузить измерения. Проверь backend :4000.",
-    createMeasurementError: "Не получилось создать измерение. Проверь backend :4000.",
+    device: "устройство",
+    measurementError: "Не удалось загрузить измерения. Попробуйте обновить страницу.",
+    createMeasurementError: "Не получилось создать измерение. Попробуйте еще раз.",
   },
   kk: {
     title: "Науқас кабинеты",
-    subtitle: "Деректер backend-тен келеді (машина симуляциясы).",
-    newMeasurement: "Жаңа өлшеу",
-    qrStation: "QR-станциясына",
+    subtitle: "Дәрігерге жазылып, талонды бақылап, өлшеулер тарихын сақтаңыз.",
+    hello: "Аккаунт",
+    quickActions: "Жылдам әрекеттер",
+    quickActionsHint: "Қазір не істеу керегін таңдаңыз.",
+    bookDoctor: "Дәрігерге жазылу",
+    newMeasurement: "Өлшеу қосу",
+    qrStation: "QR-станцияны ашу",
     adminPanel: "Админкаға кіру",
-    onlineTicket: "Онлайн-талон",
-    refresh: "Жаңарту",
-    noTicket: "Сізде әлі белсенді талон жоқ.",
-    takeNewTicket: "Жаңа талон алу",
-    yourNumber: "Сіздің нөміріңіз",
-    nowCalling: "Қазір шақырады",
+    onlineTicket: "Клиника кезегі",
+    refresh: "Статусты жаңарту",
+    noTicket: "Белсенді талон жоқ. Клиникада болсаңыз, талон алыңыз.",
+    takeNewTicket: "Талон алу",
+    yourNumber: "Сіздің талоныңыз",
+    nowCalling: "Қазір қабылдайды",
     ahead: "Алдыңызда",
-    waiting: "Күту",
+    waiting: "Шамамен күту",
     minutes: "мин",
-    invited: "Сіздің нөміріңізді шақырады",
-    waitForCall: "Шақыруды күтіңіз",
+    invited: "Сізді шақырып жатыр",
+    waitForCall: "Талон белсенді",
     ticketMissed: "Талон өткізіп алды",
-    issued: "Шығарылған",
-    history: "Тарих",
+    issued: "Алынды",
+    history: "Өлшеулер тарихы",
     loading: "Жүктелуде...",
-    noMeasurements: "Әлі өлшеулер жоқ. Жаңа өлшеу батырмасын басыңыз немесе QR-станциясына кіріңіз.",
+    noMeasurements: "Әлі өлшеулер жоқ. Қолмен қосыңыз немесе QR-станцияны ашыңыз.",
     pressure: "Қысым",
     temp: "Темп",
     pulse: "Пульс",
     spo2: "SpO₂",
-    device: "device",
-    measurementError: "Өлшеулерді жүктей алмады. Backend-ті тексеріңіз :4000.",
-    createMeasurementError: "Өлшеуді жасай алмады. Backend-ті тексеріңіз :4000.",
+    device: "құрылғы",
+    measurementError: "Өлшеулерді жүктеу мүмкін болмады. Бетті жаңартып көріңіз.",
+    createMeasurementError: "Өлшеуді қосу мүмкін болмады. Қайта көріңіз.",
   },
   en: {
     title: "Patient Dashboard",
-    subtitle: "Data comes from backend (simulation of device).",
-    newMeasurement: "New Measurement",
-    qrStation: "To QR Station",
+    subtitle: "Book visits, track your clinic ticket, and keep measurement history.",
+    hello: "Account",
+    quickActions: "Quick Actions",
+    quickActionsHint: "Choose what you need to do now.",
+    bookDoctor: "Book a Doctor",
+    newMeasurement: "Add Measurement",
+    qrStation: "Open QR Station",
     adminPanel: "Open Admin",
-    onlineTicket: "Online Ticket",
-    refresh: "Refresh",
-    noTicket: "You don't have an active ticket yet.",
-    takeNewTicket: "Take New Ticket",
-    yourNumber: "Your Number",
-    nowCalling: "Now Calling",
+    onlineTicket: "Clinic Queue",
+    refresh: "Refresh Status",
+    noTicket: "No active ticket. Take a ticket if you are already at the clinic.",
+    takeNewTicket: "Take Ticket",
+    yourNumber: "Your Ticket",
+    nowCalling: "Now Seeing",
     ahead: "Ahead",
-    waiting: "Waiting",
+    waiting: "Estimated Wait",
     minutes: "min",
-    invited: "Your number is being called",
-    waitForCall: "Wait for call",
+    invited: "You are invited",
+    waitForCall: "Ticket active",
     ticketMissed: "Ticket missed",
-    issued: "Issued",
-    history: "History",
+    issued: "Taken",
+    history: "Measurement History",
     loading: "Loading...",
-    noMeasurements: "No measurements yet. Click New Measurement or go to QR Station.",
+    noMeasurements: "No measurements yet. Add one manually or open the QR station.",
     pressure: "Pressure",
     temp: "Temp",
     pulse: "Pulse",
     spo2: "SpO₂",
     device: "device",
-    measurementError: "Failed to load measurements. Check backend :4000.",
-    createMeasurementError: "Failed to create measurement. Check backend :4000.",
+    measurementError: "Failed to load measurements. Try refreshing the page.",
+    createMeasurementError: "Failed to add measurement. Try again.",
   },
 } as const;
 
@@ -139,6 +151,7 @@ export default function Dashboard() {
   const nav = useNavigate();
   const currentUser = readCurrentUser();
   const isAdmin = currentUser?.role === "admin";
+  const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
   const [locale, setLocale] = useState<Locale>(() => {
     const v = window.localStorage.getItem("ha_locale");
     if (v === "en" || v === "kk" || v === "ru") return v;
@@ -157,7 +170,8 @@ export default function Dashboard() {
   }, [locale]);
 
   function refreshTicket() {
-    setTicket(getMyTicket());
+    const currentTicket = getMyTicket();
+    setTicket(currentTicket?.status === "passed" ? null : currentTicket);
   }
 
   async function load() {
@@ -185,36 +199,41 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="container relative">
-      {/* Language Switcher */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className="flex rounded-full border border-white/20 overflow-hidden bg-slate-900/50 backdrop-blur-sm">
-          {(["ru", "kk", "en"] as Locale[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLocale(l)}
-              className={`px-3 py-1.5 text-xs font-medium transition ${
-                locale === l
-                  ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-
+    <div className="container">
       <div className="stack">
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div className="patient-hero">
           <div>
             <h1 className="h1" style={{ marginBottom: 4 }}>{t.title}</h1>
             <p className="muted" style={{ margin: 0 }}>
               {t.subtitle}
             </p>
+            <div className="patient-account">
+              <span>{t.hello}</span>
+              <strong>{displayName}</strong>
+            </div>
           </div>
 
-          <div className="row">
+          <div className="language-switcher">
+            {(["ru", "kk", "en"] as Locale[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLocale(l)}
+                className={locale === l ? "language-switcher__item language-switcher__item--active" : "language-switcher__item"}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Card>
+          <div className="patient-actions">
+            <div>
+              <h2 className="h2" style={{ margin: 0 }}>{t.quickActions}</h2>
+              <p className="muted" style={{ margin: "6px 0 0" }}>{t.quickActionsHint}</p>
+            </div>
+
+            <div className="patient-actions__buttons">
             {isAdmin ? (
               <Button onClick={() => nav("/admin")}>
                 {t.adminPanel}
@@ -222,7 +241,7 @@ export default function Dashboard() {
             ) : null}
 
             <Button variant="ghost" onClick={() => nav("/appointments/new")}>
-              Записаться к врачу
+              {t.bookDoctor}
             </Button>
 
             <Button
@@ -242,8 +261,9 @@ export default function Dashboard() {
             <Button variant="ghost" onClick={() => nav("/scan/device-001")}>
               {t.qrStation}
             </Button>
+            </div>
           </div>
-        </div>
+        </Card>
 
         {err ? <div className="alert">{err}</div> : null}
 
@@ -264,7 +284,7 @@ export default function Dashboard() {
                 <div className="row">
                   <Button
                     onClick={() => {
-                      const created = getOrCreateMyTicket();
+                      const created = createNewMyTicket();
                       setTicket(created);
                     }}
                   >
