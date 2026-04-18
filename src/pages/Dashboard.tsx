@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { fetchMyMeasurements, createMeasurement } from "../lib/apiMeasurements";
+import {
+  DOCTORS,
+  fetchAppointments,
+  type Appointment,
+  type AppointmentStatus,
+} from "../lib/apiAppointments";
 import { createNewMyTicket, getMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 import { useAppPreferences } from "../lib/appPreferences";
 
@@ -35,6 +41,15 @@ const copy = {
     newMeasurement: "Добавить измерение",
     qrStation: "Открыть QR-станцию",
     adminPanel: "Зайти в админку",
+    myAppointments: "Мои записи",
+    myAppointmentsHint: "Здесь появятся ваши приемы после записи к врачу.",
+    noAppointments: "Записей пока нет. Выберите врача и удобное время.",
+    appointmentError: "Не удалось загрузить записи. Попробуйте обновить страницу.",
+    doctor: "Врач",
+    reason: "Причина",
+    appointmentStatusPending: "Ожидает",
+    appointmentStatusActive: "На приеме",
+    appointmentStatusDone: "Завершен",
     onlineTicket: "Очередь в клинике",
     refresh: "Обновить статус",
     noTicket: "Активного талона нет. Получите талон, если вы уже в клинике.",
@@ -69,6 +84,15 @@ const copy = {
     newMeasurement: "Өлшеу қосу",
     qrStation: "QR-станцияны ашу",
     adminPanel: "Админкаға кіру",
+    myAppointments: "Менің жазбаларым",
+    myAppointmentsHint: "Дәрігерге жазылғаннан кейін қабылдауларыңыз осында көрінеді.",
+    noAppointments: "Әзірге жазба жоқ. Дәрігер мен ыңғайлы уақытты таңдаңыз.",
+    appointmentError: "Жазбаларды жүктеу мүмкін болмады. Бетті жаңартып көріңіз.",
+    doctor: "Дәрігер",
+    reason: "Себебі",
+    appointmentStatusPending: "Күтуде",
+    appointmentStatusActive: "Қабылдауда",
+    appointmentStatusDone: "Аяқталды",
     onlineTicket: "Клиника кезегі",
     refresh: "Статусты жаңарту",
     noTicket: "Белсенді талон жоқ. Клиникада болсаңыз, талон алыңыз.",
@@ -103,6 +127,15 @@ const copy = {
     newMeasurement: "Add Measurement",
     qrStation: "Open QR Station",
     adminPanel: "Open Admin",
+    myAppointments: "My Appointments",
+    myAppointmentsHint: "Your doctor visits will appear here after booking.",
+    noAppointments: "No appointments yet. Choose a doctor and a convenient time.",
+    appointmentError: "Failed to load appointments. Try refreshing the page.",
+    doctor: "Doctor",
+    reason: "Reason",
+    appointmentStatusPending: "Pending",
+    appointmentStatusActive: "In progress",
+    appointmentStatusDone: "Done",
     onlineTicket: "Clinic Queue",
     refresh: "Refresh Status",
     noTicket: "No active ticket. Take a ticket if you are already at the clinic.",
@@ -146,17 +179,41 @@ function readCurrentUser(): StoredUser | null {
   }
 }
 
+function appointmentBelongsToUser(item: Appointment, user: StoredUser | null) {
+  const userId = String(user?.id || "");
+  const userEmail = String(user?.email || "").toLowerCase();
+  const patientId = String(item.patient_id || item.patientId || "");
+  const patientEmail = String(item.patient_email || item.patientEmail || "").toLowerCase();
+
+  if (!patientId && !patientEmail) return true;
+  return Boolean((userId && patientId === userId) || (userEmail && patientEmail === userEmail));
+}
+
+function doctorLabel(item: Appointment) {
+  const doctorId = item.doctor_id || item.doctorId;
+  const doctor = DOCTORS.find((doctorItem) => doctorItem.id === doctorId);
+  return item.doctorName || (doctor ? `${doctor.name} - ${doctor.specialty}` : doctorId) || "Врач";
+}
+
+function appointmentStatusClass(status: AppointmentStatus) {
+  if (status === "active") return "badge--warn";
+  if (status === "done") return "badge--ok";
+  return "badge--danger";
+}
+
 export default function Dashboard() {
   const nav = useNavigate();
   const { locale } = useAppPreferences();
-  const currentUser = readCurrentUser();
+  const currentUser = useMemo(() => readCurrentUser(), []);
   const isAdmin = currentUser?.role === "admin";
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
 
   const t = copy[locale];
 
   const [items, setItems] = useState<MeasurementItem[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
 
@@ -178,8 +235,33 @@ export default function Dashboard() {
     }
   }, [t.measurementError]);
 
+  const loadAppointments = useCallback(async () => {
+    setAppointmentsLoading(true);
+    try {
+      const data = await fetchAppointments();
+      const mine = (data.items ?? [])
+        .filter((item) => appointmentBelongsToUser(item, currentUser))
+        .sort((a, b) => {
+          const byDate = a.date.localeCompare(b.date);
+          return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
+        });
+      setAppointments(mine);
+    } catch {
+      setErr(t.appointmentError);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  }, [currentUser, t.appointmentError]);
+
+  function appointmentStatusLabel(status: AppointmentStatus) {
+    if (status === "active") return t.appointmentStatusActive;
+    if (status === "done") return t.appointmentStatusDone;
+    return t.appointmentStatusPending;
+  }
+
   useEffect(() => {
     load();
+    loadAppointments();
     refreshTicket();
 
     const timer = window.setInterval(() => {
@@ -187,7 +269,7 @@ export default function Dashboard() {
     }, 15000);
 
     return () => window.clearInterval(timer);
-  }, [load, refreshTicket]);
+  }, [load, loadAppointments, refreshTicket]);
 
   return (
     <div className="container">
@@ -245,6 +327,62 @@ export default function Dashboard() {
         </Card>
 
         {err ? <div className="alert">{err}</div> : null}
+
+        <Card>
+          <div className="stack">
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 className="h2" style={{ margin: 0 }}>{t.myAppointments}</h2>
+                <p className="muted" style={{ margin: "6px 0 0" }}>{t.myAppointmentsHint}</p>
+              </div>
+              <Button variant="ghost" onClick={loadAppointments} disabled={appointmentsLoading}>
+                {appointmentsLoading ? t.loading : t.refresh}
+              </Button>
+            </div>
+
+            {appointmentsLoading ? (
+              <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
+            ) : appointments.length === 0 ? (
+              <div className="stack">
+                <p className="muted" style={{ margin: 0 }}>{t.noAppointments}</p>
+                <div className="row">
+                  <Button onClick={() => nav("/appointments/new")}>{t.bookDoctor}</Button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {appointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    style={{
+                      padding: 14,
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.10)",
+                    }}
+                  >
+                    <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 800 }}>
+                          {appointment.date} • {appointment.time}
+                        </div>
+                        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                          {t.doctor}: {doctorLabel(appointment)}
+                        </div>
+                        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                          {t.reason}: {appointment.reason || "Прием"}
+                        </div>
+                      </div>
+                      <span className={`badge ${appointmentStatusClass(appointment.status)}`}>
+                        <span className="badge__dot" />
+                        {appointmentStatusLabel(appointment.status)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
 
         <Card>
           <div className="stack">

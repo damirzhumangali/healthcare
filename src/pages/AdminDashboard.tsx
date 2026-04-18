@@ -34,6 +34,7 @@ type StoredUser = {
 };
 
 type StatusFilter = AppointmentStatus | "all";
+type DoctorFilter = string | "all";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -66,6 +67,12 @@ function patientLabel(item: Appointment) {
   return item.patientName || item.patient_email || item.patientEmail || (idTail ? `Пациент ${idTail}` : "Пациент");
 }
 
+function doctorLabel(item: Appointment, doctors: DoctorOption[]) {
+  const doctorId = item.doctor_id || item.doctorId;
+  const doctor = doctors.find((doctorItem) => doctorItem.id === doctorId);
+  return item.doctorName || (doctor ? `${doctor.name} - ${doctor.specialty}` : doctorId) || "Врач";
+}
+
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -89,6 +96,7 @@ export default function AdminDashboard() {
   const allowed = isAdminAccount(user) || isLocalDemoHost();
   const [date, setDate] = useState(today());
   const [status, setStatusFilter] = useState<StatusFilter>("all");
+  const [doctorFilter, setDoctorFilter] = useState<DoctorFilter>("all");
   const [items, setItems] = useState<Appointment[]>([]);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [doctors, setDoctors] = useState<DoctorOption[]>(DOCTORS.map((doctor) => ({ ...doctor, active: true })));
@@ -118,8 +126,13 @@ export default function AdminDashboard() {
   }, [date]);
 
   const filteredItems = useMemo(() => {
-    return items.filter((item) => (status === "all" ? true : item.status === status));
-  }, [items, status]);
+    return items.filter((item) => {
+      const matchesStatus = status === "all" ? true : item.status === status;
+      const matchesDoctor =
+        doctorFilter === "all" ? true : (item.doctor_id || item.doctorId) === doctorFilter;
+      return matchesStatus && matchesDoctor;
+    });
+  }, [doctorFilter, items, status]);
 
   const visibleItems = filteredItems;
   const visiblePatients =
@@ -190,6 +203,10 @@ export default function AdminDashboard() {
             <CalendarClock size={18} />
             Расписание
           </a>
+          <a className="doctor-admin__nav-item" href="#appointments">
+            <ClipboardList size={18} />
+            Записи
+          </a>
           <a className="doctor-admin__nav-item" href="#patients">
             <Users size={18} />
             Пациенты
@@ -216,6 +233,9 @@ export default function AdminDashboard() {
                 onChange={(event) => setDate(event.target.value)}
               />
             </label>
+            <button className="doctor-admin__refresh" type="button" onClick={() => setDate("")}>
+              Все даты
+            </button>
             <select
               className="doctor-admin__select"
               value={status}
@@ -225,6 +245,18 @@ export default function AdminDashboard() {
               <option value="pending">Ожидает</option>
               <option value="active">На приеме</option>
               <option value="done">Завершен</option>
+            </select>
+            <select
+              className="doctor-admin__select"
+              value={doctorFilter}
+              onChange={(event) => setDoctorFilter(event.target.value)}
+            >
+              <option value="all">Все врачи</option>
+              {doctors.map((doctor) => (
+                <option key={doctor.id} value={doctor.id}>
+                  {doctor.name}
+                </option>
+              ))}
             </select>
             <button className="doctor-admin__refresh" type="button" onClick={load}>
               Обновить
@@ -270,7 +302,7 @@ export default function AdminDashboard() {
         <section className="doctor-admin__content">
           <article className="doctor-admin__panel doctor-admin__schedule" id="schedule">
             <div className="doctor-admin__panel-head">
-              <h2>Расписание на сегодня</h2>
+              <h2>{date ? "Расписание на дату" : "Все записи"}</h2>
               <span>{formatDay(date)}</span>
             </div>
 
@@ -334,6 +366,68 @@ export default function AdminDashboard() {
               )}
             </div>
           </article>
+        </section>
+
+        <section className="doctor-admin__panel doctor-admin__records" id="appointments">
+          <div className="doctor-admin__panel-head">
+            <div>
+              <h2>Все записи</h2>
+              <p className="doctor-admin__panel-subtitle">
+                Управляйте статусом приема по выбранным фильтрам.
+              </p>
+            </div>
+            <span>{visibleItems.length}</span>
+          </div>
+
+          <div className="doctor-admin__record-list">
+            {visibleItems.length === 0 ? (
+              <p className="doctor-admin__empty">Записей по выбранным фильтрам нет.</p>
+            ) : (
+              visibleItems.map((item) => {
+                const name = patientLabel(item);
+                return (
+                  <div className="doctor-admin__record" key={`${item.id}-record`}>
+                    <div className="doctor-admin__record-date">
+                      <strong>{item.date}</strong>
+                      <span>{item.time}</span>
+                    </div>
+                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                    <div className="doctor-admin__record-main">
+                      <strong>{name}</strong>
+                      <span>{doctorLabel(item, doctors)}</span>
+                      <small>{item.reason || "Прием"}</small>
+                    </div>
+                    <div className="doctor-admin__record-actions">
+                      <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
+                        {statusLabel(item.status)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={item.status === "pending"}
+                        onClick={() => changeStatus(item.id, "pending")}
+                      >
+                        Ожидает
+                      </button>
+                      <button
+                        type="button"
+                        disabled={item.status === "active"}
+                        onClick={() => changeStatus(item.id, "active")}
+                      >
+                        Принять
+                      </button>
+                      <button
+                        type="button"
+                        disabled={item.status === "done"}
+                        onClick={() => changeStatus(item.id, "done")}
+                      >
+                        Завершить
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </section>
 
         <section className="doctor-admin__quick">
