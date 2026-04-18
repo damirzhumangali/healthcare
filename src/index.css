@@ -1,5 +1,8 @@
 :root{
   --bg:#0b0f14;
+  --bgA:rgba(79,140,255,.18);
+  --bgB:rgba(96,220,165,.10);
+  --bgC:rgba(255,204,0,.08);
   --text:#e6edf6;
   --muted:#9aa4b2;
   --border:rgba(255,255,255,.09);
@@ -15,6 +18,19 @@
   --shadow: 0 18px 50px rgba(0,0,0,.40);
 }
 
+.app-shell--light{
+  --bg:#f5f8fb;
+  --bgA:rgba(79,140,255,.16);
+  --bgB:rgba(16,185,129,.12);
+  --bgC:rgba(245,158,11,.10);
+  --text:#101827;
+  --muted:#5f6b7a;
+  --border:rgba(15,23,42,.12);
+  --cardA:rgba(255,255,255,.92);
+  --cardB:rgba(255,255,255,.70);
+  --shadow: 0 16px 38px rgba(30,41,59,.12);
+}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -22,9 +38,18 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   color:var(--text);
   background:
-    radial-gradient(1200px 700px at 15% 0%, rgba(79,140,255,.18), transparent 60%),
-    radial-gradient(900px 500px at 90% 20%, rgba(96,220,165,.10), transparent 55%),
-    radial-gradient(800px 480px at 60% 100%, rgba(255,204,0,.08), transparent 55%),
+    radial-gradient(1200px 700px at 15% 0%, var(--bgA), transparent 60%),
+    radial-gradient(900px 500px at 90% 20%, var(--bgB), transparent 55%),
+    radial-gradient(800px 480px at 60% 100%, var(--bgC), transparent 55%),
+    var(--bg);
+}
+.app-shell{
+  min-height:100vh;
+  color:var(--text);
+  background:
+    radial-gradient(1200px 700px at 15% 0%, var(--bgA), transparent 60%),
+    radial-gradient(900px 500px at 90% 20%, var(--bgB), transparent 55%),
+    radial-gradient(800px 480px at 60% 100%, var(--bgC), transparent 55%),
     var(--bg);
 }
 
@@ -43,7 +68,7 @@ button, input{font:inherit}
   top: 0;
   z-index: 10;
   backdrop-filter: blur(10px);
-  background: rgba(11,15,20,.60);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
   border-bottom: 1px solid var(--border);
   display:flex;
   justify-content:space-between;
@@ -70,7 +95,7 @@ button, input{font:inherit}
 .brand__title{font-weight:900; letter-spacing:.4px}
 .brand__sub{color:var(--muted); font-size:12px; margin-top:2px}
 
-.actions{display:flex; gap:10px; align-items:center}
+.actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
 
 .card{
   background: linear-gradient(180deg, var(--cardA), var(--cardB));
@@ -213,6 +238,9 @@ button, input{font:inherit}
   background:rgba(0,0,0,.18);
   flex:0 0 auto;
 }
+.language-switcher--topbar{
+  height:44px;
+}
 .language-switcher__item{
   min-width:46px;
   min-height:36px;
@@ -238,6 +266,20 @@ button, input{font:inherit}
   justify-content:flex-end;
   gap:10px;
 }
+.theme-toggle{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  cursor:pointer;
+}
+.theme-toggle:hover{
+  filter:brightness(1.05);
+}
 
 @media (max-width: 640px){
   .grid{grid-template-columns: 1fr}
@@ -251,6 +293,9 @@ button, input{font:inherit}
   .actions,
   .patient-actions__buttons{
     width:100%;
+  }
+  .actions .btn{
+    flex:1;
   }
   .patient-actions__buttons .btn{
     width:100%;

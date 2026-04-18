@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { fetchMyMeasurements, createMeasurement } from "../lib/apiMeasurements";
 import { createNewMyTicket, getMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
-
-type Locale = "ru" | "kk" | "en";
+import { useAppPreferences } from "../lib/appPreferences";
 
 type StoredUser = {
   id?: string;
@@ -149,14 +148,10 @@ function readCurrentUser(): StoredUser | null {
 
 export default function Dashboard() {
   const nav = useNavigate();
+  const { locale } = useAppPreferences();
   const currentUser = readCurrentUser();
   const isAdmin = currentUser?.role === "admin";
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
-  const [locale, setLocale] = useState<Locale>(() => {
-    const v = window.localStorage.getItem("ha_locale");
-    if (v === "en" || v === "kk" || v === "ru") return v;
-    return "ru";
-  });
 
   const t = copy[locale];
 
@@ -165,27 +160,23 @@ export default function Dashboard() {
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
 
-  useEffect(() => {
-    window.localStorage.setItem("ha_locale", locale);
-  }, [locale]);
-
-  function refreshTicket() {
+  const refreshTicket = useCallback(() => {
     const currentTicket = getMyTicket();
     setTicket(currentTicket?.status === "passed" ? null : currentTicket);
-  }
+  }, []);
 
-  async function load() {
+  const load = useCallback(async () => {
     setErr(null);
     setLoading(true);
     try {
       const data = await fetchMyMeasurements();
       setItems(data.items ?? []);
     } catch {
-      setErr("Не удалось загрузить измерения. Проверь backend :4000.");
+      setErr(t.measurementError);
     } finally {
       setLoading(false);
     }
-  }
+  }, [t.measurementError]);
 
   useEffect(() => {
     load();
@@ -196,7 +187,7 @@ export default function Dashboard() {
     }, 15000);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [load, refreshTicket]);
 
   return (
     <div className="container">
@@ -212,18 +203,6 @@ export default function Dashboard() {
               <strong>{displayName}</strong>
             </div>
           </div>
-
-          <div className="language-switcher">
-            {(["ru", "kk", "en"] as Locale[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLocale(l)}
-                className={locale === l ? "language-switcher__item language-switcher__item--active" : "language-switcher__item"}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
         </div>
 
         <Card>
@@ -234,33 +213,33 @@ export default function Dashboard() {
             </div>
 
             <div className="patient-actions__buttons">
-            {isAdmin ? (
-              <Button onClick={() => nav("/admin")}>
-                {t.adminPanel}
+              {isAdmin ? (
+                <Button onClick={() => nav("/admin")}>
+                  {t.adminPanel}
+                </Button>
+              ) : null}
+
+              <Button variant="ghost" onClick={() => nav("/appointments/new")}>
+                {t.bookDoctor}
               </Button>
-            ) : null}
 
-            <Button variant="ghost" onClick={() => nav("/appointments/new")}>
-              {t.bookDoctor}
-            </Button>
+              <Button
+                onClick={async () => {
+                  setErr(null);
+                  try {
+                    await createMeasurement("device-001");
+                    await load();
+                  } catch {
+                    setErr(t.createMeasurementError);
+                  }
+                }}
+              >
+                {t.newMeasurement}
+              </Button>
 
-            <Button
-              onClick={async () => {
-                setErr(null);
-                try {
-                  await createMeasurement("device-001");
-                  await load();
-                } catch {
-                  setErr(t.createMeasurementError);
-                }
-              }}
-            >
-              {t.newMeasurement}
-            </Button>
-
-            <Button variant="ghost" onClick={() => nav("/scan/device-001")}>
-              {t.qrStation}
-            </Button>
+              <Button variant="ghost" onClick={() => nav("/scan/device-001")}>
+                {t.qrStation}
+              </Button>
             </div>
           </div>
         </Card>
