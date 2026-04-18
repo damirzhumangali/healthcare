@@ -23,6 +23,7 @@ import {
   type AdminPatient,
   type AdminSummary,
 } from "../lib/apiAdmin";
+import { isAdminAccount } from "../lib/adminAccess";
 import { getToken } from "../lib/auth";
 
 type StoredUser = {
@@ -132,7 +133,7 @@ function statusTone(status: AppointmentStatus) {
 
 export default function AdminDashboard() {
   const user = useMemo(() => readCurrentUser(), []);
-  const allowed = user?.role === "admin" || isLocalDemoHost();
+  const allowed = isAdminAccount(user) || isLocalDemoHost();
   const [date, setDate] = useState(today());
   const [status, setStatusFilter] = useState<StatusFilter>("all");
   const [items, setItems] = useState<Appointment[]>([]);

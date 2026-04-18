@@ -27,6 +27,7 @@ import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
 import { getGoogleAuthUrl } from "./lib/apiAuth";
 import { getToken, logout } from "./lib/auth";
+import { isAdminAccount } from "./lib/adminAccess";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
@@ -197,7 +198,7 @@ function Landing() {
   const [currentUserRole, setCurrentUserRole] = useState<string>(() => readStoredUser()?.role || "");
 
   const t = text[locale];
-  const isAdminUser = currentUserRole === "admin";
+  const isAdminUser = currentUserRole === "admin" || isAdminAccount(readStoredUser());
 
   function openUserArea() {
     const token = getToken();

@@ -1,10 +1,12 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import Input from "../components/Input";
 import { createAppointment, DOCTORS, fetchDoctors, type DoctorOption } from "../lib/apiAppointments";
+import { isAdminAccount } from "../lib/adminAccess";
+import { getCurrentUser } from "../lib/authStore";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -12,6 +14,7 @@ function today() {
 
 export default function AppointmentForm() {
   const nav = useNavigate();
+  const currentUser = getCurrentUser();
   const [doctors, setDoctors] = useState<DoctorOption[]>(DOCTORS);
   const [doctorId, setDoctorId] = useState(DOCTORS[0]?.id ?? "");
   const [date, setDate] = useState(today());
@@ -44,6 +47,10 @@ export default function AppointmentForm() {
       cancelled = true;
     };
   }, []);
+
+  if (isAdminAccount(currentUser)) {
+    return <Navigate to="/admin" replace />;
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

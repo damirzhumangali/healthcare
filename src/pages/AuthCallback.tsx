@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import { exchangeGoogleCode } from "../lib/apiAuth";
 import { setToken } from "../lib/auth";
-
-const ADMIN_EMAILS = ["damirzhumangali125@gmail.com"];
+import { isAdminAccount } from "../lib/adminAccess";
 
 export default function AuthCallback() {
   const nav = useNavigate();
@@ -29,9 +28,7 @@ export default function AuthCallback() {
       .then(({ token, user }) => {
         setToken(token);
         localStorage.setItem("healthassist_current_user", JSON.stringify(user));
-        const email = String(user?.email || "").toLowerCase();
-        const isAdmin = user?.role === "admin" || ADMIN_EMAILS.includes(email);
-        nav(isAdmin ? "/admin" : "/app");
+        nav(isAdminAccount(user) ? "/admin" : "/app");
       })
       .catch(() => setMsg("Ошибка входа через Google. Попробуй снова."));
   }, [nav]);

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useNavigate } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
 import Button from "../components/Button";
 import { getCurrentUser, logout } from "../lib/authStore";
+import { isAdminAccount } from "../lib/adminAccess";
 import {
   AppPreferencesProvider,
   type AppTheme,
@@ -36,8 +37,12 @@ export default function AppLayout() {
       theme,
       toggleTheme: () => setTheme((current) => (current === "dark" ? "light" : "dark")),
     }),
-    [locale, theme]
+    [locale, setLocale, theme, setTheme]
   );
+
+  if (isAdminAccount(user)) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <AppPreferencesProvider value={preferences}>
