@@ -35,53 +35,6 @@ type StoredUser = {
 
 type StatusFilter = AppointmentStatus | "all";
 
-const demoAppointments: Appointment[] = [
-  {
-    id: "demo-1",
-    patientName: "Иван Коваль",
-    doctor_id: "doctor-001",
-    doctorName: "Др. Айжан Нурбекова",
-    date: new Date().toISOString().slice(0, 10),
-    time: "09:00",
-    reason: "Первичный прием",
-    status: "done",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-2",
-    patientName: "Фарида Мусина",
-    doctor_id: "doctor-002",
-    doctorName: "Др. Ерлан Садыков",
-    date: new Date().toISOString().slice(0, 10),
-    time: "10:30",
-    reason: "Повторный прием",
-    status: "done",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-3",
-    patientName: "Арман Жаксыбеков",
-    doctor_id: "doctor-003",
-    doctorName: "Др. Мария Ким",
-    date: new Date().toISOString().slice(0, 10),
-    time: "12:00",
-    reason: "Консультация",
-    status: "pending",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-4",
-    patientName: "Дана Нурланова",
-    doctor_id: "doctor-001",
-    doctorName: "Др. Айжан Нурбекова",
-    date: new Date().toISOString().slice(0, 10),
-    time: "14:00",
-    reason: "Анализы",
-    status: "active",
-    created_at: new Date().toISOString(),
-  },
-];
-
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -168,7 +121,7 @@ export default function AdminDashboard() {
     return items.filter((item) => (status === "all" ? true : item.status === status));
   }, [items, status]);
 
-  const visibleItems = filteredItems.length > 0 ? filteredItems : demoAppointments;
+  const visibleItems = filteredItems;
   const visiblePatients =
     patients.length > 0
       ? patients
@@ -192,7 +145,6 @@ export default function AdminDashboard() {
   }, [doctors, summary, visibleItems, visiblePatients]);
 
   async function changeStatus(id: string, nextStatus: AppointmentStatus) {
-    if (id.startsWith("demo-")) return;
     setErr(null);
     try {
       await updateAppointmentStatus(id, nextStatus);
@@ -323,26 +275,30 @@ export default function AdminDashboard() {
             </div>
 
             <div className="doctor-admin__list">
-              {visibleItems.map((item) => {
-                const name = patientLabel(item);
-                return (
-                  <div className="doctor-admin__appointment" key={item.id}>
-                    <time>{item.time}</time>
-                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
-                    <div className="doctor-admin__appointment-main">
-                      <strong>{name}</strong>
-                      <span>{item.reason || "Прием"}</span>
+              {visibleItems.length === 0 ? (
+                <p className="doctor-admin__empty">На выбранную дату записей нет.</p>
+              ) : (
+                visibleItems.map((item) => {
+                  const name = patientLabel(item);
+                  return (
+                    <div className="doctor-admin__appointment" key={item.id}>
+                      <time>{item.time}</time>
+                      <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                      <div className="doctor-admin__appointment-main">
+                        <strong>{name}</strong>
+                        <span>{item.reason || "Прием"}</span>
+                      </div>
+                      <button
+                        className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}
+                        type="button"
+                        onClick={() => changeStatus(item.id, item.status === "done" ? "pending" : "done")}
+                      >
+                        {statusLabel(item.status)}
+                      </button>
                     </div>
-                    <button
-                      className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}
-                      type="button"
-                      onClick={() => changeStatus(item.id, item.status === "done" ? "pending" : "done")}
-                    >
-                      {statusLabel(item.status)}
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </article>
 
@@ -355,23 +311,27 @@ export default function AdminDashboard() {
             </div>
 
             <div className="doctor-admin__patient-list">
-              {visiblePatients.slice(0, 4).map((patient) => {
-                const name = patient.name;
-                return (
-                  <div className="doctor-admin__patient" key={`${patient.id}-patient`}>
-                    <div className="doctor-admin__mini-avatar doctor-admin__mini-avatar--soft">
-                      {initials(name)}
+              {visiblePatients.length === 0 ? (
+                <p className="doctor-admin__empty">Пока нет реальных пациентов.</p>
+              ) : (
+                visiblePatients.slice(0, 4).map((patient) => {
+                  const name = patient.name;
+                  return (
+                    <div className="doctor-admin__patient" key={`${patient.id}-patient`}>
+                      <div className="doctor-admin__mini-avatar doctor-admin__mini-avatar--soft">
+                        {initials(name)}
+                      </div>
+                      <div>
+                        <strong>{name}</strong>
+                        <span>
+                          {patient.email || "Без email"} • {patient.appointment_count} записей
+                        </span>
+                      </div>
+                      <button type="button">Карта</button>
                     </div>
-                    <div>
-                      <strong>{name}</strong>
-                      <span>
-                        {patient.email || "Без email"} • {patient.appointment_count} записей
-                      </span>
-                    </div>
-                    <button type="button">Карта</button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </article>
         </section>

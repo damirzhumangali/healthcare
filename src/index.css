@@ -561,6 +561,13 @@ button, input{font:inherit}
 .doctor-admin__patient-list{
   display:grid;
 }
+.doctor-admin__empty{
+  margin:0;
+  padding:18px 0;
+  color:#c1c4bb;
+  font-size:17px;
+  font-weight:800;
+}
 .doctor-admin__appointment{
   display:grid;
   grid-template-columns:78px 56px minmax(0,1fr) 136px;
