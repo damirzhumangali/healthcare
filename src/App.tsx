@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Activity,
   ChevronDown,
@@ -31,6 +31,12 @@ import { getToken, logout } from "./lib/auth";
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
 
+type StoredUser = {
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
 const imageFrames = Object.values(
   import.meta.glob("./images/ezgif-frame-*.jpg", {
     eager: true,
@@ -41,11 +47,17 @@ imageFrames.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
 const text = {
   ru: {
-    navFeatures: "Возможности",
-    navStory: "Сторителлинг",
-    navFaq: "FAQ",
-    navMap: "Карта",
+    navFeatures: "Пациентам",
+    navStory: "Симптомы",
+    navFaq: "Вопросы",
+    navMap: "Клиники",
+    navBody: "3D тело",
+    navAppointment: "Записаться",
+    navCabinet: "Кабинет",
+    navAdmin: "Админка",
     navLogin: "Войти",
+    navGoogle: "Войти через Google",
+    navLogout: "Выйти",
     navRegister: "Регистрация",
     heroKicker: "Digital Healthcare Platform",
     heroTitle: "Практические советы по здоровью на каждый день",
@@ -77,11 +89,17 @@ const text = {
     footer: "Готово к адаптации под твой бренд и контент.",
   },
   kk: {
-    navFeatures: "Мүмкіндіктер",
-    navStory: "Скролл стори",
-    navFaq: "Сұрақ-жауап",
-    navMap: "Карта",
+    navFeatures: "Пациенттерге",
+    navStory: "Белгілер",
+    navFaq: "Сұрақтар",
+    navMap: "Емханалар",
+    navBody: "3D дене",
+    navAppointment: "Жазылу",
+    navCabinet: "Кабинет",
+    navAdmin: "Админка",
     navLogin: "Кіру",
+    navGoogle: "Google арқылы кіру",
+    navLogout: "Шығу",
     navRegister: "Тіркелу",
     heroKicker: "Digital Healthcare Platform",
     heroTitle: "Күнделікті денсаулыққа пайдалы нұсқаулық",
@@ -113,11 +131,17 @@ const text = {
     footer: "Сенің бренд пен контентке бейімдеуге дайын.",
   },
   en: {
-    navFeatures: "Features",
-    navStory: "Story",
-    navFaq: "FAQ",
-    navMap: "Map",
+    navFeatures: "For Patients",
+    navStory: "Symptoms",
+    navFaq: "Questions",
+    navMap: "Clinics",
+    navBody: "3D Body",
+    navAppointment: "Book Visit",
+    navCabinet: "Dashboard",
+    navAdmin: "Admin",
     navLogin: "Sign in",
+    navGoogle: "Sign in with Google",
+    navLogout: "Sign out",
     navRegister: "Register",
     heroKicker: "Digital Healthcare Platform",
     heroTitle: "Practical health guidance for daily life",
@@ -150,33 +174,32 @@ const text = {
   },
 } as const;
 
+function readStoredUser(): StoredUser | null {
+  try {
+    const raw = localStorage.getItem("healthassist_current_user");
+    return raw ? (JSON.parse(raw) as StoredUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 function Landing() {
   const nav = useNavigate();
   const [theme, setTheme] = useState<Theme>("dark");
   const [locale, setLocale] = useState<Locale>("ru");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [currentUserName, setCurrentUserName] = useState<string>("");
-  const [cabinetOpening, setCabinetOpening] = useState(false);
-
-  useEffect(() => {
-    const token = getToken();
-    setIsAuthed(Boolean(token));
-    try {
-      const raw = localStorage.getItem("healthassist_current_user");
-      if (raw) {
-        const user = JSON.parse(raw) as { name?: string };
-        setCurrentUserName(user.name ?? "");
-      }
-    } catch {
-      // ignore parse issues
-    }
-  }, []);
+  const [isAuthed, setIsAuthed] = useState(() => Boolean(getToken()));
+  const [currentUserName, setCurrentUserName] = useState<string>(() => {
+    const user = readStoredUser();
+    return user?.name || user?.email || "";
+  });
+  const [currentUserRole, setCurrentUserRole] = useState<string>(() => readStoredUser()?.role || "");
 
   const t = text[locale];
+  const isAdminUser = currentUserRole === "admin";
 
-  async function openPatientCabinet() {
+  function openUserArea() {
     const token = getToken();
 
     if (!token) {
@@ -185,28 +208,8 @@ function Landing() {
       return;
     }
 
-    setCabinetOpening(true);
-    try {
-      const response = await fetch("/api/doors/open", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ doorId: "main" }),
-      });
-
-      if (!response.ok) {
-        throw new Error("door open failed");
-      }
-
-      setMobileMenu(false);
-      nav("/app");
-    } catch {
-      window.alert("Не удалось открыть кабинет пациента. Проверь backend и попробуй еще раз.");
-    } finally {
-      setCabinetOpening(false);
-    }
+    setMobileMenu(false);
+    nav(isAdminUser ? "/admin" : "/app");
   }
 
   const rootClass =
@@ -269,7 +272,7 @@ function Landing() {
             <a href="#map">{t.navMap}</a>
             <Link to="/body" className="inline-flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              3D
+              {t.navBody}
             </Link>
           </nav>
 
@@ -303,34 +306,34 @@ function Landing() {
                   {currentUserName || "Google user"}
                 </span>
                 <button
-                  onClick={openPatientCabinet}
-                  disabled={cabinetOpening}
+                  onClick={openUserArea}
                   className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
                 >
-                  {cabinetOpening ? "Открываем..." : "Кабинет пациента"}
+                  {isAdminUser ? t.navAdmin : t.navCabinet}
                 </button>
                 <button
                   onClick={() => {
                     logout();
                     setIsAuthed(false);
                     setCurrentUserName("");
+                    setCurrentUserRole("");
                   }}
                   className={`rounded-full px-3 py-1.5 text-xs border ${
                     theme === "dark" ? "border-white/20" : "border-slate-300"
                   }`}
                 >
-                  Выйти
+                  {t.navLogout}
                 </button>
               </>
             ) : (
               <>
                 <Link
-                  to="/login"
+                  to="/appointments/new"
                   className={`rounded-full px-3 py-1.5 text-xs border ${
                     theme === "dark" ? "border-white/20" : "border-slate-300"
                   }`}
                 >
-                  {t.navLogin}
+                  {t.navAppointment}
                 </Link>
                 <button
                   onClick={async () => {
@@ -339,7 +342,7 @@ function Landing() {
                   }}
                   className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                 >
-                  {t.navLogin} Google
+                  {t.navGoogle}
                 </button>
               </>
             )}
@@ -371,12 +374,12 @@ function Landing() {
             </a>
             <Link to="/body" onClick={() => setMobileMenu(false)} className="inline-flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              3D
+              {t.navBody}
             </Link>
             {!isAuthed && (
               <>
-                <Link to="/login" onClick={() => setMobileMenu(false)}>
-                  {t.navLogin}
+                <Link to="/appointments/new" onClick={() => setMobileMenu(false)}>
+                  {t.navAppointment}
                 </Link>
                 <Link to="/register" onClick={() => setMobileMenu(false)}>
                   {t.navRegister}
@@ -414,31 +417,32 @@ function Landing() {
           {!isAuthed && (
             <div className="flex flex-col gap-2 mt-4">
               <Link 
-                to="/login" 
+                to="/appointments/new" 
                 onClick={() => setMobileMenu(false)}
                 className={`rounded-full px-4 py-2 text-sm font-medium border ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
               >
-                {t.navLogin}
+                {t.navAppointment}
               </Link>
-              <Link 
-                to="/register" 
-                onClick={() => setMobileMenu(false)}
+              <button
+                onClick={async () => {
+                  const url = await getGoogleAuthUrl();
+                  window.location.href = url;
+                }}
                 className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
               >
-                {t.navRegister}
-              </Link>
+                {t.navGoogle}
+              </button>
             </div>
           )}
           {isAuthed && (
             <div className="flex flex-col gap-2 mt-4">
               <button
-                onClick={openPatientCabinet}
-                disabled={cabinetOpening}
+                onClick={openUserArea}
                 className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
               >
-                {cabinetOpening ? "Открываем..." : "Кабинет пациента"}
+                {isAdminUser ? t.navAdmin : t.navCabinet}
               </button>
             </div>
           )}
