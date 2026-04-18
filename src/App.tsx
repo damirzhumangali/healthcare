@@ -53,7 +53,7 @@ const text = {
     navMap: "Клиники",
     navBody: "3D тело",
     navAppointment: "Записаться",
-    navCabinet: "Кабинет",
+    navCabinet: "Кабинет пациента",
     navAdmin: "Админка",
     navLogin: "Войти",
     navGoogle: "Войти через Google",
