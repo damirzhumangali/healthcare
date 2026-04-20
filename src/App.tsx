@@ -39,7 +39,7 @@ type StoredUser = {
 };
 
 const imageFrames = Object.values(
-  import.meta.glob("./images/ezgif-frame-*.jpg", {
+  import.meta.glob("./images2/ezgif-frame-*.jpg", {
     eager: true,
     import: "default",
   })
