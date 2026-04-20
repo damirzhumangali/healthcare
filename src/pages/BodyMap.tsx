@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Brain, Globe, Moon, Sparkles, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
-import Body3D from "../components/Body3D";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
@@ -104,6 +103,25 @@ const copy = {
   },
 } as const;
 
+type Hotspot = {
+  id: string;
+  key: BodyPartKey;
+  position: string;
+  normal: string;
+};
+
+const hotspots: Hotspot[] = [
+  { id: "hotspot-1", key: "head", position: "0m 1.75m 0.02m", normal: "0 1 0" },
+  { id: "hotspot-2", key: "neck", position: "0m 1.55m 0.02m", normal: "0 1 0" },
+  { id: "hotspot-3", key: "chest", position: "0m 1.35m 0.05m", normal: "0 1 0" },
+  { id: "hotspot-4", key: "belly", position: "0m 1.05m 0.05m", normal: "0 1 0" },
+  { id: "hotspot-5", key: "back", position: "0m 1.2m -0.25m", normal: "0 0 -1" },
+  { id: "hotspot-6", key: "leftArm", position: "-0.45m 1.25m 0.02m", normal: "-1 0 0" },
+  { id: "hotspot-7", key: "rightArm", position: "0.45m 1.25m 0.02m", normal: "1 0 0" },
+  { id: "hotspot-8", key: "leftLeg", position: "-0.22m 0.45m 0m", normal: "-1 0 0" },
+  { id: "hotspot-9", key: "rightLeg", position: "0.22m 0.45m 0m", normal: "1 0 0" },
+];
+
 export default function BodyMap() {
   const [theme, setTheme] = useState<Theme>(() => {
     const v = window.localStorage.getItem("ha_theme");
@@ -123,6 +141,8 @@ export default function BodyMap() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const viewerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     window.localStorage.setItem("ha_theme", theme);
@@ -175,10 +195,47 @@ export default function BodyMap() {
     }
   };
 
+  const modelSrc =
+    "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/Xbot.glb";
+
   const title = useMemo(() => t.title, [t.title]);
 
   return (
     <div className={`min-h-screen ${pageBg}`}>
+      <style>{`
+        .hotspot {
+          width: 22px;
+          height: 22px;
+          background: #0ea5e9;
+          border: 3px solid rgba(255,255,255,0.95);
+          border-radius: 999px;
+          box-shadow: 0 0 24px rgba(14,165,233,0.55);
+          cursor: pointer;
+          transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+        }
+        .hotspot:hover {
+          transform: scale(1.18);
+          background: #22c55e;
+          box-shadow: 0 0 28px rgba(34,197,94,0.55);
+        }
+        .annotation {
+          position: absolute;
+          background: rgba(2,6,23,0.92);
+          color: white;
+          padding: 7px 12px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          white-space: nowrap;
+          pointer-events: none;
+          opacity: 0;
+          transform: translate(-50%, -140%);
+          transition: opacity .18s ease;
+          box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        }
+        .hotspot:hover + .annotation { opacity: 1; }
+      `}</style>
+
       <div className="fixed inset-x-0 top-4 z-50">
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
           <Link
@@ -230,15 +287,39 @@ export default function BodyMap() {
 
       <section className="max-w-6xl mx-auto px-4 pb-10 grid lg:grid-cols-[1.35fr_.65fr] gap-4">
         <div className={`rounded-3xl border overflow-hidden ${panel}`}>
-          <Body3D
-            labels={t.parts}
-            selected={selected}
-            theme={theme}
-            onPick={(part) => {
-              setSelected(part);
-              setAnswer(null);
+          <model-viewer
+            ref={(el: HTMLElement | null) => {
+              viewerRef.current = el;
             }}
-          />
+            src={modelSrc}
+            alt="3D human model"
+            auto-rotate
+            rotation-per-second="25%"
+            camera-controls
+            touch-action="pan-y"
+            shadow-intensity="2"
+            exposure="1"
+            camera-orbit="0deg 80deg 130%"
+            field-of-view="30deg"
+            interaction-prompt="none"
+            style={{ width: "100%", height: "min(74vh, 720px)", background: theme === "dark" ? "#0b1220" : "white" }}
+          >
+            {hotspots.map((h) => (
+              <React.Fragment key={h.id}>
+                <button
+                  className="hotspot"
+                  slot={h.id}
+                  data-position={h.position}
+                  data-normal={h.normal}
+                  onClick={() => {
+                    setSelected(h.key);
+                    setAnswer(null);
+                  }}
+                />
+                <div className="annotation">{t.parts[h.key]}</div>
+              </React.Fragment>
+            ))}
+          </model-viewer>
         </div>
 
         <aside className={`rounded-3xl border p-5 ${panel}`}>
@@ -320,3 +401,4 @@ export default function BodyMap() {
     </div>
   );
 }
+
