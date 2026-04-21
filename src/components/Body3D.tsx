@@ -10,33 +10,18 @@ type Zone =
   | "leftLeg"
   | "rightLeg";
 type Body3DTheme = "dark" | "light";
-type Vec2 = [number, number];
 type Vec3 = [number, number, number];
-type PickPoint = { top: number; left: number };
-
-type SketchfabPick = {
-  position3D?: Vec3;
-  instanceID?: number;
-};
-
-type SketchfabProjection = {
-  canvasCoord?: Vec2;
-};
 
 type SketchfabApi = {
   start: (callback?: () => void) => void;
   stop: (callback?: () => void) => void;
   addEventListener: (event: "viewerready", callback: () => void) => void;
-  pickFromScreen: (
-    position2D: Vec2,
-    callback: (error: unknown, coordinates?: SketchfabPick) => void,
-  ) => void;
-  getWorldToScreenCoordinates: (
-    worldCoordinates: Vec3,
-    callback: (coordinates?: SketchfabProjection) => void,
-  ) => void;
   setBackground: (
     options: { color: Vec3 },
+    callback?: (error?: unknown) => void,
+  ) => void;
+  setUserInteraction: (
+    enable: boolean,
     callback?: (error?: unknown) => void,
   ) => void;
 };
@@ -97,115 +82,90 @@ const zoneDots: Array<{
   label: string;
   top: number;
   left: number;
-  pickPoints: PickPoint[];
+  width: number;
+  height: number;
+  radius: string;
+  rotate?: number;
 }> = [
   {
     zone: "head",
     label: "Голова",
-    top: 22,
-    left: 47,
-    pickPoints: [
-      { top: 22, left: 47 },
-      { top: 24, left: 47 },
-      { top: 23, left: 50 },
-    ],
+    top: 7,
+    left: 43,
+    width: 15,
+    height: 13,
+    radius: "999px",
   },
   {
     zone: "chest",
     label: "Грудь",
-    top: 35,
-    left: 48,
-    pickPoints: [
-      { top: 35, left: 48 },
-      { top: 35, left: 51 },
-      { top: 38, left: 48 },
-    ],
+    top: 23,
+    left: 33,
+    width: 30,
+    height: 17,
+    radius: "36% 36% 22% 22%",
   },
   {
     zone: "abdomen",
     label: "Живот",
-    top: 48,
-    left: 48,
-    pickPoints: [
-      { top: 48, left: 48 },
-      { top: 51, left: 48 },
-      { top: 45, left: 48 },
-    ],
+    top: 40,
+    left: 37,
+    width: 22,
+    height: 20,
+    radius: "34% 34% 46% 46%",
   },
   {
     zone: "back",
     label: "Спина",
-    top: 37,
-    left: 56,
-    pickPoints: [
-      { top: 37, left: 56 },
-      { top: 40, left: 57 },
-      { top: 34, left: 55 },
-    ],
+    top: 24,
+    left: 55,
+    width: 15,
+    height: 27,
+    radius: "38%",
   },
   {
     zone: "leftArm",
     label: "Левая рука",
-    top: 38,
-    left: 35,
-    pickPoints: [
-      { top: 38, left: 35 },
-      { top: 42, left: 32 },
-      { top: 46, left: 30 },
-      { top: 35, left: 39 },
-    ],
+    top: 29,
+    left: 7,
+    width: 23,
+    height: 35,
+    radius: "999px",
+    rotate: 16,
   },
   {
     zone: "rightArm",
     label: "Правая рука",
-    top: 37,
-    left: 61,
-    pickPoints: [
-      { top: 37, left: 61 },
-      { top: 42, left: 64 },
-      { top: 46, left: 67 },
-      { top: 35, left: 57 },
-    ],
+    top: 28,
+    left: 67,
+    width: 23,
+    height: 35,
+    radius: "999px",
+    rotate: -16,
   },
   {
     zone: "leftLeg",
     label: "Левая нога",
-    top: 68,
-    left: 41,
-    pickPoints: [
-      { top: 68, left: 41 },
-      { top: 63, left: 43 },
-      { top: 76, left: 43 },
-    ],
+    top: 59,
+    left: 28,
+    width: 18,
+    height: 37,
+    radius: "999px",
+    rotate: 5,
   },
   {
     zone: "rightLeg",
     label: "Правая нога",
-    top: 68,
-    left: 54,
-    pickPoints: [
-      { top: 68, left: 54 },
-      { top: 63, left: 53 },
-      { top: 76, left: 54 },
-    ],
+    top: 59,
+    left: 52,
+    width: 18,
+    height: 37,
+    radius: "999px",
+    rotate: -5,
   },
 ];
 
-type DotPosition = {
-  top: number | string;
-  left: number | string;
-  visible: boolean;
-};
-
 let sketchfabScriptPromise: Promise<void> | null = null;
-
-function getFallbackPositions(): DotPosition[] {
-  return zoneDots.map((dot) => ({
-    top: `${dot.top}%`,
-    left: `${dot.left}%`,
-    visible: true,
-  }));
-}
 
 function loadSketchfabViewerScript() {
   if (window.Sketchfab) return Promise.resolve();
@@ -249,102 +209,14 @@ export default function Body3D({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const apiRef = useRef<SketchfabApi | null>(null);
   const themeRef = useRef(theme);
-  const anchorsRef = useRef<Array<Vec3 | null>>(zoneDots.map(() => null));
-  const [dotPositions, setDotPositions] = useState<DotPosition[]>(() =>
-    getFallbackPositions(),
-  );
+  const [hoveredZone, setHoveredZone] = useState<Zone | null>(null);
   const background = themeBackgrounds[theme];
 
   useEffect(() => {
-    const container = containerRef.current;
     const iframe = iframeRef.current;
-    if (!container || !iframe) return undefined;
+    if (!iframe) return undefined;
 
-    let intervalId = 0;
     let cancelled = false;
-
-    function getPickCoordinates(point: PickPoint): Vec2 {
-      const iframeHeight = iframe.clientHeight;
-      const containerX = (container.clientWidth * point.left) / 100;
-      const containerY = (container.clientHeight * point.top) / 100;
-      const iframeX = containerX - iframe.offsetLeft;
-      const iframeY = containerY - iframe.offsetTop;
-      const pixelRatio = window.devicePixelRatio || 1;
-
-      return [iframeX * pixelRatio, (iframeHeight - iframeY) * pixelRatio];
-    }
-
-    function projectAnchors(api: SketchfabApi) {
-      const anchors = anchorsRef.current;
-      let pending = 0;
-      const nextPositions = getFallbackPositions();
-
-      anchors.forEach((anchor, index) => {
-        if (!anchor) return;
-        pending += 1;
-
-        api.getWorldToScreenCoordinates(anchor, (coordinates) => {
-          const canvasCoordinates = coordinates?.canvasCoord;
-
-          if (canvasCoordinates) {
-            const left = iframe.offsetLeft + canvasCoordinates[0];
-            const top = iframe.offsetTop + canvasCoordinates[1];
-            nextPositions[index] = {
-              left,
-              top,
-              visible:
-                left > -24 &&
-                top > -24 &&
-                left < container.clientWidth + 24 &&
-                top < container.clientHeight + 24,
-            };
-          }
-
-          pending -= 1;
-          if (pending === 0 && !cancelled) {
-            setDotPositions(nextPositions);
-          }
-        });
-      });
-    }
-
-    function calibrateDot(
-      api: SketchfabApi,
-      index: number,
-      pointIndex: number,
-      onDone: () => void,
-    ) {
-      const dot = zoneDots[index];
-      const point = dot.pickPoints[pointIndex];
-
-      if (!point) {
-        onDone();
-        return;
-      }
-
-      api.pickFromScreen(getPickCoordinates(point), (error, coordinates) => {
-        if (!error && coordinates?.position3D) {
-          anchorsRef.current[index] = coordinates.position3D;
-          onDone();
-          return;
-        }
-
-        calibrateDot(api, index, pointIndex + 1, onDone);
-      });
-    }
-
-    function calibrateAnchors(api: SketchfabApi) {
-      let pending = zoneDots.length;
-
-      zoneDots.forEach((_, index) => {
-        calibrateDot(api, index, 0, () => {
-          pending -= 1;
-          if (pending === 0 && !cancelled) {
-            projectAnchors(api);
-          }
-        });
-      });
-    }
 
     loadSketchfabViewerScript()
       .then(() => {
@@ -376,11 +248,7 @@ export default function Body3D({
             api.addEventListener("viewerready", () => {
               if (cancelled) return;
               applySketchfabBackground(api, themeRef.current);
-              window.setTimeout(() => {
-                if (cancelled) return;
-                calibrateAnchors(api);
-                intervalId = window.setInterval(() => projectAnchors(api), 50);
-              }, 650);
+              api.setUserInteraction(false);
             });
           },
           error() {
@@ -394,7 +262,6 @@ export default function Body3D({
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
       apiRef.current?.stop();
       apiRef.current = null;
     };
@@ -431,36 +298,57 @@ export default function Body3D({
           border: 0,
           display: "block",
           background: background.css,
+          pointerEvents: "none",
         }}
       />
 
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-        {zoneDots.map((dot, index) => (
-          <button
-            key={`${dot.zone}-${index}`}
-            type="button"
-            aria-label={dot.label}
-            onClick={() => onPick(dot.zone)}
-            style={{
-              position: "absolute",
-              top: dotPositions[index]?.top ?? `${dot.top}%`,
-              left: dotPositions[index]?.left ?? `${dot.left}%`,
-              transform: "translate(-50%, -50%)",
-              display: dotPositions[index]?.visible === false ? "none" : "block",
-              pointerEvents: "auto",
-              width: 18,
-              height: 18,
-              border: "2px solid rgba(255,255,255,0.92)",
-              borderRadius: "999px",
-              padding: 0,
-              background:
-                "radial-gradient(circle at 35% 35%, #f8fafc 0 16%, #34d399 20% 58%, #0f766e 62% 100%)",
-              cursor: "pointer",
-              boxShadow:
-                "0 0 0 7px rgba(45,212,191,0.2), 0 10px 22px rgba(0,0,0,0.34)",
-            }}
-          />
-        ))}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "52%",
+          width: "min(48%, 360px)",
+          height: "86%",
+          transform: "translate(-50%, -50%)",
+          pointerEvents: "none",
+        }}
+      >
+        {zoneDots.map((dot) => {
+          const active = hoveredZone === dot.zone;
+          return (
+            <button
+              key={dot.zone}
+              type="button"
+              aria-label={dot.label}
+              title={dot.label}
+              onClick={() => onPick(dot.zone)}
+              onPointerEnter={() => setHoveredZone(dot.zone)}
+              onPointerLeave={() => setHoveredZone(null)}
+              style={{
+                position: "absolute",
+                top: `${dot.top}%`,
+                left: `${dot.left}%`,
+                width: `${dot.width}%`,
+                height: `${dot.height}%`,
+                transform: `rotate(${dot.rotate ?? 0}deg)`,
+                transformOrigin: "50% 50%",
+                pointerEvents: "auto",
+                border: active
+                  ? "1px solid rgba(255,255,255,0.74)"
+                  : "1px solid transparent",
+                borderRadius: dot.radius,
+                padding: 0,
+                background: active
+                  ? "rgba(45,212,191,0.22)"
+                  : "rgba(45,212,191,0.02)",
+                cursor: "pointer",
+                boxShadow: active
+                  ? "0 0 0 5px rgba(45,212,191,0.12), 0 16px 34px rgba(0,0,0,0.2)"
+                  : "none",
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );
