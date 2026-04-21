@@ -1,14 +1,69 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
+export type Body3DZone =
+  | "head"
+  | "chest"
+  | "abdomen"
+  | "back"
+  | "leftArm"
+  | "rightArm"
+  | "leftLeg"
+  | "rightLeg";
 
 type Body3DTheme = "dark" | "light";
+type Vec2 = [number, number];
 type Vec3 = [number, number, number];
+type PickPoint = { top: number; left: number };
+
+type SketchfabPick = {
+  position3D?: Vec3;
+};
+
+type SketchfabCamera = {
+  position: Vec3;
+  target: Vec3;
+};
 
 type SketchfabApi = {
   start: (callback?: () => void) => void;
   stop: (callback?: () => void) => void;
-  addEventListener: (event: "viewerready", callback: () => void) => void;
+  addEventListener: (
+    event: "viewerready" | "annotationSelect",
+    callback: (index?: number) => void,
+  ) => void;
   setBackground: (
     options: { color: Vec3 },
+    callback?: (error?: unknown) => void,
+  ) => void;
+  getCameraLookAt: (
+    callback: (error: unknown, camera?: SketchfabCamera) => void,
+  ) => void;
+  pickFromScreen: (
+    position2D: Vec2,
+    callback: (error: unknown, coordinates?: SketchfabPick) => void,
+  ) => void;
+  removeAllAnnotations: (callback?: (error?: unknown) => void) => void;
+  createAnnotationFromWorldPosition: (
+    position: Vec3,
+    eye: Vec3,
+    target: Vec3,
+    title: string,
+    text: string,
+    callback?: (error: unknown, index?: number) => void,
+  ) => void;
+  hideAnnotationTooltips: (callback?: (error?: unknown) => void) => void;
+  setAnnotationCameraTransition: (
+    preventAnimation: boolean,
+    preventMove: boolean,
+    callback?: (error?: unknown) => void,
+  ) => void;
+  setAnnotationsTexture: (
+    options: {
+      url: string;
+      colNumber: number;
+      padding: number;
+      iconSize: number;
+    },
     callback?: (error?: unknown) => void,
   ) => void;
 };
@@ -64,6 +119,85 @@ const themeBackgrounds: Record<
   light: { css: "#f8fafc", sketchfab: [0.973, 0.984, 0.996] },
 };
 
+const bodyAnnotations: Array<{
+  zone: Body3DZone;
+  label: string;
+  pickPoints: PickPoint[];
+}> = [
+  {
+    zone: "head",
+    label: "Голова",
+    pickPoints: [
+      { top: 18, left: 50 },
+      { top: 20, left: 50 },
+      { top: 19, left: 47 },
+    ],
+  },
+  {
+    zone: "chest",
+    label: "Грудь",
+    pickPoints: [
+      { top: 34, left: 50 },
+      { top: 35, left: 47 },
+      { top: 35, left: 53 },
+    ],
+  },
+  {
+    zone: "abdomen",
+    label: "Живот",
+    pickPoints: [
+      { top: 47, left: 50 },
+      { top: 50, left: 50 },
+      { top: 44, left: 50 },
+    ],
+  },
+  {
+    zone: "back",
+    label: "Спина",
+    pickPoints: [
+      { top: 36, left: 58 },
+      { top: 39, left: 59 },
+      { top: 33, left: 57 },
+    ],
+  },
+  {
+    zone: "leftArm",
+    label: "Левая рука",
+    pickPoints: [
+      { top: 38, left: 35 },
+      { top: 43, left: 31 },
+      { top: 48, left: 29 },
+    ],
+  },
+  {
+    zone: "rightArm",
+    label: "Правая рука",
+    pickPoints: [
+      { top: 38, left: 65 },
+      { top: 43, left: 69 },
+      { top: 48, left: 71 },
+    ],
+  },
+  {
+    zone: "leftLeg",
+    label: "Левая нога",
+    pickPoints: [
+      { top: 64, left: 44 },
+      { top: 70, left: 43 },
+      { top: 77, left: 43 },
+    ],
+  },
+  {
+    zone: "rightLeg",
+    label: "Правая нога",
+    pickPoints: [
+      { top: 64, left: 56 },
+      { top: 70, left: 57 },
+      { top: 77, left: 57 },
+    ],
+  },
+];
+
 let sketchfabScriptPromise: Promise<void> | null = null;
 
 function loadSketchfabViewerScript() {
@@ -97,17 +231,138 @@ function applySketchfabBackground(api: SketchfabApi | null, theme: Body3DTheme) 
   api?.setBackground({ color: themeBackgrounds[theme].sketchfab });
 }
 
+function createAnnotationTexture() {
+  const iconSize = 64;
+  const colNumber = bodyAnnotations.length;
+  const circles = bodyAnnotations
+    .map(
+      (_, index) => `
+        <g transform="translate(${index * iconSize} 0)">
+          <circle cx="32" cy="32" r="21" fill="#0f766e" opacity="0.35"/>
+          <circle cx="32" cy="32" r="14" fill="#34d399"/>
+          <circle cx="32" cy="32" r="7" fill="#f8fafc"/>
+        </g>
+      `,
+    )
+    .join("");
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize * colNumber}" height="${iconSize}" viewBox="0 0 ${iconSize * colNumber} ${iconSize}">
+      ${circles}
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export default function Body3D({
   theme = "dark",
   hint,
+  onPick,
 }: {
   theme?: Body3DTheme;
   hint?: string;
+  onPick?: (zone: Body3DZone) => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const apiRef = useRef<SketchfabApi | null>(null);
   const themeRef = useRef(theme);
+  const onPickRef = useRef(onPick);
+  const annotationZonesRef = useRef<Record<number, Body3DZone>>({});
   const background = themeBackgrounds[theme];
+
+  const getPickCoordinates = useCallback((point: PickPoint): Vec2 | null => {
+    const iframe = iframeRef.current;
+    if (!iframe) return null;
+
+    const parent = iframe.parentElement;
+    if (!parent) return null;
+
+    const iframeHeight = iframe.clientHeight;
+    const containerX = (parent.clientWidth * point.left) / 100;
+    const containerY = (parent.clientHeight * point.top) / 100;
+    const iframeX = containerX - iframe.offsetLeft;
+    const iframeY = containerY - iframe.offsetTop;
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    return [iframeX * pixelRatio, (iframeHeight - iframeY) * pixelRatio];
+  }, []);
+
+  const pickAnnotationPoint = useCallback(
+    function pickAnnotationPoint(
+      api: SketchfabApi,
+      pickPoints: PickPoint[],
+      callback: (position?: Vec3) => void,
+      index = 0,
+    ) {
+      const point = pickPoints[index];
+      const screenPoint = point ? getPickCoordinates(point) : null;
+
+      if (!point || !screenPoint) {
+        callback();
+        return;
+      }
+
+      api.pickFromScreen(screenPoint, (error, coordinates) => {
+        if (!error && coordinates?.position3D) {
+          callback(coordinates.position3D);
+          return;
+        }
+
+        pickAnnotationPoint(api, pickPoints, callback, index + 1);
+      });
+    },
+    [getPickCoordinates],
+  );
+
+  const createBodyAnnotations = useCallback((api: SketchfabApi) => {
+    api.getCameraLookAt((cameraError, camera) => {
+      if (cameraError || !camera) return;
+
+      api.removeAllAnnotations(() => {
+        annotationZonesRef.current = {};
+        api.setAnnotationCameraTransition(true, true);
+        api.setAnnotationsTexture({
+          url: createAnnotationTexture(),
+          colNumber: bodyAnnotations.length,
+          padding: 0,
+          iconSize: 64,
+        });
+
+        function createNextAnnotation(index: number) {
+          const annotation = bodyAnnotations[index];
+          if (!annotation) {
+            api.hideAnnotationTooltips();
+            return;
+          }
+
+          pickAnnotationPoint(api, annotation.pickPoints, (position) => {
+            if (!position) {
+              createNextAnnotation(index + 1);
+              return;
+            }
+
+            api.createAnnotationFromWorldPosition(
+              position,
+              camera.position,
+              camera.target,
+              annotation.label,
+              "",
+              (error, createdIndex) => {
+                if (!error && typeof createdIndex === "number") {
+                  annotationZonesRef.current[createdIndex] = annotation.zone;
+                }
+                api.hideAnnotationTooltips();
+                createNextAnnotation(index + 1);
+              },
+            );
+          });
+        }
+
+        createNextAnnotation(0);
+      });
+    });
+  }, [pickAnnotationPoint]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -131,7 +386,7 @@ export default function Body3D({
           ui_watermark: 0,
           ui_watermark_link: 0,
           ui_hint: 0,
-          ui_annotations: 0,
+          ui_annotations: 1,
           ui_ar: 0,
           ui_fullscreen: 0,
           ui_general_controls: 0,
@@ -142,9 +397,22 @@ export default function Body3D({
           success(api) {
             apiRef.current = api;
             api.start();
+            api.addEventListener("annotationSelect", (index) => {
+              if (typeof index !== "number") return;
+              const zone =
+                annotationZonesRef.current[index] ??
+                bodyAnnotations[index]?.zone ??
+                bodyAnnotations[index - 1]?.zone;
+              if (zone) onPickRef.current?.(zone);
+              api.hideAnnotationTooltips();
+            });
             api.addEventListener("viewerready", () => {
               if (cancelled) return;
               applySketchfabBackground(api, themeRef.current);
+              window.setTimeout(() => {
+                if (cancelled) return;
+                createBodyAnnotations(api);
+              }, 900);
             });
           },
           error() {
@@ -161,12 +429,16 @@ export default function Body3D({
       apiRef.current?.stop();
       apiRef.current = null;
     };
-  }, []);
+  }, [createBodyAnnotations]);
 
   useEffect(() => {
     themeRef.current = theme;
     applySketchfabBackground(apiRef.current, theme);
   }, [theme]);
+
+  useEffect(() => {
+    onPickRef.current = onPick;
+  }, [onPick]);
 
   return (
     <div
