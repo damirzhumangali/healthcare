@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Brain, Globe, Moon, Sparkles, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
-import Body3D, { type Body3DZone } from "../components/Body3D";
+import Body3D from "../components/Body3D";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
@@ -118,17 +118,6 @@ const bodyPartButtons: BodyPartKey[] = [
   "leftLeg",
   "rightLeg",
 ];
-
-const body3DZoneToPart: Record<Body3DZone, BodyPartKey> = {
-  head: "head",
-  chest: "chest",
-  abdomen: "belly",
-  back: "back",
-  leftArm: "leftArm",
-  rightArm: "rightArm",
-  leftLeg: "leftLeg",
-  rightLeg: "rightLeg",
-};
 
 type AnswerSection = {
   title?: string;
@@ -329,14 +318,7 @@ export default function BodyMap() {
 
       <section className="max-w-6xl mx-auto px-4 pb-10 grid lg:grid-cols-[1.35fr_.65fr] gap-4">
         <div className={`rounded-3xl border overflow-hidden ${panel}`}>
-          <Body3D
-            theme={theme}
-            hint={t.rotateHint}
-            onPick={(zone) => {
-              setSelected(body3DZoneToPart[zone]);
-              setAnswer(null);
-            }}
-          />
+          <Body3D theme={theme} hint={t.rotateHint} />
         </div>
 
         <aside className={`rounded-3xl border p-5 ${panel}`}>
