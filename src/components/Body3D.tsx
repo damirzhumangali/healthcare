@@ -1,20 +1,20 @@
 type Zone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
 
 const SKETCHFAB_MODEL_URL =
-  "https://sketchfab.com/models/33162ec759e04d2985dbbdf4ec908d66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=1&ui_stop=0&ui_watermark=1";
+  "https://sketchfab.com/models/33162ec759e04d2985dbbdf4ec908d66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=0&ui_stop=0&ui_watermark=0&ui_watermark_link=0&ui_hint=0";
 
-const zoneButtons: Array<{
+const zoneDots: Array<{
   zone: Zone;
   label: string;
   top: string;
   left: string;
 }> = [
-  { zone: "head", label: "Голова", top: "15%", left: "50%" },
-  { zone: "chest", label: "Грудь", top: "31%", left: "50%" },
-  { zone: "abdomen", label: "Живот", top: "47%", left: "50%" },
-  { zone: "back", label: "Спина", top: "39%", left: "60%" },
-  { zone: "arm", label: "Рука", top: "39%", left: "31%" },
-  { zone: "arm", label: "Рука", top: "39%", left: "69%" },
+  { zone: "head", label: "Голова", top: "23%", left: "50%" },
+  { zone: "chest", label: "Грудь", top: "34%", left: "50%" },
+  { zone: "abdomen", label: "Живот", top: "48%", left: "50%" },
+  { zone: "back", label: "Спина", top: "39%", left: "59%" },
+  { zone: "arm", label: "Рука", top: "40%", left: "31%" },
+  { zone: "arm", label: "Рука", top: "40%", left: "69%" },
   { zone: "leg", label: "Нога", top: "69%", left: "43%" },
   { zone: "leg", label: "Нога", top: "69%", left: "57%" },
 ];
@@ -46,51 +46,32 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
       />
 
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-        {zoneButtons.map((button, index) => (
+        {zoneDots.map((dot, index) => (
           <button
-            key={`${button.zone}-${index}`}
+            key={`${dot.zone}-${index}`}
             type="button"
-            onClick={() => onPick(button.zone)}
+            aria-label={dot.label}
+            onClick={() => onPick(dot.zone)}
             style={{
               position: "absolute",
-              top: button.top,
-              left: button.left,
+              top: dot.top,
+              left: dot.left,
               transform: "translate(-50%, -50%)",
               pointerEvents: "auto",
-              border: "1px solid rgba(255,255,255,0.22)",
-              borderRadius: 8,
-              padding: "6px 10px",
-              background: "rgba(2,6,23,0.78)",
-              color: "white",
-              fontSize: 12,
-              fontWeight: 700,
+              width: 18,
+              height: 18,
+              border: "2px solid rgba(255,255,255,0.92)",
+              borderRadius: "999px",
+              padding: 0,
+              background:
+                "radial-gradient(circle at 35% 35%, #f8fafc 0 16%, #34d399 20% 58%, #0f766e 62% 100%)",
               cursor: "pointer",
-              boxShadow: "0 12px 28px rgba(0,0,0,0.32)",
+              boxShadow:
+                "0 0 0 7px rgba(45,212,191,0.2), 0 10px 22px rgba(0,0,0,0.34)",
             }}
-          >
-            {button.label}
-          </button>
+          />
         ))}
       </div>
-
-      <a
-        href="https://sketchfab.com/3d-models/ecorche-male-musclenames-anatomy-33162ec759e04d2985dbbdf4ec908d66"
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          position: "absolute",
-          right: 12,
-          bottom: 10,
-          borderRadius: 8,
-          padding: "6px 9px",
-          background: "rgba(2,6,23,0.72)",
-          color: "#cbd5e1",
-          fontSize: 11,
-          textDecoration: "none",
-        }}
-      >
-        Model: chrisfischerart, Sketchfab
-      </a>
     </div>
   );
 }
