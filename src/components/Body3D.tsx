@@ -1,7 +1,7 @@
 type Zone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
 
 const SKETCHFAB_MODEL_URL =
-  "https://sketchfab.com/models/0954aa04666d45aab9633009318f7b66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=1&ui_stop=0&ui_watermark=1";
+  "https://sketchfab.com/models/33162ec759e04d2985dbbdf4ec908d66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=1&ui_stop=0&ui_watermark=1";
 
 const zoneButtons: Array<{
   zone: Zone;
@@ -32,9 +32,9 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
       }}
     >
       <iframe
-        title="Male base muscular anatomy by CharacterZone on Sketchfab"
+        title="Écorché Male Musclenames Anatomy by chrisfischerart on Sketchfab"
         src={SKETCHFAB_MODEL_URL}
-        allow="autoplay; fullscreen; xr-spatial-tracking"
+        allow="autoplay; fullscreen; xr-spatial-tracking; web-share"
         allowFullScreen
         style={{
           width: "100%",
@@ -74,7 +74,7 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
       </div>
 
       <a
-        href="https://sketchfab.com/3d-models/male-base-muscular-anatomy-0954aa04666d45aab9633009318f7b66"
+        href="https://sketchfab.com/3d-models/ecorche-male-musclenames-anatomy-33162ec759e04d2985dbbdf4ec908d66"
         target="_blank"
         rel="noreferrer"
         style={{
@@ -89,7 +89,7 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
           textDecoration: "none",
         }}
       >
-        Model: CharacterZone, CC BY
+        Model: chrisfischerart, Sketchfab
       </a>
     </div>
   );
