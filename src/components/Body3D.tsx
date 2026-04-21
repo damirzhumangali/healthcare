@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { ContactShadows, Environment, Html, OrbitControls, useAnimations, useGLTF } from "@react-three/drei";
+import { ContactShadows, Html, OrbitControls, useAnimations, useGLTF } from "@react-three/drei";
 import type { Mesh, Object3D } from "three";
 
 type Zone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
@@ -151,6 +151,7 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
       <Canvas camera={{ position: [0, 0.28, 4.1], fov: 32 }} shadows>
         <color attach="background" args={["#0b1220"]} />
         <ambientLight intensity={0.82} />
+        <hemisphereLight args={["#e0f2fe", "#172033", 1.15]} />
         <directionalLight position={[2.8, 4.2, 3]} intensity={1.5} castShadow />
         <pointLight position={[-2, 1.8, 2.5]} intensity={0.6} color="#67e8f9" />
         <Suspense fallback={<LoadingModel />}>
@@ -158,7 +159,6 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
             <HumanModel />
             <BodyZones onPick={onPick} />
           </group>
-          <Environment preset="city" />
         </Suspense>
         <ContactShadows opacity={0.3} scale={4} blur={2.5} far={2.8} position={[0, -0.9, 0]} />
         <OrbitControls enablePan={false} minDistance={2.6} maxDistance={5.2} target={[0, 0.18, 0]} />
