@@ -130,6 +130,79 @@ const body3DZoneToPart: Record<Body3DZone, BodyPartKey> = {
   rightLeg: "rightLeg",
 };
 
+type AnswerSection = {
+  title?: string;
+  content: string;
+};
+
+function cleanAnswerText(value: string) {
+  return value.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+}
+
+function parseAnswerSections(answer: string): AnswerSection[] {
+  const sectionRegex = /\*\*([^*]+)\*\*\s*[-–—:]\s*/g;
+  const sections: AnswerSection[] = [];
+  let match: RegExpExecArray | null;
+  let lastTitle: string | undefined;
+  let lastContentStart = 0;
+
+  while ((match = sectionRegex.exec(answer)) !== null) {
+    const prefix = answer.slice(lastContentStart, match.index).trim();
+    if (prefix) {
+      sections.push({ title: lastTitle, content: prefix });
+    }
+
+    lastTitle = cleanAnswerText(match[1]);
+    lastContentStart = sectionRegex.lastIndex;
+  }
+
+  const tail = answer.slice(lastContentStart).trim();
+  if (tail) {
+    sections.push({ title: lastTitle, content: tail });
+  }
+
+  if (sections.length === 0) return [{ content: answer }];
+  return sections;
+}
+
+function AnswerContent({ answer }: { answer: string }) {
+  return (
+    <div className="space-y-3">
+      {parseAnswerSections(answer).map((section, sectionIndex) => {
+        const lines = section.content
+          .replace(/\s+-\s+/g, "\n- ")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        return (
+          <section key={`${section.title ?? "intro"}-${sectionIndex}`} className="space-y-1.5">
+            {section.title && (
+              <h3 className="text-sm font-semibold text-emerald-300">
+                {section.title}
+              </h3>
+            )}
+
+            {lines.map((line, lineIndex) => {
+              const isBullet = line.startsWith("- ");
+              const text = cleanAnswerText(isBullet ? line.slice(2) : line);
+
+              return isBullet ? (
+                <div key={lineIndex} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-300" />
+                  <p>{text}</p>
+                </div>
+              ) : (
+                <p key={lineIndex}>{text}</p>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function BodyMap() {
   const [theme, setTheme] = useState<Theme>(() => {
     const v = window.localStorage.getItem("ha_theme");
@@ -205,8 +278,8 @@ export default function BodyMap() {
 
   return (
     <div className={`min-h-screen ${pageBg}`}>
-      <div className="fixed inset-x-0 top-4 z-50">
-        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
+      <div className="relative z-20 pt-4">
+        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between gap-3">
           <Link
             to="/"
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${panel}`}
@@ -243,7 +316,7 @@ export default function BodyMap() {
         </div>
       </div>
 
-      <header className="pt-20 pb-6">
+      <header className="pt-8 pb-6">
         <div className="max-w-6xl mx-auto px-4">
           <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-sky-400">
             <Globe className="h-3.5 w-3.5" />
@@ -365,13 +438,13 @@ export default function BodyMap() {
 
             {answer && (
               <div
-                className={`mt-3 rounded-2xl border p-3 text-sm leading-relaxed ${
+                className={`mt-3 max-h-[420px] overflow-y-auto rounded-2xl border p-4 pr-3 text-sm leading-6 ${
                   theme === "dark"
                     ? "bg-slate-950/40 border-white/10 text-slate-100"
                     : "bg-white border-slate-200 text-slate-900"
                 }`}
               >
-                {answer}
+                <AnswerContent answer={answer} />
               </div>
             )}
           </div>

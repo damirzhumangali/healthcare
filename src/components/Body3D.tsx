@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Body3DZone =
   | "head"
@@ -14,58 +14,50 @@ type Body3DTheme = "dark" | "light";
 type Vec2 = [number, number];
 type Vec3 = [number, number, number];
 type PickPoint = { top: number; left: number };
+type MarkerPosition = { left: number; top: number };
+
+type BodyMarker = {
+  zone: Body3DZone;
+  label: string;
+  position: MarkerPosition;
+  visible: boolean;
+};
+
+type BodyMarkerWorld = {
+  zone: Body3DZone;
+  label: string;
+  position: Vec3;
+};
 
 type SketchfabPick = {
   position3D?: Vec3;
 };
 
-type SketchfabCamera = {
-  position: Vec3;
-  target: Vec3;
+type SketchfabScreenCoordinates = {
+  canvasCoord?: Vec2;
+  glCoord?: Vec2;
 };
 
 type SketchfabApi = {
   start: (callback?: () => void) => void;
   stop: (callback?: () => void) => void;
   addEventListener: (
-    event: "viewerready" | "annotationSelect",
-    callback: (index?: number) => void,
+    event: "viewerready",
+    callback: () => void,
   ) => void;
   setBackground: (
     options: { color: Vec3 },
     callback?: (error?: unknown) => void,
   ) => void;
-  getCameraLookAt: (
-    callback: (error: unknown, camera?: SketchfabCamera) => void,
-  ) => void;
   pickFromScreen: (
     position2D: Vec2,
     callback: (error: unknown, coordinates?: SketchfabPick) => void,
   ) => void;
-  removeAllAnnotations: (callback?: (error?: unknown) => void) => void;
-  createAnnotationFromWorldPosition: (
-    position: Vec3,
-    eye: Vec3,
-    target: Vec3,
-    title: string,
-    text: string,
-    callback?: (error: unknown, index?: number) => void,
+  getWorldToScreenCoordinates: (
+    worldCoord: Vec3,
+    callback: (coordinates?: SketchfabScreenCoordinates) => void,
   ) => void;
-  hideAnnotationTooltips: (callback?: (error?: unknown) => void) => void;
-  setAnnotationCameraTransition: (
-    preventAnimation: boolean,
-    preventMove: boolean,
-    callback?: (error?: unknown) => void,
-  ) => void;
-  setAnnotationsTexture: (
-    options: {
-      url: string;
-      colNumber: number;
-      padding: number;
-      iconSize: number;
-    },
-    callback?: (error?: unknown) => void,
-  ) => void;
+  recenterCamera?: (callback?: (error?: unknown) => void) => void;
 };
 
 type SketchfabClient = {
@@ -231,30 +223,6 @@ function applySketchfabBackground(api: SketchfabApi | null, theme: Body3DTheme) 
   api?.setBackground({ color: themeBackgrounds[theme].sketchfab });
 }
 
-function createAnnotationTexture() {
-  const iconSize = 64;
-  const colNumber = bodyAnnotations.length;
-  const circles = bodyAnnotations
-    .map(
-      (_, index) => `
-        <g transform="translate(${index * iconSize} 0)">
-          <circle cx="32" cy="32" r="21" fill="#0f766e" opacity="0.35"/>
-          <circle cx="32" cy="32" r="14" fill="#34d399"/>
-          <circle cx="32" cy="32" r="7" fill="#f8fafc"/>
-        </g>
-      `,
-    )
-    .join("");
-
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize * colNumber}" height="${iconSize}" viewBox="0 0 ${iconSize * colNumber} ${iconSize}">
-      ${circles}
-    </svg>
-  `;
-
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
 export default function Body3D({
   theme = "dark",
   hint,
@@ -268,7 +236,9 @@ export default function Body3D({
   const apiRef = useRef<SketchfabApi | null>(null);
   const themeRef = useRef(theme);
   const onPickRef = useRef(onPick);
-  const annotationZonesRef = useRef<Record<number, Body3DZone>>({});
+  const markerWorldRef = useRef<BodyMarkerWorld[]>([]);
+  const markerTimerRef = useRef<number | null>(null);
+  const [markers, setMarkers] = useState<BodyMarker[]>([]);
   const background = themeBackgrounds[theme];
 
   const getPickCoordinates = useCallback((point: PickPoint): Vec2 | null => {
@@ -315,54 +285,103 @@ export default function Body3D({
     [getPickCoordinates],
   );
 
-  const createBodyAnnotations = useCallback((api: SketchfabApi) => {
-    api.getCameraLookAt((cameraError, camera) => {
-      if (cameraError || !camera) return;
+  const updateMarkerPositions = useCallback((api: SketchfabApi) => {
+    const iframe = iframeRef.current;
+    const parent = iframe?.parentElement;
+    const markerWorld = markerWorldRef.current;
 
-      api.removeAllAnnotations(() => {
-        annotationZonesRef.current = {};
-        api.setAnnotationCameraTransition(true, true);
-        api.setAnnotationsTexture({
-          url: createAnnotationTexture(),
-          colNumber: bodyAnnotations.length,
-          padding: 0,
-          iconSize: 64,
-        });
+    if (!iframe || !parent || markerWorld.length === 0) return;
 
-        function createNextAnnotation(index: number) {
-          const annotation = bodyAnnotations[index];
-          if (!annotation) {
-            api.hideAnnotationTooltips();
-            return;
-          }
+    const nextMarkers: BodyMarker[] = [];
+    let pending = markerWorld.length;
+    const containerWidth = parent.clientWidth;
+    const containerHeight = parent.clientHeight;
 
-          pickAnnotationPoint(api, annotation.pickPoints, (position) => {
-            if (!position) {
-              createNextAnnotation(index + 1);
-              return;
-            }
+    markerWorld.forEach((marker, index) => {
+      api.getWorldToScreenCoordinates(marker.position, (coordinates) => {
+        const canvasCoord = coordinates?.canvasCoord;
 
-            api.createAnnotationFromWorldPosition(
-              position,
-              camera.position,
-              camera.target,
-              annotation.label,
-              "",
-              (error, createdIndex) => {
-                if (!error && typeof createdIndex === "number") {
-                  annotationZonesRef.current[createdIndex] = annotation.zone;
-                }
-                api.hideAnnotationTooltips();
-                createNextAnnotation(index + 1);
-              },
-            );
-          });
+        if (!canvasCoord) {
+          nextMarkers[index] = {
+            zone: marker.zone,
+            label: marker.label,
+            position: { left: 0, top: 0 },
+            visible: false,
+          };
+        } else {
+          const left = iframe.offsetLeft + canvasCoord[0];
+          const top = iframe.offsetTop + canvasCoord[1];
+
+          nextMarkers[index] = {
+            zone: marker.zone,
+            label: marker.label,
+            position: { left, top },
+            visible:
+              left >= -24 &&
+              top >= -24 &&
+              left <= containerWidth + 24 &&
+              top <= containerHeight + 24,
+          };
         }
 
-        createNextAnnotation(0);
+        pending -= 1;
+        if (pending === 0) setMarkers(nextMarkers);
       });
     });
-  }, [pickAnnotationPoint]);
+  }, []);
+
+  const stopMarkerTracking = useCallback(() => {
+    if (markerTimerRef.current !== null) {
+      window.clearTimeout(markerTimerRef.current);
+      markerTimerRef.current = null;
+    }
+  }, []);
+
+  const startMarkerTracking = useCallback(
+    (api: SketchfabApi) => {
+      stopMarkerTracking();
+
+      const tick = () => {
+        if (apiRef.current !== api) return;
+        updateMarkerPositions(api);
+        markerTimerRef.current = window.setTimeout(tick, 80);
+      };
+
+      tick();
+    },
+    [stopMarkerTracking, updateMarkerPositions],
+  );
+
+  const createBodyMarkers = useCallback(
+    (api: SketchfabApi) => {
+      const nextMarkerWorld: BodyMarkerWorld[] = [];
+
+      function createNextMarker(index: number) {
+        const marker = bodyAnnotations[index];
+        if (!marker) {
+          markerWorldRef.current = nextMarkerWorld;
+          updateMarkerPositions(api);
+          startMarkerTracking(api);
+          return;
+        }
+
+        pickAnnotationPoint(api, marker.pickPoints, (position) => {
+          if (position) {
+            nextMarkerWorld.push({
+              zone: marker.zone,
+              label: marker.label,
+              position,
+            });
+          }
+
+          createNextMarker(index + 1);
+        });
+      }
+
+      createNextMarker(0);
+    },
+    [pickAnnotationPoint, startMarkerTracking, updateMarkerPositions],
+  );
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -386,7 +405,7 @@ export default function Body3D({
           ui_watermark: 0,
           ui_watermark_link: 0,
           ui_hint: 0,
-          ui_annotations: 1,
+          ui_annotations: 0,
           ui_ar: 0,
           ui_fullscreen: 0,
           ui_general_controls: 0,
@@ -397,22 +416,22 @@ export default function Body3D({
           success(api) {
             apiRef.current = api;
             api.start();
-            api.addEventListener("annotationSelect", (index) => {
-              if (typeof index !== "number") return;
-              const zone =
-                annotationZonesRef.current[index] ??
-                bodyAnnotations[index]?.zone ??
-                bodyAnnotations[index - 1]?.zone;
-              if (zone) onPickRef.current?.(zone);
-              api.hideAnnotationTooltips();
-            });
             api.addEventListener("viewerready", () => {
               if (cancelled) return;
               applySketchfabBackground(api, themeRef.current);
-              window.setTimeout(() => {
+              const createMarkers = () => {
                 if (cancelled) return;
-                createBodyAnnotations(api);
-              }, 900);
+                createBodyMarkers(api);
+              };
+
+              if (api.recenterCamera) {
+                api.recenterCamera(() => {
+                  window.setTimeout(createMarkers, 700);
+                });
+                return;
+              }
+
+              window.setTimeout(createMarkers, 900);
             });
           },
           error() {
@@ -426,10 +445,13 @@ export default function Body3D({
 
     return () => {
       cancelled = true;
+      stopMarkerTracking();
+      markerWorldRef.current = [];
+      setMarkers([]);
       apiRef.current?.stop();
       apiRef.current = null;
     };
-  }, [createBodyAnnotations]);
+  }, [createBodyMarkers, stopMarkerTracking]);
 
   useEffect(() => {
     themeRef.current = theme;
@@ -445,8 +467,8 @@ export default function Body3D({
       style={{
         position: "relative",
         width: "100%",
-        height: "min(74vh, 720px)",
-        minHeight: 520,
+        height: "clamp(500px, 68vh, 680px)",
+        minHeight: 500,
         overflow: "hidden",
         background: background.css,
       }}
@@ -458,15 +480,63 @@ export default function Body3D({
         allowFullScreen
         style={{
           position: "absolute",
-          top: -72,
-          left: -96,
-          width: "calc(100% + 192px)",
-          height: "calc(100% + 144px)",
+          top: -56,
+          left: -82,
+          width: "calc(100% + 164px)",
+          height: "calc(100% + 112px)",
           border: 0,
           display: "block",
           background: background.css,
         }}
       />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+        }}
+      >
+        {markers.map((marker) => (
+          <button
+            key={marker.zone}
+            type="button"
+            aria-label={marker.label}
+            title={marker.label}
+            onClick={(event) => {
+              event.stopPropagation();
+              onPickRef.current?.(marker.zone);
+            }}
+            style={{
+              position: "absolute",
+              left: marker.position.left,
+              top: marker.position.top,
+              width: 28,
+              height: 28,
+              display: marker.visible ? "grid" : "none",
+              placeItems: "center",
+              transform: "translate(-50%, -50%)",
+              border: "1px solid rgba(255,255,255,0.72)",
+              borderRadius: "999px",
+              background: "rgba(15,118,110,0.42)",
+              boxShadow:
+                "0 0 0 7px rgba(16,185,129,0.22), 0 10px 28px rgba(0,0,0,0.35)",
+              cursor: "pointer",
+              pointerEvents: "auto",
+            }}
+          >
+            <span
+              style={{
+                width: 9,
+                height: 9,
+                borderRadius: "999px",
+                background: "#f8fafc",
+                boxShadow: "0 0 0 4px #34d399",
+              }}
+            />
+          </button>
+        ))}
+      </div>
 
       <div
         style={{
