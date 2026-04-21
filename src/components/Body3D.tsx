@@ -1,81 +1,170 @@
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { ContactShadows, Environment, Html, OrbitControls, useAnimations, useGLTF } from "@react-three/drei";
+import type { Mesh, Object3D } from "three";
 
 type Zone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
 
-function ZoneMesh({
+const MODEL_URL = "/models/real-human.glb";
+
+function isMesh(object: Object3D): object is Mesh {
+  return (object as Mesh).isMesh === true;
+}
+
+function HumanModel() {
+  const gltf = useGLTF(MODEL_URL);
+  const { actions } = useAnimations(gltf.animations, gltf.scene);
+
+  useMemo(() => {
+    gltf.scene.traverse((object) => {
+      if (isMesh(object)) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+      }
+    });
+  }, [gltf.scene]);
+
+  useEffect(() => {
+    const idle = actions.Idle;
+    idle?.reset().fadeIn(0.2).play();
+    return () => {
+      idle?.fadeOut(0.2);
+    };
+  }, [actions]);
+
+  return <primitive object={gltf.scene} />;
+}
+
+function LoadingModel() {
+  return (
+    <Html center>
+      <div
+        style={{
+          padding: "8px 12px",
+          borderRadius: 8,
+          background: "rgba(2,6,23,0.78)",
+          color: "#e2e8f0",
+          fontSize: 13,
+          fontWeight: 700,
+        }}
+      >
+        Загрузка 3D
+      </div>
+    </Html>
+  );
+}
+
+function HitZone({
   zone,
+  label,
   position,
   scale,
+  rotation,
   onPick,
-  label,
 }: {
   zone: Zone;
+  label: string;
   position: [number, number, number];
   scale: [number, number, number];
-  onPick: (z: Zone) => void;
-  label: string;
+  rotation?: [number, number, number];
+  onPick: (zone: Zone) => void;
 }) {
-  return (
-    <group position={position} scale={scale} onClick={(e) => (e.stopPropagation(), onPick(zone))}>
-      {/* Прозрачная "зона" */}
-      <mesh>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial transparent opacity={0.18} />
-      </mesh>
+  const [hovered, setHovered] = useState(false);
 
-      {/* Подпись */}
-      <Html center style={{ pointerEvents: "none" }}>
-        <div
-          style={{
-            padding: "6px 10px",
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(0,0,0,0.45)",
-            fontSize: 12,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </div>
-      </Html>
+  function pick(event: ThreeEvent<MouseEvent>) {
+    event.stopPropagation();
+    onPick(zone);
+  }
+
+  function show(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
+    setHovered(true);
+  }
+
+  function hide(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
+    setHovered(false);
+  }
+
+  return (
+    <group
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      onClick={pick}
+      onPointerOver={show}
+      onPointerOut={hide}
+    >
+      <mesh>
+        <capsuleGeometry args={[1, 0.55, 12, 24]} />
+        <meshStandardMaterial
+          color={hovered ? "#34d399" : "#38bdf8"}
+          transparent
+          opacity={hovered ? 0.28 : 0.04}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.88]} scale={[0.18, 0.18, 0.18]}>
+        <sphereGeometry args={[1, 18, 18]} />
+        <meshStandardMaterial color={hovered ? "#34d399" : "#38bdf8"} emissive={hovered ? "#064e3b" : "#075985"} />
+      </mesh>
+      {hovered ? (
+        <Html center position={[0, 0.72, 1]} style={{ pointerEvents: "none" }}>
+          <div
+            style={{
+              padding: "6px 10px",
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.2)",
+              background: "rgba(2,6,23,0.84)",
+              color: "white",
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </div>
+        </Html>
+      ) : null}
     </group>
   );
 }
 
-function Mannequin({ onPick }: { onPick: (z: Zone) => void }) {
-  // Простой “манекен” из кликабельных зон
+function BodyZones({ onPick }: { onPick: (zone: Zone) => void }) {
   return (
-    <group>
-      {/* Голова */}
-      <ZoneMesh zone="head" label="Голова" position={[0, 2.1, 0]} scale={[0.55, 0.55, 0.55]} onPick={onPick} />
-      {/* Грудь */}
-      <ZoneMesh zone="chest" label="Грудь" position={[0, 1.35, 0]} scale={[0.9, 0.7, 0.55]} onPick={onPick} />
-      {/* Живот */}
-      <ZoneMesh zone="abdomen" label="Живот" position={[0, 0.65, 0]} scale={[0.9, 0.75, 0.55]} onPick={onPick} />
-      {/* Спина (сзади) */}
-      <ZoneMesh zone="back" label="Спина" position={[0, 1.0, -0.55]} scale={[0.95, 1.35, 0.4]} onPick={onPick} />
-      {/* Руки */}
-      <ZoneMesh zone="arm" label="Рука" position={[1.1, 1.1, 0]} scale={[0.55, 1.35, 0.45]} onPick={onPick} />
-      <ZoneMesh zone="arm" label="Рука" position={[-1.1, 1.1, 0]} scale={[0.55, 1.35, 0.45]} onPick={onPick} />
-      {/* Ноги */}
-      <ZoneMesh zone="leg" label="Нога" position={[0.45, -0.7, 0]} scale={[0.55, 1.55, 0.55]} onPick={onPick} />
-      <ZoneMesh zone="leg" label="Нога" position={[-0.45, -0.7, 0]} scale={[0.55, 1.55, 0.55]} onPick={onPick} />
-    </group>
+    <>
+      <HitZone zone="head" label="Голова" position={[0, 1.56, 0.1]} scale={[0.16, 0.2, 0.14]} onPick={onPick} />
+      <HitZone zone="chest" label="Грудь" position={[0, 1.12, 0.12]} scale={[0.31, 0.34, 0.16]} onPick={onPick} />
+      <HitZone zone="abdomen" label="Живот" position={[0, 0.74, 0.12]} scale={[0.29, 0.3, 0.15]} onPick={onPick} />
+      <HitZone zone="back" label="Спина" position={[0, 1.0, -0.16]} scale={[0.35, 0.5, 0.12]} onPick={onPick} />
+      <HitZone zone="arm" label="Рука" position={[-0.58, 0.84, 0.08]} rotation={[0, 0, -0.08]} scale={[0.12, 0.48, 0.12]} onPick={onPick} />
+      <HitZone zone="arm" label="Рука" position={[0.58, 0.84, 0.08]} rotation={[0, 0, 0.08]} scale={[0.12, 0.48, 0.12]} onPick={onPick} />
+      <HitZone zone="leg" label="Нога" position={[-0.2, 0.24, 0.08]} scale={[0.12, 0.58, 0.12]} onPick={onPick} />
+      <HitZone zone="leg" label="Нога" position={[0.2, 0.24, 0.08]} scale={[0.12, 0.58, 0.12]} onPick={onPick} />
+    </>
   );
 }
 
 export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
   return (
-    <div style={{ width: "100%", height: 420, borderRadius: 18, overflow: "hidden", border: "1px solid rgba(255,255,255,0.12)" }}>
-      <Canvas camera={{ position: [0, 1.4, 4.2], fov: 45 }}>
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[3, 5, 2]} intensity={1.2} />
-
-        <Mannequin onPick={onPick} />
-
-        <OrbitControls enablePan={false} minDistance={3} maxDistance={6} />
+    <div style={{ width: "100%", height: "min(74vh, 720px)", minHeight: 520, background: "#0b1220" }}>
+      <Canvas camera={{ position: [0, 0.28, 4.1], fov: 32 }} shadows>
+        <color attach="background" args={["#0b1220"]} />
+        <ambientLight intensity={0.82} />
+        <directionalLight position={[2.8, 4.2, 3]} intensity={1.5} castShadow />
+        <pointLight position={[-2, 1.8, 2.5]} intensity={0.6} color="#67e8f9" />
+        <Suspense fallback={<LoadingModel />}>
+          <group position={[0, -0.86, 0]} scale={1.24}>
+            <HumanModel />
+            <BodyZones onPick={onPick} />
+          </group>
+          <Environment preset="city" />
+        </Suspense>
+        <ContactShadows opacity={0.3} scale={4} blur={2.5} far={2.8} position={[0, -0.9, 0]} />
+        <OrbitControls enablePan={false} minDistance={2.6} maxDistance={5.2} target={[0, 0.18, 0]} />
       </Canvas>
     </div>
   );
 }
+
+useGLTF.preload(MODEL_URL);
