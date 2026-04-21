@@ -1,14 +1,5 @@
 import { useEffect, useRef } from "react";
 
-type Zone =
-  | "head"
-  | "chest"
-  | "abdomen"
-  | "back"
-  | "leftArm"
-  | "rightArm"
-  | "leftLeg"
-  | "rightLeg";
 type Body3DTheme = "dark" | "light";
 type Vec3 = [number, number, number];
 
@@ -73,20 +64,6 @@ const themeBackgrounds: Record<
   light: { css: "#f8fafc", sketchfab: [0.973, 0.984, 0.996] },
 };
 
-const zoneButtons: Array<{
-  zone: Zone;
-  label: string;
-}> = [
-  { zone: "head", label: "Голова" },
-  { zone: "chest", label: "Грудь" },
-  { zone: "abdomen", label: "Живот" },
-  { zone: "back", label: "Спина" },
-  { zone: "leftArm", label: "Левая рука" },
-  { zone: "rightArm", label: "Правая рука" },
-  { zone: "leftLeg", label: "Левая нога" },
-  { zone: "rightLeg", label: "Правая нога" },
-];
-
 let sketchfabScriptPromise: Promise<void> | null = null;
 
 function loadSketchfabViewerScript() {
@@ -121,13 +98,12 @@ function applySketchfabBackground(api: SketchfabApi | null, theme: Body3DTheme) 
 }
 
 export default function Body3D({
-  onPick,
   theme = "dark",
+  hint,
 }: {
-  onPick: (zone: Zone) => void;
   theme?: Body3DTheme;
+  hint?: string;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const apiRef = useRef<SketchfabApi | null>(null);
   const themeRef = useRef(theme);
@@ -194,7 +170,6 @@ export default function Body3D({
 
   return (
     <div
-      ref={containerRef}
       style={{
         position: "relative",
         width: "100%",
@@ -224,39 +199,22 @@ export default function Body3D({
       <div
         style={{
           position: "absolute",
-          insetInline: 16,
-          bottom: 14,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
+          top: 14,
+          left: 14,
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.14)",
+          padding: "7px 10px",
+          background:
+            theme === "dark" ? "rgba(2,6,23,0.66)" : "rgba(255,255,255,0.76)",
+          color: theme === "dark" ? "#e2e8f0" : "#334155",
+          fontSize: 12,
+          fontWeight: 700,
+          boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+          backdropFilter: "blur(10px)",
           pointerEvents: "none",
         }}
       >
-        {zoneButtons.map((button) => (
-          <button
-            key={button.zone}
-            type="button"
-            onClick={() => onPick(button.zone)}
-            style={{
-              pointerEvents: "auto",
-              border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: 8,
-              padding: "7px 10px",
-              background:
-                theme === "dark"
-                  ? "rgba(2,6,23,0.72)"
-                  : "rgba(255,255,255,0.78)",
-              color: theme === "dark" ? "#f8fafc" : "#0f172a",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 700,
-              boxShadow: "0 12px 28px rgba(0,0,0,0.2)",
-              backdropFilter: "blur(10px)",
-            }}
-          >
-            {button.label}
-          </button>
-        ))}
+        {hint}
       </div>
     </div>
   );

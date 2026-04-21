@@ -17,26 +17,17 @@ type BodyPartKey =
   | "leftLeg"
   | "rightLeg";
 
-type Body3DZone =
-  | "head"
-  | "chest"
-  | "abdomen"
-  | "back"
-  | "leftArm"
-  | "rightArm"
-  | "leftLeg"
-  | "rightLeg";
-
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:4000";
 
 const copy = {
   ru: {
     title: "Где у вас болит?",
-    subtitle: "Нажмите на часть тела и опишите симптомы.",
+    subtitle: "Вращайте модель и выберите часть тела.",
     back: "Назад",
     lang: "Язык",
     theme: "Тема",
+    rotateHint: "Вращайте 3D модель",
     aiTitle: "AI‑подсказка (демо)",
     aiHint:
       "Это не диагноз. При серьёзных симптомах вызывайте скорую или обратитесь к врачу.",
@@ -60,10 +51,11 @@ const copy = {
   },
   kk: {
     title: "Қай жеріңіз ауырады?",
-    subtitle: "Дене бөлігін таңдаңыз және симптомдарды жазыңыз.",
+    subtitle: "Модельді айналдырып, дене бөлігін таңдаңыз.",
     back: "Артқа",
     lang: "Тіл",
     theme: "Тақырып",
+    rotateHint: "3D модельді айналдырыңыз",
     aiTitle: "AI‑кеңес (демо)",
     aiHint:
       "Бұл диагноз емес. Қауіпті белгілер болса — жедел жәрдем шақырыңыз немесе дәрігерге көрініңіз.",
@@ -87,10 +79,11 @@ const copy = {
   },
   en: {
     title: "Where does it hurt?",
-    subtitle: "Tap a body part and describe symptoms.",
+    subtitle: "Rotate the model and choose a body part.",
     back: "Back",
     lang: "Language",
     theme: "Theme",
+    rotateHint: "Rotate the 3D model",
     aiTitle: "AI guidance (demo)",
     aiHint:
       "Not a diagnosis. If symptoms are severe, seek urgent medical care.",
@@ -114,16 +107,17 @@ const copy = {
   },
 } as const;
 
-const body3DZoneToPart: Record<Body3DZone, BodyPartKey> = {
-  head: "head",
-  chest: "chest",
-  abdomen: "belly",
-  back: "back",
-  leftArm: "leftArm",
-  rightArm: "rightArm",
-  leftLeg: "leftLeg",
-  rightLeg: "rightLeg",
-};
+const bodyPartButtons: BodyPartKey[] = [
+  "head",
+  "neck",
+  "chest",
+  "belly",
+  "back",
+  "leftArm",
+  "rightArm",
+  "leftLeg",
+  "rightLeg",
+];
 
 export default function BodyMap() {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -251,13 +245,7 @@ export default function BodyMap() {
 
       <section className="max-w-6xl mx-auto px-4 pb-10 grid lg:grid-cols-[1.35fr_.65fr] gap-4">
         <div className={`rounded-3xl border overflow-hidden ${panel}`}>
-          <Body3D
-            theme={theme}
-            onPick={(zone: Body3DZone) => {
-              setSelected(body3DZoneToPart[zone]);
-              setAnswer(null);
-            }}
-          />
+          <Body3D theme={theme} hint={t.rotateHint} />
         </div>
 
         <aside className={`rounded-3xl border p-5 ${panel}`}>
@@ -273,8 +261,43 @@ export default function BodyMap() {
           </div>
 
           <div className="mt-5 space-y-3">
-            <div className={`text-sm font-semibold ${selected ? "" : muted}`}>
-              {selected ? t.parts[selected] : t.selectPart}
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {t.selectPart}
+              </div>
+              {selected && (
+                <div className="text-xs font-semibold text-emerald-400">
+                  {t.parts[selected]}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {bodyPartButtons.map((part) => {
+                const active = selected === part;
+
+                return (
+                  <button
+                    key={part}
+                    type="button"
+                    onClick={() => {
+                      setSelected(part);
+                      setAnswer(null);
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${
+                      active
+                        ? theme === "dark"
+                          ? "border-emerald-300/70 bg-emerald-300/20 text-emerald-100"
+                          : "border-emerald-400 bg-emerald-100 text-emerald-900"
+                        : theme === "dark"
+                          ? "border-white/10 bg-white/5 text-slate-200 hover:border-emerald-300/40 hover:bg-emerald-300/10"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {t.parts[part]}
+                  </button>
+                );
+              })}
             </div>
 
             <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
