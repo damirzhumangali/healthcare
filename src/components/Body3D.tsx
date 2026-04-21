@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 type Zone =
   | "head"
@@ -18,10 +18,6 @@ type SketchfabApi = {
   addEventListener: (event: "viewerready", callback: () => void) => void;
   setBackground: (
     options: { color: Vec3 },
-    callback?: (error?: unknown) => void,
-  ) => void;
-  setUserInteraction: (
-    enable: boolean,
     callback?: (error?: unknown) => void,
   ) => void;
 };
@@ -77,92 +73,18 @@ const themeBackgrounds: Record<
   light: { css: "#f8fafc", sketchfab: [0.973, 0.984, 0.996] },
 };
 
-const zoneDots: Array<{
+const zoneButtons: Array<{
   zone: Zone;
   label: string;
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-  radius: string;
-  rotate?: number;
 }> = [
-  {
-    zone: "head",
-    label: "Голова",
-    top: 7,
-    left: 43,
-    width: 15,
-    height: 13,
-    radius: "999px",
-  },
-  {
-    zone: "chest",
-    label: "Грудь",
-    top: 23,
-    left: 33,
-    width: 30,
-    height: 17,
-    radius: "36% 36% 22% 22%",
-  },
-  {
-    zone: "abdomen",
-    label: "Живот",
-    top: 40,
-    left: 37,
-    width: 22,
-    height: 20,
-    radius: "34% 34% 46% 46%",
-  },
-  {
-    zone: "back",
-    label: "Спина",
-    top: 24,
-    left: 55,
-    width: 15,
-    height: 27,
-    radius: "38%",
-  },
-  {
-    zone: "leftArm",
-    label: "Левая рука",
-    top: 29,
-    left: 7,
-    width: 23,
-    height: 35,
-    radius: "999px",
-    rotate: 16,
-  },
-  {
-    zone: "rightArm",
-    label: "Правая рука",
-    top: 28,
-    left: 67,
-    width: 23,
-    height: 35,
-    radius: "999px",
-    rotate: -16,
-  },
-  {
-    zone: "leftLeg",
-    label: "Левая нога",
-    top: 59,
-    left: 28,
-    width: 18,
-    height: 37,
-    radius: "999px",
-    rotate: 5,
-  },
-  {
-    zone: "rightLeg",
-    label: "Правая нога",
-    top: 59,
-    left: 52,
-    width: 18,
-    height: 37,
-    radius: "999px",
-    rotate: -5,
-  },
+  { zone: "head", label: "Голова" },
+  { zone: "chest", label: "Грудь" },
+  { zone: "abdomen", label: "Живот" },
+  { zone: "back", label: "Спина" },
+  { zone: "leftArm", label: "Левая рука" },
+  { zone: "rightArm", label: "Правая рука" },
+  { zone: "leftLeg", label: "Левая нога" },
+  { zone: "rightLeg", label: "Правая нога" },
 ];
 
 let sketchfabScriptPromise: Promise<void> | null = null;
@@ -209,7 +131,6 @@ export default function Body3D({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const apiRef = useRef<SketchfabApi | null>(null);
   const themeRef = useRef(theme);
-  const [hoveredZone, setHoveredZone] = useState<Zone | null>(null);
   const background = themeBackgrounds[theme];
 
   useEffect(() => {
@@ -248,7 +169,6 @@ export default function Body3D({
             api.addEventListener("viewerready", () => {
               if (cancelled) return;
               applySketchfabBackground(api, themeRef.current);
-              api.setUserInteraction(false);
             });
           },
           error() {
@@ -298,57 +218,45 @@ export default function Body3D({
           border: 0,
           display: "block",
           background: background.css,
-          pointerEvents: "none",
         }}
       />
 
       <div
         style={{
           position: "absolute",
-          left: "50%",
-          top: "52%",
-          width: "min(48%, 360px)",
-          height: "86%",
-          transform: "translate(-50%, -50%)",
+          insetInline: 16,
+          bottom: 14,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 8,
           pointerEvents: "none",
         }}
       >
-        {zoneDots.map((dot) => {
-          const active = hoveredZone === dot.zone;
-          return (
-            <button
-              key={dot.zone}
-              type="button"
-              aria-label={dot.label}
-              title={dot.label}
-              onClick={() => onPick(dot.zone)}
-              onPointerEnter={() => setHoveredZone(dot.zone)}
-              onPointerLeave={() => setHoveredZone(null)}
-              style={{
-                position: "absolute",
-                top: `${dot.top}%`,
-                left: `${dot.left}%`,
-                width: `${dot.width}%`,
-                height: `${dot.height}%`,
-                transform: `rotate(${dot.rotate ?? 0}deg)`,
-                transformOrigin: "50% 50%",
-                pointerEvents: "auto",
-                border: active
-                  ? "1px solid rgba(255,255,255,0.74)"
-                  : "1px solid transparent",
-                borderRadius: dot.radius,
-                padding: 0,
-                background: active
-                  ? "rgba(45,212,191,0.22)"
-                  : "rgba(45,212,191,0.02)",
-                cursor: "pointer",
-                boxShadow: active
-                  ? "0 0 0 5px rgba(45,212,191,0.12), 0 16px 34px rgba(0,0,0,0.2)"
-                  : "none",
-              }}
-            />
-          );
-        })}
+        {zoneButtons.map((button) => (
+          <button
+            key={button.zone}
+            type="button"
+            onClick={() => onPick(button.zone)}
+            style={{
+              pointerEvents: "auto",
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 8,
+              padding: "7px 10px",
+              background:
+                theme === "dark"
+                  ? "rgba(2,6,23,0.72)"
+                  : "rgba(255,255,255,0.78)",
+              color: theme === "dark" ? "#f8fafc" : "#0f172a",
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 700,
+              boxShadow: "0 12px 28px rgba(0,0,0,0.2)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            {button.label}
+          </button>
+        ))}
       </div>
     </div>
   );
