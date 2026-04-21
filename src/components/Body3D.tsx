@@ -37,8 +37,11 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
         allow="autoplay; fullscreen; xr-spatial-tracking; web-share"
         allowFullScreen
         style={{
-          width: "100%",
-          height: "100%",
+          position: "absolute",
+          top: -72,
+          left: -96,
+          width: "calc(100% + 192px)",
+          height: "calc(100% + 144px)",
           border: 0,
           display: "block",
           background: "#0b1220",
