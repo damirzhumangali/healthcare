@@ -1,9 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 
-type Zone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
+type Zone =
+  | "head"
+  | "chest"
+  | "abdomen"
+  | "back"
+  | "leftArm"
+  | "rightArm"
+  | "leftLeg"
+  | "rightLeg";
 type Body3DTheme = "dark" | "light";
 type Vec2 = [number, number];
 type Vec3 = [number, number, number];
+type PickPoint = { top: number; left: number };
 
 type SketchfabPick = {
   position3D?: Vec3;
@@ -48,6 +57,14 @@ type SketchfabInitOptions = {
   ui_watermark: number;
   ui_watermark_link: number;
   ui_hint: number;
+  ui_annotations?: number;
+  ui_ar?: number;
+  ui_fullscreen?: number;
+  ui_general_controls?: number;
+  ui_help?: number;
+  ui_loading?: number;
+  ui_settings?: number;
+  ui_vr?: number;
 };
 
 type SketchfabConstructor = new (
@@ -65,7 +82,7 @@ const SKETCHFAB_MODEL_UID = "33162ec759e04d2985dbbdf4ec908d66";
 const SKETCHFAB_SCRIPT_URL =
   "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
 const SKETCHFAB_FALLBACK_URL =
-  "https://sketchfab.com/models/33162ec759e04d2985dbbdf4ec908d66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=0&ui_stop=0&ui_watermark=0&ui_watermark_link=0&ui_hint=0";
+  "https://sketchfab.com/models/33162ec759e04d2985dbbdf4ec908d66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=0&ui_stop=0&ui_watermark=0&ui_watermark_link=0&ui_hint=0&ui_annotations=0&ui_ar=0&ui_fullscreen=0&ui_general_controls=0&ui_help=0&ui_loading=0&ui_settings=0&ui_vr=0";
 
 const themeBackgrounds: Record<
   Body3DTheme,
@@ -80,15 +97,98 @@ const zoneDots: Array<{
   label: string;
   top: number;
   left: number;
+  pickPoints: PickPoint[];
 }> = [
-  { zone: "head", label: "Голова", top: 33, left: 50 },
-  { zone: "chest", label: "Грудь", top: 47, left: 50 },
-  { zone: "abdomen", label: "Живот", top: 57, left: 50 },
-  { zone: "back", label: "Спина", top: 43, left: 58 },
-  { zone: "arm", label: "Рука", top: 44, left: 39 },
-  { zone: "arm", label: "Рука", top: 44, left: 61 },
-  { zone: "leg", label: "Нога", top: 69, left: 45 },
-  { zone: "leg", label: "Нога", top: 69, left: 55 },
+  {
+    zone: "head",
+    label: "Голова",
+    top: 22,
+    left: 47,
+    pickPoints: [
+      { top: 22, left: 47 },
+      { top: 24, left: 47 },
+      { top: 23, left: 50 },
+    ],
+  },
+  {
+    zone: "chest",
+    label: "Грудь",
+    top: 35,
+    left: 48,
+    pickPoints: [
+      { top: 35, left: 48 },
+      { top: 35, left: 51 },
+      { top: 38, left: 48 },
+    ],
+  },
+  {
+    zone: "abdomen",
+    label: "Живот",
+    top: 48,
+    left: 48,
+    pickPoints: [
+      { top: 48, left: 48 },
+      { top: 51, left: 48 },
+      { top: 45, left: 48 },
+    ],
+  },
+  {
+    zone: "back",
+    label: "Спина",
+    top: 37,
+    left: 56,
+    pickPoints: [
+      { top: 37, left: 56 },
+      { top: 40, left: 57 },
+      { top: 34, left: 55 },
+    ],
+  },
+  {
+    zone: "leftArm",
+    label: "Левая рука",
+    top: 38,
+    left: 35,
+    pickPoints: [
+      { top: 38, left: 35 },
+      { top: 42, left: 32 },
+      { top: 46, left: 30 },
+      { top: 35, left: 39 },
+    ],
+  },
+  {
+    zone: "rightArm",
+    label: "Правая рука",
+    top: 37,
+    left: 61,
+    pickPoints: [
+      { top: 37, left: 61 },
+      { top: 42, left: 64 },
+      { top: 46, left: 67 },
+      { top: 35, left: 57 },
+    ],
+  },
+  {
+    zone: "leftLeg",
+    label: "Левая нога",
+    top: 68,
+    left: 41,
+    pickPoints: [
+      { top: 68, left: 41 },
+      { top: 63, left: 43 },
+      { top: 76, left: 43 },
+    ],
+  },
+  {
+    zone: "rightLeg",
+    label: "Правая нога",
+    top: 68,
+    left: 54,
+    pickPoints: [
+      { top: 68, left: 54 },
+      { top: 63, left: 53 },
+      { top: 76, left: 54 },
+    ],
+  },
 ];
 
 type DotPosition = {
@@ -163,10 +263,10 @@ export default function Body3D({
     let intervalId = 0;
     let cancelled = false;
 
-    function getPickCoordinates(dot: (typeof zoneDots)[number]): Vec2 {
+    function getPickCoordinates(point: PickPoint): Vec2 {
       const iframeHeight = iframe.clientHeight;
-      const containerX = (container.clientWidth * dot.left) / 100;
-      const containerY = (container.clientHeight * dot.top) / 100;
+      const containerX = (container.clientWidth * point.left) / 100;
+      const containerY = (container.clientHeight * point.top) / 100;
       const iframeX = containerX - iframe.offsetLeft;
       const iframeY = containerY - iframe.offsetTop;
       const pixelRatio = window.devicePixelRatio || 1;
@@ -208,11 +308,39 @@ export default function Body3D({
       });
     }
 
+    function calibrateDot(
+      api: SketchfabApi,
+      index: number,
+      pointIndex: number,
+      onDone: () => void,
+    ) {
+      const dot = zoneDots[index];
+      const point = dot.pickPoints[pointIndex];
+
+      if (!point) {
+        onDone();
+        return;
+      }
+
+      api.pickFromScreen(getPickCoordinates(point), (error, coordinates) => {
+        if (!error && coordinates?.position3D) {
+          anchorsRef.current[index] = coordinates.position3D;
+          onDone();
+          return;
+        }
+
+        calibrateDot(api, index, pointIndex + 1, onDone);
+      });
+    }
+
     function calibrateAnchors(api: SketchfabApi) {
-      zoneDots.forEach((dot, index) => {
-        api.pickFromScreen(getPickCoordinates(dot), (error, coordinates) => {
-          if (!error && coordinates?.position3D) {
-            anchorsRef.current[index] = coordinates.position3D;
+      let pending = zoneDots.length;
+
+      zoneDots.forEach((_, index) => {
+        calibrateDot(api, index, 0, () => {
+          pending -= 1;
+          if (pending === 0 && !cancelled) {
+            projectAnchors(api);
           }
         });
       });
@@ -234,6 +362,14 @@ export default function Body3D({
           ui_watermark: 0,
           ui_watermark_link: 0,
           ui_hint: 0,
+          ui_annotations: 0,
+          ui_ar: 0,
+          ui_fullscreen: 0,
+          ui_general_controls: 0,
+          ui_help: 0,
+          ui_loading: 0,
+          ui_settings: 0,
+          ui_vr: 0,
           success(api) {
             apiRef.current = api;
             api.start();
@@ -243,7 +379,6 @@ export default function Body3D({
               window.setTimeout(() => {
                 if (cancelled) return;
                 calibrateAnchors(api);
-                projectAnchors(api);
                 intervalId = window.setInterval(() => projectAnchors(api), 50);
               }, 650);
             });

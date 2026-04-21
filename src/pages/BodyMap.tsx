@@ -17,7 +17,15 @@ type BodyPartKey =
   | "leftLeg"
   | "rightLeg";
 
-type Body3DZone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
+type Body3DZone =
+  | "head"
+  | "chest"
+  | "abdomen"
+  | "back"
+  | "leftArm"
+  | "rightArm"
+  | "leftLeg"
+  | "rightLeg";
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:4000";
@@ -111,8 +119,10 @@ const body3DZoneToPart: Record<Body3DZone, BodyPartKey> = {
   chest: "chest",
   abdomen: "belly",
   back: "back",
-  arm: "leftArm",
-  leg: "leftLeg",
+  leftArm: "leftArm",
+  rightArm: "rightArm",
+  leftLeg: "leftLeg",
+  rightLeg: "rightLeg",
 };
 
 export default function BodyMap() {
