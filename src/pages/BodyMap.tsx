@@ -242,6 +242,7 @@ export default function BodyMap() {
       <section className="max-w-6xl mx-auto px-4 pb-10 grid lg:grid-cols-[1.35fr_.65fr] gap-4">
         <div className={`rounded-3xl border overflow-hidden ${panel}`}>
           <Body3D
+            theme={theme}
             onPick={(zone: Body3DZone) => {
               setSelected(body3DZoneToPart[zone]);
               setAnswer(null);

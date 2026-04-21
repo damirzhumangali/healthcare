@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Zone = "head" | "chest" | "abdomen" | "back" | "arm" | "leg";
+type Body3DTheme = "dark" | "light";
 type Vec2 = [number, number];
 type Vec3 = [number, number, number];
 
@@ -25,6 +26,10 @@ type SketchfabApi = {
     worldCoordinates: Vec3,
     callback: (coordinates?: SketchfabProjection) => void,
   ) => void;
+  setBackground: (
+    options: { color: Vec3 },
+    callback?: (error?: unknown) => void,
+  ) => void;
 };
 
 type SketchfabClient = {
@@ -36,7 +41,7 @@ type SketchfabInitOptions = {
   error: () => void;
   autostart: number;
   preload: number;
-  ui_theme: "dark";
+  ui_theme: Body3DTheme;
   ui_infos: number;
   ui_controls: number;
   ui_stop: number;
@@ -61,6 +66,14 @@ const SKETCHFAB_SCRIPT_URL =
   "https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js";
 const SKETCHFAB_FALLBACK_URL =
   "https://sketchfab.com/models/33162ec759e04d2985dbbdf4ec908d66/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_controls=0&ui_stop=0&ui_watermark=0&ui_watermark_link=0&ui_hint=0";
+
+const themeBackgrounds: Record<
+  Body3DTheme,
+  { css: string; sketchfab: Vec3 }
+> = {
+  dark: { css: "#0b1220", sketchfab: [0.043, 0.071, 0.125] },
+  light: { css: "#f8fafc", sketchfab: [0.973, 0.984, 0.996] },
+};
 
 const zoneDots: Array<{
   zone: Zone;
@@ -121,20 +134,32 @@ function loadSketchfabViewerScript() {
   return sketchfabScriptPromise;
 }
 
-export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
+function applySketchfabBackground(api: SketchfabApi | null, theme: Body3DTheme) {
+  api?.setBackground({ color: themeBackgrounds[theme].sketchfab });
+}
+
+export default function Body3D({
+  onPick,
+  theme = "dark",
+}: {
+  onPick: (zone: Zone) => void;
+  theme?: Body3DTheme;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const apiRef = useRef<SketchfabApi | null>(null);
+  const themeRef = useRef(theme);
   const anchorsRef = useRef<Array<Vec3 | null>>(zoneDots.map(() => null));
   const [dotPositions, setDotPositions] = useState<DotPosition[]>(() =>
     getFallbackPositions(),
   );
+  const background = themeBackgrounds[theme];
 
   useEffect(() => {
     const container = containerRef.current;
     const iframe = iframeRef.current;
     if (!container || !iframe) return undefined;
 
-    let apiRef: SketchfabApi | null = null;
     let intervalId = 0;
     let cancelled = false;
 
@@ -210,10 +235,11 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
           ui_watermark_link: 0,
           ui_hint: 0,
           success(api) {
-            apiRef = api;
+            apiRef.current = api;
             api.start();
             api.addEventListener("viewerready", () => {
               if (cancelled) return;
+              applySketchfabBackground(api, themeRef.current);
               window.setTimeout(() => {
                 if (cancelled) return;
                 calibrateAnchors(api);
@@ -234,9 +260,15 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
-      apiRef?.stop();
+      apiRef.current?.stop();
+      apiRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    themeRef.current = theme;
+    applySketchfabBackground(apiRef.current, theme);
+  }, [theme]);
 
   return (
     <div
@@ -247,7 +279,7 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
         height: "min(74vh, 720px)",
         minHeight: 520,
         overflow: "hidden",
-        background: "#0b1220",
+        background: background.css,
       }}
     >
       <iframe
@@ -263,7 +295,7 @@ export default function Body3D({ onPick }: { onPick: (zone: Zone) => void }) {
           height: "calc(100% + 144px)",
           border: 0,
           display: "block",
-          background: "#0b1220",
+          background: background.css,
         }}
       />
 
