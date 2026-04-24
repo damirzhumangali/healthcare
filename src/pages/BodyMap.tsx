@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ComponentType, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Brain, Globe, Moon, Sparkles, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
 import Body3D from "../components/Body3D";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
+
+type Body3DViewProps = {
+  theme: Theme;
+  hint: string;
+};
+
+const Body3DView = Body3D as unknown as ComponentType<Body3DViewProps>;
 
 type BodyPartKey =
   | "head"
@@ -318,7 +325,7 @@ export default function BodyMap() {
 
       <section className="max-w-6xl mx-auto px-4 pb-10 grid lg:grid-cols-[1.35fr_.65fr] gap-4">
         <div className={`self-start rounded-3xl border overflow-hidden ${panel}`}>
-          <Body3D theme={theme} hint={t.rotateHint} />
+          <Body3DView theme={theme} hint={t.rotateHint} />
         </div>
 
         <aside className={`rounded-3xl border p-5 ${panel}`}>

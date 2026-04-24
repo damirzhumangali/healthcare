@@ -1,6 +1,12 @@
 import { useEffect, useRef } from "react";
 
-type Body3DTheme = "dark" | "light";
+export type Body3DTheme = "dark" | "light";
+
+type Body3DProps = {
+  theme?: Body3DTheme;
+  hint?: string;
+};
+
 type Vec3 = [number, number, number];
 
 type SketchfabApi = {
@@ -100,10 +106,7 @@ function applySketchfabBackground(api: SketchfabApi | null, theme: Body3DTheme) 
 export default function Body3D({
   theme = "dark",
   hint,
-}: {
-  theme?: Body3DTheme;
-  hint?: string;
-}) {
+}: Body3DProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const apiRef = useRef<SketchfabApi | null>(null);
   const themeRef = useRef(theme);

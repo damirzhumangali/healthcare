@@ -28,8 +28,9 @@ import RequireAuth from "./lib/RequireAuth";
 import { getGoogleAuthUrl } from "./lib/apiAuth";
 import { getToken, logout } from "./lib/auth";
 import { isAdminAccount } from "./lib/adminAccess";
+import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "./lib/locale";
 
-type Locale = "ru" | "kk" | "en";
+type Locale = AppLocale;
 type Theme = "dark" | "light";
 
 type StoredUser = {
@@ -187,7 +188,7 @@ function readStoredUser(): StoredUser | null {
 function Landing() {
   const nav = useNavigate();
   const [theme, setTheme] = useState<Theme>("dark");
-  const [locale, setLocale] = useState<Locale>("ru");
+  const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
   const [mobileMenu, setMobileMenu] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [isAuthed, setIsAuthed] = useState(() => Boolean(getToken()));
@@ -199,6 +200,11 @@ function Landing() {
 
   const t = text[locale];
   const isAdminUser = currentUserRole === "admin" || isAdminAccount(readStoredUser());
+
+  function handleLocaleChange(nextLocale: Locale) {
+    setLocale(nextLocale);
+    writeStoredLocale(nextLocale);
+  }
 
   function openUserArea() {
     const token = getToken();
@@ -279,17 +285,17 @@ function Landing() {
 
           <div className="hidden md:flex items-center gap-2">
             <div className="flex rounded-full border border-white/20 overflow-hidden">
-              {(["ru", "kk", "en"] as Locale[]).map((l) => (
+              {APP_LOCALES.map((l) => (
                 <button
                   key={l}
-                  onClick={() => setLocale(l)}
+                  onClick={() => handleLocaleChange(l)}
                   className={`px-2.5 py-1 text-xs font-medium ${
                     locale === l
                       ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                       : ""
                   }`}
                 >
-                  {l.toUpperCase()}
+                  {l === "kk" ? "KZ" : l.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -391,17 +397,17 @@ function Landing() {
           
           <div className={`flex items-center justify-between gap-2 mt-4 pt-3 border-t ${theme === "dark" ? "border-white/10" : "border-slate-200"}`}>
             <div className="flex rounded-full border border-white/20 overflow-hidden">
-              {(["ru", "kk", "en"] as Locale[]).map((l) => (
+              {APP_LOCALES.map((l) => (
                 <button
                   key={l}
-                  onClick={() => setLocale(l)}
+                  onClick={() => handleLocaleChange(l)}
                   className={`px-2.5 py-1 text-xs font-medium ${
                     locale === l
                       ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                       : ""
                   }`}
                 >
-                  {l.toUpperCase()}
+                  {l === "kk" ? "KZ" : l.toUpperCase()}
                 </button>
               ))}
             </div>

@@ -416,7 +416,13 @@ button, input{font:inherit}
   align-items:center;
   justify-content:flex-end;
   gap:12px;
+  flex-wrap:wrap;
   min-width:0;
+}
+.doctor-admin__identity{
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
 .doctor-admin__avatar{
   width:64px;
@@ -447,7 +453,8 @@ button, input{font:inherit}
 }
 .doctor-admin__date input,
 .doctor-admin__select,
-.doctor-admin__refresh{
+.doctor-admin__refresh,
+.doctor-admin__home{
   height:42px;
   border:1px solid rgba(255,255,255,.18);
   background:#20231f;
@@ -462,8 +469,41 @@ button, input{font:inherit}
 .doctor-admin__select{
   width:150px;
 }
-.doctor-admin__refresh{
+.doctor-admin__refresh,
+.doctor-admin__home{
   cursor:pointer;
+}
+.doctor-admin__home{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.doctor-admin__locale{
+  min-height:42px;
+  display:inline-flex;
+  align-items:stretch;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;
+  overflow:hidden;
+  background:#20231f;
+}
+.doctor-admin__locale-button{
+  min-width:54px;
+  border:none;
+  background:transparent;
+  color:#c7cac2;
+  font-weight:900;
+  cursor:pointer;
+  transition:background .2s ease, color .2s ease;
+}
+.doctor-admin__locale-button:hover{
+  background:rgba(255,255,255,.06);
+}
+.doctor-admin__locale-button--active{
+  background:#e2eaf3;
+  color:#174a7d;
 }
 .doctor-admin__alert{
   margin-bottom:18px;
@@ -905,10 +945,18 @@ button, input{font:inherit}
   .doctor-admin__profile{
     width:100%;
   }
+  .doctor-admin__identity{
+    width:100%;
+  }
   .doctor-admin__date input,
   .doctor-admin__select,
-  .doctor-admin__refresh{
+  .doctor-admin__refresh,
+  .doctor-admin__home,
+  .doctor-admin__locale{
     width:100%;
+  }
+  .doctor-admin__locale-button{
+    flex:1 1 0;
   }
   .doctor-admin__metrics,
   .doctor-admin__content,
