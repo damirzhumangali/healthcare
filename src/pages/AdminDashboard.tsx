@@ -421,7 +421,7 @@ export default function AdminDashboard() {
             <Users size={18} />
             {t.navPatients}
           </a>
-          <a className="doctor-admin__nav-item" href="http://10.202.27.117">
+          <a className="doctor-admin__nav-item" href="http://10.202.20.103">
             <Settings size={18} />
             {t.navSettings}
           </a>
