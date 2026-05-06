@@ -65,8 +65,6 @@ const text = {
     heroTitle: "Практические советы по здоровью на каждый день",
     heroSub:
       "Проверяй симптомы, получай базовые рекомендации по самопомощи и понимай, когда нужно обратиться к врачу без промедления.",
-    heroCta: "Проверить симптомы",
-    heroCta2: "Полезные материалы",
     featuresTitle: "Полезная информация",
     featuresSub: "Коротко и по делу: что делать дома, что взять на прием и когда нужна срочная помощь.",
     f1: "Когда нужно срочно к врачу",
@@ -107,8 +105,6 @@ const text = {
     heroTitle: "Күнделікті денсаулыққа пайдалы нұсқаулық",
     heroSub:
       "Белгілерді тексеріп, алғашқы көмек бойынша ұсыныс алып, дәрігерге қашан шұғыл қаралу керегін біліңіз.",
-    heroCta: "Белгілерді тексеру",
-    heroCta2: "Пайдалы материалдар",
     featuresTitle: "Пайдалы ақпарат",
     featuresSub: "Қысқа әрі нақты: үйде не істеу керек, қабылдауға не алу керек, қашан жедел көмек қажет.",
     f1: "Дәрігерге қашан шұғыл бару керек",
@@ -149,8 +145,6 @@ const text = {
     heroTitle: "Practical health guidance for daily life",
     heroSub:
       "Check symptoms, get basic self-care recommendations, and understand when urgent medical help is needed.",
-    heroCta: "Check symptoms",
-    heroCta2: "Helpful guides",
     featuresTitle: "Useful information",
     featuresSub: "Clear and practical: what to do at home, what to bring to a visit, and when to seek urgent care.",
     f1: "When to seek urgent care",
@@ -466,27 +460,13 @@ function Landing() {
             {t.heroTitle}
           </h1>
           <p className={`mt-4 max-w-3xl ${mutedClass}`}>{t.heroSub}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href="#story"
-              className="rounded-full px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-            >
-              {t.heroCta}
-            </a>
-            <a
-              href="#features"
-              className={`rounded-full px-5 py-2.5 text-sm border ${theme === "dark" ? "border-white/20" : "border-slate-300"}`}
-            >
-              {t.heroCta2}
-            </a>
+          <div className="mt-8">
             <Link
               to="/body"
-              className={`rounded-full px-5 py-2.5 text-sm border inline-flex items-center gap-2 ${
-                theme === "dark" ? "border-white/20" : "border-slate-300"
-              }`}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-transform hover:-translate-y-0.5"
             >
-              <HeartPulse className="h-4 w-4 text-emerald-400" />
-              3D Body
+              <HeartPulse className="h-4 w-4" />
+              {t.navBody}
             </Link>
           </div>
         </section>
