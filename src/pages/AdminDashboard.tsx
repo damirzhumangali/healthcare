@@ -25,6 +25,7 @@ import {
   type AdminSummary,
 } from "../lib/apiAdmin";
 import { isAdminAccount } from "../lib/adminAccess";
+import { BMO_SETTINGS_URL } from "../lib/apiBase";
 import { getToken } from "../lib/auth";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
 
@@ -87,7 +88,7 @@ const adminText = {
     newAppointment: "Новая запись",
     accessDenied: "Нет доступа",
     accessDeniedText: "Для админ-панели нужна роль admin.",
-    loadError: "Не удалось загрузить админ-данные. Проверь backend :4000.",
+    loadError: "Не удалось загрузить админ-данные. Проверь backend и VITE_API_BASE.",
     statusUpdateError: "Не удалось изменить статус записи.",
     patientFallback: "Пациент",
     doctorFallback: "Врач",
@@ -142,7 +143,7 @@ const adminText = {
     newAppointment: "Жаңа жазылу",
     accessDenied: "Қол жеткізу жоқ",
     accessDeniedText: "Әкімші панелі үшін admin рөлі қажет.",
-    loadError: "Әкімші деректерін жүктеу мүмкін болмады. Backend :4000 тексеріңіз.",
+    loadError: "Әкімші деректерін жүктеу мүмкін болмады. Backend пен VITE_API_BASE тексеріңіз.",
     statusUpdateError: "Жазылу мәртебесін өзгерту мүмкін болмады.",
     patientFallback: "Пациент",
     doctorFallback: "Дәрігер",
@@ -197,7 +198,7 @@ const adminText = {
     newAppointment: "New appointment",
     accessDenied: "Access denied",
     accessDeniedText: "The admin panel requires the admin role.",
-    loadError: "Could not load admin data. Check backend :4000.",
+    loadError: "Could not load admin data. Check the backend and VITE_API_BASE.",
     statusUpdateError: "Could not change the appointment status.",
     patientFallback: "Patient",
     doctorFallback: "Doctor",
@@ -421,10 +422,17 @@ export default function AdminDashboard() {
             <Users size={18} />
             {t.navPatients}
           </a>
-          <a className="doctor-admin__nav-item" href="http://10.202.20.103">
-            <Settings size={18} />
-            {t.navSettings}
-          </a>
+          {BMO_SETTINGS_URL ? (
+            <a
+              className="doctor-admin__nav-item"
+              href={BMO_SETTINGS_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Settings size={18} />
+              {t.navSettings}
+            </a>
+          ) : null}
         </nav>
       </aside>
 

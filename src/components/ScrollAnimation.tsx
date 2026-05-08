@@ -70,7 +70,9 @@ type ScrollAnimationSectionProps = {
   frameUrls?: string[]; // explicit frame URLs from import.meta.glob
   className?: string;
   maxCanvasHeightVh?: number; // ~80
+  maxCanvasWidthPx?: number;
   batchSize?: number; // preload batch size
+  theme?: "dark" | "light";
   children?: React.ReactNode;
 };
 
@@ -81,7 +83,9 @@ export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
   frameUrls,
   className,
   maxCanvasHeightVh = 80,
+  maxCanvasWidthPx = 1500,
   batchSize = 6,
+  theme = "dark",
   children,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -101,6 +105,7 @@ export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
   const [frameIndex, setFrameIndex] = useState(0);
   const progress01Ref = useRef(0);
   const frameIndexRef = useRef(0);
+  const isLight = theme === "light";
 
   const lastDrawnFrameRef = useRef(-1);
 
@@ -185,7 +190,8 @@ export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
     const aspect = 1640 / 1264;
 
     const resize = () => {
-      const cssW = Math.min(window.innerWidth - 32, 1100);
+      const viewportGutter = window.innerWidth < 768 ? 24 : 64;
+      const cssW = Math.min(window.innerWidth - viewportGutter, maxCanvasWidthPx);
       const maxH = (window.innerHeight * maxCanvasHeightVh) / 100;
       const cssH = Math.min(cssW / aspect, maxH);
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -200,7 +206,7 @@ export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
     resize();
     window.addEventListener("resize", resize, { passive: true });
     return () => window.removeEventListener("resize", resize);
-  }, [maxCanvasHeightVh]);
+  }, [maxCanvasHeightVh, maxCanvasWidthPx]);
 
   // Scroll controller: only updates state/refs (NO drawing here)
   useEffect(() => {
@@ -301,7 +307,11 @@ export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
     <ScrollAnimationContext.Provider value={ctxValue}>
       <div className={className}>
         {/* Progress indicator */}
-        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-white/10 pointer-events-none">
+        <div
+          className={`fixed top-0 left-0 right-0 z-50 h-1 pointer-events-none ${
+            isLight ? "bg-slate-200/90" : "bg-white/10"
+          }`}
+        >
           <div
             className="h-full bg-gradient-to-r from-sky-400 via-cyan-300 to-emerald-400 transition-[width] duration-75"
             style={{ width: `${Math.round(progress01 * 100)}%` }}
@@ -315,30 +325,54 @@ export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
         >
           <div className="sticky top-0 h-screen flex items-center justify-center px-4">
             <div className="relative w-full flex items-center justify-center">
-              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-950/20 via-slate-950/40 to-slate-950/60 rounded-3xl" />
+              <div
+                className="absolute inset-0 -z-10 rounded-3xl bg-transparent"
+              />
 
               <div className="relative">
                 <canvas
                   ref={canvasRef}
-                  className="block rounded-3xl border border-white/10 shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+                  className={`block rounded-3xl ${
+                    isLight
+                      ? "border border-slate-200 bg-white shadow-none"
+                      : "border border-white/10 shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+                  }`}
                 />
 
                 {children}
 
                 {isLoading && (
-                  <div className="absolute inset-0 rounded-3xl bg-slate-950/75 backdrop-blur-xl border border-white/10 flex items-center justify-center p-6">
+                  <div
+                    className={`absolute inset-0 rounded-3xl flex items-center justify-center p-6 ${
+                      isLight
+                        ? "bg-white/90 backdrop-blur-xl border border-slate-200"
+                        : "bg-slate-950/75 backdrop-blur-xl border border-white/10"
+                    }`}
+                  >
                     <div className="w-[min(420px,92vw)] text-center">
                       <div className="mx-auto h-12 w-12 rounded-full border-4 border-sky-400/30 border-t-sky-300 animate-spin" />
-                      <div className="mt-4 text-sm font-semibold text-slate-50">
+                      <div
+                        className={`mt-4 text-sm font-semibold ${
+                          isLight ? "text-slate-900" : "text-slate-50"
+                        }`}
+                      >
                         Загружаем анимацию
                       </div>
-                      <div className="mt-3 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className={`mt-3 h-2 w-full rounded-full overflow-hidden ${
+                          isLight ? "bg-slate-200" : "bg-white/10"
+                        }`}
+                      >
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-sky-400 to-emerald-400 transition-[width] duration-200"
                           style={{ width: `${loadingPct}%` }}
                         />
                       </div>
-                      <div className="mt-2 text-xs text-slate-300">
+                      <div
+                        className={`mt-2 text-xs ${
+                          isLight ? "text-slate-500" : "text-slate-300"
+                        }`}
+                      >
                         {loadingPct}% · {resolvedFrameCount} кадров
                       </div>
                     </div>
@@ -398,4 +432,3 @@ export const OverlayContent: React.FC<OverlayContentProps> = ({
     </div>
   );
 };
-

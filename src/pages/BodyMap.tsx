@@ -1,17 +1,11 @@
-import { type ComponentType, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Brain, Globe, Moon, Sparkles, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
 import Body3D from "../components/Body3D";
+import { API_URL } from "../lib/apiBase";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
-
-type Body3DViewProps = {
-  theme: Theme;
-  hint: string;
-};
-
-const Body3DView = Body3D as unknown as ComponentType<Body3DViewProps>;
 
 type BodyPartKey =
   | "head"
@@ -24,13 +18,10 @@ type BodyPartKey =
   | "leftLeg"
   | "rightLeg";
 
-const API_BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined) ?? "http://localhost:4000";
-
 const copy = {
   ru: {
     title: "Где у вас болит?",
-    subtitle: "Вращайте модель и выберите часть тела.",
+    subtitle: "Вращайте модель и отметьте, где болит.",
     back: "Назад",
     lang: "Язык",
     theme: "Тема",
@@ -58,7 +49,7 @@ const copy = {
   },
   kk: {
     title: "Қай жеріңіз ауырады?",
-    subtitle: "Модельді айналдырып, дене бөлігін таңдаңыз.",
+    subtitle: "Модельді айналдырып, қай жеріңіз ауыратынын белгілеңіз.",
     back: "Артқа",
     lang: "Тіл",
     theme: "Тақырып",
@@ -86,7 +77,7 @@ const copy = {
   },
   en: {
     title: "Where does it hurt?",
-    subtitle: "Rotate the model and choose a body part.",
+    subtitle: "Rotate the model and mark where it hurts.",
     back: "Back",
     lang: "Language",
     theme: "Theme",
@@ -229,8 +220,8 @@ export default function BodyMap() {
 
   const pageBg =
     theme === "dark"
-      ? "bg-slate-950 text-slate-100"
-      : "bg-sky-50 text-slate-900";
+      ? "bg-[#02050c] text-slate-100"
+      : "bg-white text-slate-900";
   const panel =
     theme === "dark"
       ? "bg-white/5 border-white/10"
@@ -244,7 +235,7 @@ export default function BodyMap() {
     setError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/triage`, {
+      const res = await fetch(`${API_URL}/api/triage`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -273,7 +264,7 @@ export default function BodyMap() {
   const title = useMemo(() => t.title, [t.title]);
 
   return (
-    <div className={`min-h-screen ${pageBg}`}>
+    <div className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
       <div className="relative z-20 pt-4">
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between gap-3">
           <Link
@@ -325,7 +316,16 @@ export default function BodyMap() {
 
       <section className="max-w-6xl mx-auto px-4 pb-10 grid lg:grid-cols-[1.35fr_.65fr] gap-4">
         <div className={`self-start rounded-3xl border overflow-hidden ${panel}`}>
-          <Body3DView theme={theme} hint={t.rotateHint} />
+          <Body3D
+            theme={theme}
+            hint={t.rotateHint}
+            selectedPart={selected}
+            onSelectPart={(part) => {
+              setSelected(part as BodyPartKey);
+              setAnswer(null);
+            }}
+            labels={t.parts}
+          />
         </div>
 
         <aside className={`rounded-3xl border p-5 ${panel}`}>
@@ -341,16 +341,11 @@ export default function BodyMap() {
           </div>
 
           <div className="mt-5 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                {t.selectPart}
+            {selected && (
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">
+                {t.parts[selected]}
               </div>
-              {selected && (
-                <div className="text-xs font-semibold text-emerald-400">
-                  {t.parts[selected]}
-                </div>
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               {bodyPartButtons.map((part) => {

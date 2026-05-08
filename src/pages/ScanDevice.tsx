@@ -21,7 +21,7 @@ const copy = {
     startMeasurement: "Начать измерение",
     measuring: "Измеряю...",
     openDashboard: "Открыть кабинет",
-    measurementError: "Не получилось создать измерение. Проверь backend :4000 и попробуй ещё раз.",
+    measurementError: "Не получилось создать измерение. Проверь backend и VITE_API_BASE, затем попробуй ещё раз.",
   },
   kk: {
     kicker: "QR → СТАНЦИЯ",
@@ -36,7 +36,7 @@ const copy = {
     startMeasurement: "Өлшеуді бастау",
     measuring: "Өлшенуде...",
     openDashboard: "Кабинетті ашу",
-    measurementError: "Өлшеуді жасай алмады. Backend-ті тексеріңіз :4000 және қайтадан көріңіз.",
+    measurementError: "Өлшеуді жасай алмады. Backend пен VITE_API_BASE тексеріп, қайтадан көріңіз.",
   },
   en: {
     kicker: "QR → STATION",
@@ -51,7 +51,7 @@ const copy = {
     startMeasurement: "Start Measurement",
     measuring: "Measuring...",
     openDashboard: "Open Dashboard",
-    measurementError: "Failed to create measurement. Check backend :4000 and try again.",
+    measurementError: "Failed to create measurement. Check the backend and VITE_API_BASE, then try again.",
   },
 } as const;
 

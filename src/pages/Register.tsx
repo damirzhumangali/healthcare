@@ -19,7 +19,7 @@ const copy = {
     password2Placeholder: "Ещё раз",
     createAccount: "Создать аккаунт",
     hasAccount: "Уже есть аккаунт",
-    backToQR: "Назад к QR",
+    backToHome: "Назад к главной",
     passwordMismatch: "Пароли не совпадают",
     registerError: "Ошибка регистрации",
   },
@@ -33,7 +33,7 @@ const copy = {
     password2Placeholder: "Тағы да бір рет",
     createAccount: "Аккаунт жасау",
     hasAccount: "Аккаунт бар",
-    backToQR: "QR-ға қайту",
+    backToHome: "Басты бетке оралу",
     passwordMismatch: "Құпиясөздер сәйкес келмейді",
     registerError: "Тіркелу қатесі",
   },
@@ -47,7 +47,7 @@ const copy = {
     password2Placeholder: "Again",
     createAccount: "Create Account",
     hasAccount: "Already have an account",
-    backToQR: "Back to QR",
+    backToHome: "Back to Home",
     passwordMismatch: "Passwords do not match",
     registerError: "Registration error",
   },
@@ -138,15 +138,15 @@ export default function Register() {
 
             {err ? <div className="alert">{err}</div> : null}
 
-            <div className="row">
+            <div className="auth-actions">
               <Button>{t.createAccount}</Button>
               <Button type="button" variant="ghost" onClick={() => nav("/login")}>
                 {t.hasAccount}
               </Button>
             </div>
 
-            <Button type="button" variant="ghost" onClick={() => nav("/scan/device-001")}>
-              {t.backToQR}
+            <Button type="button" variant="ghost" onClick={() => nav("/")}>
+              {t.backToHome}
             </Button>
           </form>
         </div>

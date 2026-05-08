@@ -1,4 +1,5 @@
-export const API_URL = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+export { API_URL } from "./apiBase";
+import { API_URL } from "./apiBase";
 
 export async function getGoogleAuthUrl(): Promise<string> {
   const res = await fetch(`${API_URL}/auth/google/url`);

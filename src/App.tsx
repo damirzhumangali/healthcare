@@ -7,10 +7,10 @@ import {
   Menu,
   Moon,
   ShieldCheck,
-  Sparkles,
   Sun,
   X,
 } from "lucide-react";
+import CinematicHero from "./components/CinematicHero";
 import { OverlayContent, ScrollAnimationSection } from "./components/ScrollAnimation";
 import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import BodyMap from "./pages/BodyMap";
@@ -25,7 +25,6 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
-import { getGoogleAuthUrl } from "./lib/apiAuth";
 import { getToken, logout } from "./lib/auth";
 import { isAdminAccount } from "./lib/adminAccess";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "./lib/locale";
@@ -65,6 +64,14 @@ const text = {
     heroTitle: "Практические советы по здоровью на каждый день",
     heroSub:
       "Проверяй симптомы, получай базовые рекомендации по самопомощи и понимай, когда нужно обратиться к врачу без промедления.",
+    heroStudioLine1: "AI-powered",
+    heroStudioLine2: "healthcare",
+    heroStudioLine3: "assistant",
+    heroStudioSub:
+      "Интеллектуальная диагностика и клиническая поддержка на базе современного медицинского AI.",
+    heroStudioLabel1: "Medical AI Platform",
+    heroStudioLabel2: "Software + Robotics",
+    heroStudioLabel3: "Clinical Support",
     featuresTitle: "Полезная информация",
     featuresSub: "Коротко и по делу: что делать дома, что взять на прием и когда нужна срочная помощь.",
     f1: "Когда нужно срочно к врачу",
@@ -105,6 +112,14 @@ const text = {
     heroTitle: "Күнделікті денсаулыққа пайдалы нұсқаулық",
     heroSub:
       "Белгілерді тексеріп, алғашқы көмек бойынша ұсыныс алып, дәрігерге қашан шұғыл қаралу керегін біліңіз.",
+    heroStudioLine1: "AI-powered",
+    heroStudioLine2: "healthcare",
+    heroStudioLine3: "assistant",
+    heroStudioSub:
+      "Заманауи медициналық AI негізіндегі интеллектуалды диагностика және клиникалық қолдау.",
+    heroStudioLabel1: "Medical AI Platform",
+    heroStudioLabel2: "Software + Robotics",
+    heroStudioLabel3: "Clinical Support",
     featuresTitle: "Пайдалы ақпарат",
     featuresSub: "Қысқа әрі нақты: үйде не істеу керек, қабылдауға не алу керек, қашан жедел көмек қажет.",
     f1: "Дәрігерге қашан шұғыл бару керек",
@@ -145,6 +160,14 @@ const text = {
     heroTitle: "Practical health guidance for daily life",
     heroSub:
       "Check symptoms, get basic self-care recommendations, and understand when urgent medical help is needed.",
+    heroStudioLine1: "AI-powered",
+    heroStudioLine2: "healthcare",
+    heroStudioLine3: "assistant",
+    heroStudioSub:
+      "Intelligent diagnostics and clinical support through modern medical AI.",
+    heroStudioLabel1: "Medical AI Platform",
+    heroStudioLabel2: "Software + Robotics",
+    heroStudioLabel3: "Clinical Support",
     featuresTitle: "Useful information",
     featuresSub: "Clear and practical: what to do at home, what to bring to a visit, and when to seek urgent care.",
     f1: "When to seek urgent care",
@@ -213,10 +236,10 @@ function Landing() {
     nav(isAdminUser ? "/admin" : "/app");
   }
 
-  const rootClass =
-    theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900";
+  const pageBackgroundClass = theme === "dark" ? "bg-[#02050c]" : "bg-white";
+  const rootClass = `${pageBackgroundClass} ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`;
   const surfaceClass =
-    theme === "dark" ? "bg-slate-900/70 border-white/10" : "bg-white/90 border-slate-200";
+    theme === "dark" ? "bg-slate-900/70 border-white/10" : "bg-white border-slate-200";
   const mutedClass = theme === "dark" ? "text-slate-300" : "text-slate-600";
 
   const features = useMemo(
@@ -256,7 +279,7 @@ function Landing() {
       <header
         className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
           theme === "dark"
-            ? "border-white/10 bg-slate-950/75"
+            ? "border-white/10 bg-[#02050c]/80"
             : "border-slate-200 bg-white/80"
         }`}
       >
@@ -329,22 +352,19 @@ function Landing() {
             ) : (
               <>
                 <Link
-                  to="/appointments/new"
+                  to="/register"
                   className={`rounded-full px-3 py-1.5 text-xs border ${
                     theme === "dark" ? "border-white/20" : "border-slate-300"
                   }`}
                 >
-                  {t.navAppointment}
+                  {t.navRegister}
                 </Link>
-                <button
-                  onClick={async () => {
-                    const url = await getGoogleAuthUrl();
-                    window.location.href = url;
-                  }}
+                <Link
+                  to="/login"
                   className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                 >
-                  {t.navGoogle}
-                </button>
+                  {t.navLogin}
+                </Link>
               </>
             )}
           </div>
@@ -379,11 +399,11 @@ function Landing() {
             </Link>
             {!isAuthed && (
               <>
-                <Link to="/appointments/new" onClick={() => setMobileMenu(false)}>
-                  {t.navAppointment}
-                </Link>
                 <Link to="/register" onClick={() => setMobileMenu(false)}>
                   {t.navRegister}
+                </Link>
+                <Link to="/login" onClick={() => setMobileMenu(false)}>
+                  {t.navLogin}
                 </Link>
               </>
             )}
@@ -418,23 +438,21 @@ function Landing() {
           {!isAuthed && (
             <div className="flex flex-col gap-2 mt-4">
               <Link 
-                to="/appointments/new" 
+                to="/register" 
                 onClick={() => setMobileMenu(false)}
                 className={`rounded-full px-4 py-2 text-sm font-medium border ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
               >
-                {t.navAppointment}
+                {t.navRegister}
               </Link>
-              <button
-                onClick={async () => {
-                  const url = await getGoogleAuthUrl();
-                  window.location.href = url;
-                }}
+              <Link
+                to="/login"
+                onClick={() => setMobileMenu(false)}
                 className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
               >
-                {t.navGoogle}
-              </button>
+                {t.navLogin}
+              </Link>
             </div>
           )}
           {isAuthed && (
@@ -450,41 +468,33 @@ function Landing() {
         </div>
       )}
 
-      <main id="top">
-        <section className="max-w-7xl mx-auto px-4 pt-16 pb-14">
-          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-cyan-400">
-            <Sparkles className="h-3.5 w-3.5" />
-            {t.heroKicker}
-          </div>
-          <h1 className="mt-4 text-4xl md:text-6xl font-semibold max-w-5xl leading-tight">
-            {t.heroTitle}
-          </h1>
-          <p className={`mt-4 max-w-3xl ${mutedClass}`}>{t.heroSub}</p>
-          <div className="mt-8">
-            <Link
-              to="/body"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-transform hover:-translate-y-0.5"
-            >
-              <HeartPulse className="h-4 w-4" />
-              {t.navBody}
-            </Link>
-          </div>
-        </section>
+      <main id="top" className={pageBackgroundClass}>
+        <CinematicHero
+          kicker={t.heroKicker}
+          lines={[t.heroStudioLine1, t.heroStudioLine2, t.heroStudioLine3]}
+          subtitle={t.heroStudioSub}
+          labels={[t.heroStudioLabel1, t.heroStudioLabel2, t.heroStudioLabel3]}
+          ctaLabel={t.navBody}
+          ctaTo="/body"
+          theme={theme}
+        />
 
-        <section id="features" className="max-w-7xl mx-auto px-4 pb-16">
-          <h2 className="text-2xl md:text-3xl font-semibold">{t.featuresTitle}</h2>
-          <p className={`mt-2 ${mutedClass}`}>{t.featuresSub}</p>
-          <div className="mt-8 grid md:grid-cols-3 gap-4">
-            {features.map((item) => (
-              <article
-                key={item.title}
-                className={`rounded-2xl border p-5 transition-transform hover:-translate-y-1 ${surfaceClass}`}
-              >
-                {item.icon}
-                <h3 className="mt-3 font-semibold">{item.title}</h3>
-                <p className={`mt-2 text-sm ${mutedClass}`}>{item.desc}</p>
-              </article>
-            ))}
+        <section id="features">
+          <div className="max-w-7xl mx-auto px-4 pt-20 pb-16 md:pt-24">
+            <h2 className="text-2xl md:text-3xl font-semibold">{t.featuresTitle}</h2>
+            <p className={`mt-2 ${mutedClass}`}>{t.featuresSub}</p>
+            <div className="mt-8 grid md:grid-cols-3 gap-4">
+              {features.map((item) => (
+                <article
+                  key={item.title}
+                  className={`rounded-2xl border p-5 transition-transform hover:-translate-y-1 ${surfaceClass}`}
+                >
+                  {item.icon}
+                  <h3 className="mt-3 font-semibold">{item.title}</h3>
+                  <p className={`mt-2 text-sm ${mutedClass}`}>{item.desc}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -492,8 +502,10 @@ function Landing() {
           <ScrollAnimationSection
             frameUrls={imageFrames}
             sectionHeightVh={400}
-            maxCanvasHeightVh={80}
+            maxCanvasHeightVh={90}
+            maxCanvasWidthPx={1500}
             className="relative"
+            theme={theme}
           >
             <OverlayContent start={0.08} end={0.25} position="left">
               <div className="p-5">
@@ -602,7 +614,11 @@ function Landing() {
         </section>
       </main>
 
-      <footer className={`border-t py-8 ${theme === "dark" ? "border-white/10" : "border-slate-200"}`}>
+      <footer
+        className={`border-t py-8 ${pageBackgroundClass} ${
+          theme === "dark" ? "border-white/10" : "border-slate-200"
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <span>© {new Date().getFullYear()} HealthAssist</span>
           <span className={mutedClass}>{t.footer}</span>

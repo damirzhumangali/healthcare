@@ -1,4 +1,4 @@
-import { API_URL } from "./apiAuth";
+import { API_URL } from "./apiBase";
 import { getToken } from "./auth";
 
 export type AppointmentStatus = "pending" | "active" | "done";

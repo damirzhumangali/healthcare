@@ -126,15 +126,16 @@ export default function Login() {
             />
             {err ? <div className="alert">{err}</div> : null}
 
-            <div className="row">
+            <div className="auth-actions">
               <Button>{t.loginBtn}</Button>
               <Button type="button" variant="ghost" onClick={() => nav("/register")}>
                 {t.registerBtn}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => nav("/")}>
-                {t.homeBtn}
-              </Button>
             </div>
+
+            <Button type="button" variant="ghost" onClick={() => nav("/")}>
+              {t.homeBtn}
+            </Button>
           </form>
 
           <div className="divider" />
