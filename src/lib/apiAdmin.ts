@@ -15,6 +15,7 @@ export type AdminSummary = {
   done: number;
   doctors: number;
   patients: number;
+  telegramNew?: number;
 };
 
 export type AdminPatient = {
@@ -26,6 +27,23 @@ export type AdminPatient = {
   created_at?: string;
   last_appointment_at?: string | null;
   appointment_count: number;
+};
+
+export type TelegramConsultationStatus = "new" | "reviewed";
+
+export type AdminTelegramConsultation = {
+  id: string;
+  chat_id: string;
+  telegram_username?: string | null;
+  telegram_first_name?: string | null;
+  telegram_last_name?: string | null;
+  patient_name: string;
+  problem: string;
+  days?: string | null;
+  temperature?: string | null;
+  status: TelegramConsultationStatus;
+  created_at: string;
+  updated_at?: string;
 };
 
 const LOCAL_DOCTORS_KEY = "healthassist_doctors_v1";
@@ -136,6 +154,36 @@ export async function fetchAdminDoctors(): Promise<{ items: DoctorOption[] }> {
   } catch {
     return { items: readLocalDoctors() };
   }
+}
+
+export async function fetchAdminTelegramConsultations(): Promise<{
+  items: AdminTelegramConsultation[];
+}> {
+  try {
+    const res = await fetch(`${API_URL}/api/admin/telegram-consultations`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error("fetch telegram consultations failed");
+    const data = await res.json();
+    return { items: data.items ?? data.consultations ?? [] };
+  } catch {
+    return { items: [] };
+  }
+}
+
+export async function updateAdminTelegramConsultationStatus(
+  id: string,
+  status: TelegramConsultationStatus
+): Promise<{ item: AdminTelegramConsultation | null }> {
+  const res = await fetch(`${API_URL}/api/admin/telegram-consultations/${id}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) throw new Error("update telegram consultation status failed");
+  const data = await res.json();
+  return { item: data.item ?? data.consultation ?? null };
 }
 
 export async function createDoctor(input: {

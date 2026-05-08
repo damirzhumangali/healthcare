@@ -69,7 +69,7 @@ export default function DoctorDashboard() {
       const data = await fetchAppointments(date);
       setItems(data.items ?? []);
     } catch {
-      setErr("Не удалось загрузить записи. Проверь backend и VITE_API_BASE.");
+      setErr("Не удалось загрузить записи. Проверь backend и VITE_API_BASE_URL.");
     } finally {
       setLoading(false);
     }

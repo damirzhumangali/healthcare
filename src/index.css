@@ -81,6 +81,9 @@ button, input{font:inherit}
   align-items:center;
   gap:10px;
 }
+.brand__meta{
+  min-width:0;
+}
 .brand__logo{
   width: 32px;
   height: 32px;
@@ -92,10 +95,41 @@ button, input{font:inherit}
   background: linear-gradient(180deg, var(--primary), var(--primary2));
   box-shadow: 0 0 0 6px rgba(79,140,255,.12);
 }
-.brand__title{font-weight:900; letter-spacing:.4px}
-.brand__sub{color:var(--muted); font-size:12px; margin-top:2px}
+.brand__title{
+  font-size:clamp(1.2rem, 1rem + .45vw, 1.75rem);
+  font-weight:900;
+  letter-spacing:.4px;
+  line-height:1.05;
+}
+.brand__sub{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:2px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+  align-items:baseline;
+}
+.brand__account{
+  color:var(--text);
+  font-weight:600;
+  overflow-wrap:anywhere;
+}
 
 .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+.app-topbar__toolbar{
+  min-width:0;
+  flex-wrap:nowrap;
+  gap:12px;
+}
+.app-topbar__logout{
+  min-height:44px;
+  min-width:142px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding-inline:18px;
+}
 
 .card{
   background: linear-gradient(180deg, var(--cardA), var(--cardB));
@@ -297,31 +331,130 @@ button, input{font:inherit}
   filter:brightness(1.05);
 }
 
+@media (max-width: 900px){
+  .topbar{
+    align-items:stretch;
+    flex-direction:column;
+    gap:18px;
+    padding:18px 18px 20px;
+  }
+  .brand{
+    align-items:flex-start;
+    gap:14px;
+  }
+  .brand__logo{
+    width:64px;
+    height:64px;
+    border-radius:18px;
+  }
+  .brand__meta{
+    width:100%;
+  }
+  .brand__sub{
+    margin-top:8px;
+    display:grid;
+    gap:2px;
+    font-size:14px;
+    line-height:1.4;
+  }
+  .brand__account{
+    font-size:16px;
+  }
+  .actions,
+  .app-topbar__toolbar{
+    width:100%;
+  }
+  .app-topbar__toolbar{
+    display:grid;
+    grid-template-columns:56px minmax(0, 1fr);
+    align-items:stretch;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .language-switcher{
+    width:100%;
+    border-radius:20px;
+    padding:2px;
+    background:rgba(255,255,255,.03);
+  }
+  .language-switcher__item{
+    flex:1;
+    min-height:52px;
+    font-size:16px;
+    border-radius:17px;
+  }
+  .theme-toggle{
+    width:100%;
+    height:56px;
+    border-radius:18px;
+  }
+  .actions .btn{
+    width:100%;
+    min-width:0;
+  }
+  .app-topbar__toolbar .theme-toggle{ justify-self:start; }
+  .app-topbar__logout{ grid-column:1 / -1; }
+  .app-topbar__logout{
+    min-height:56px;
+    border-radius:18px;
+    font-size:17px;
+  }
+}
+
 @media (max-width: 640px){
   .grid{grid-template-columns: 1fr}
   .h1{font-size:24px}
   .auth-actions{grid-template-columns:1fr}
-  .topbar,
   .patient-hero,
   .patient-actions{
     align-items:flex-start;
     flex-direction:column;
   }
+  .topbar{
+    gap:14px;
+    padding:14px 16px 16px;
+  }
+  .brand__logo{
+    width:56px;
+    height:56px;
+    border-radius:16px;
+  }
+  .brand__title{
+    font-size:18px;
+    line-height:1.1;
+  }
+  .brand__sub{
+    margin-top:6px;
+    font-size:13px;
+    line-height:1.35;
+  }
   .actions,
   .patient-actions__buttons{
     width:100%;
   }
-  .actions .btn{
-    flex:1;
+  .patient-actions__buttons .btn{ width:100%; }
+  .app-topbar__toolbar{
+    grid-template-columns:52px minmax(0, 1fr);
+    gap:10px;
   }
-  .patient-actions__buttons .btn{
+  .app-topbar__logout{
+    min-height:54px;
+    border-radius:18px;
+    font-size:16px;
+  }
+  .theme-toggle{
     width:100%;
+    height:52px;
+    border-radius:16px;
   }
   .language-switcher{
-    width:100%;
+    border-radius:16px;
+    padding:2px;
   }
   .language-switcher__item{
-    flex:1;
+    min-height:48px;
+    font-size:14px;
+    border-radius:14px;
   }
 }
 
@@ -893,17 +1026,34 @@ button, input{font:inherit}
 }
 .doctor-admin__message{
   display:grid;
-  grid-template-columns:10px 56px minmax(0,1fr) 72px;
+  grid-template-columns:10px 56px minmax(0,1fr) 172px;
   gap:18px;
   align-items:center;
   padding:18px 0;
   border-bottom:1px solid rgba(255,255,255,.12);
+}
+.doctor-admin__message-content{
+  min-width:0;
 }
 .doctor-admin__dot{
   width:10px;
   height:10px;
   border-radius:50%;
   background:#2f8cdc;
+}
+.doctor-admin__dot--new{
+  background:#f0b44c;
+}
+.doctor-admin__dot--reviewed{
+  background:#5fd69f;
+}
+.doctor-admin__message .doctor-admin__status{
+  justify-self:end;
+  min-height:40px;
+  padding:0 14px;
+  white-space:normal;
+  text-align:center;
+  line-height:1.15;
 }
 .doctor-admin__message time{
   color:#bfc3ba;
@@ -990,6 +1140,9 @@ button, input{font:inherit}
   .doctor-admin__record{
     grid-template-columns:1fr;
     justify-items:start;
+  }
+  .doctor-admin__message .doctor-admin__status{
+    justify-self:start;
   }
   .doctor-admin__record-actions{
     justify-content:flex-start;

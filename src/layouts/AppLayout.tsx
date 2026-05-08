@@ -50,15 +50,31 @@ export default function AppLayout() {
       <header className="topbar">
         <div className="brand">
           <img src="/icon-192.png" alt="HealthAssist" className="brand__logo" />
-          <div>
+          <div className="brand__meta">
             <div className="brand__title">HealthAssist</div>
             <div className="brand__sub">
-              {user ? `Аккаунт: ${user.name || user.email}` : "Кабинет пациента"}
+              {user ? (
+                <>
+                  <span>Аккаунт:</span>
+                  <strong className="brand__account">{user.name || user.email}</strong>
+                </>
+              ) : (
+                "Кабинет пациента"
+              )}
             </div>
           </div>
         </div>
 
-        <div className="actions">
+        <div className="actions app-topbar__toolbar">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={preferences.toggleTheme}
+            aria-label={theme === "dark" ? "Включить светлый режим" : "Включить ночной режим"}
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <div className="language-switcher language-switcher--topbar">
             {(["ru", "kk", "en"] as Locale[]).map((item) => (
               <button
@@ -75,17 +91,9 @@ export default function AppLayout() {
             ))}
           </div>
 
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={preferences.toggleTheme}
-            aria-label={theme === "dark" ? "Включить светлый режим" : "Включить ночной режим"}
-          >
-            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
           <Button
             variant="ghost"
+            className="app-topbar__logout"
             onClick={() => {
               logout();
               nav("/login");
