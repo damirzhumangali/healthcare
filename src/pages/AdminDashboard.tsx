@@ -21,6 +21,7 @@ import {
   fetchAdminDoctors,
   fetchAdminPatients,
   fetchAdminSummary,
+  acceptAdminTelegramConsultation,
   fetchAdminTelegramConsultations,
   type AdminPatient,
   type AdminSummary,
@@ -42,7 +43,7 @@ type StoredUser = {
 
 type StatusFilter = AppointmentStatus | "all";
 type DoctorFilter = string | "all";
-type ErrorState = "load" | "statusUpdate" | "serverAuth" | null;
+type ErrorState = "load" | "statusUpdate" | "serverAuth" | "acceptConsultation" | "acceptNotify" | null;
 type Locale = AppLocale;
 
 const adminText = {
@@ -387,6 +388,7 @@ export default function AdminDashboard() {
   const [doctors, setDoctors] = useState<DoctorOption[]>(DOCTORS.map((doctor) => ({ ...doctor, active: true })));
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [consultations, setConsultations] = useState<AdminTelegramConsultation[]>([]);
+  const [acceptForm, setAcceptForm] = useState<{ id: string; value: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
 
@@ -488,6 +490,20 @@ export default function AdminDashboard() {
       await load();
     } catch {
       setErr("statusUpdate");
+    }
+  }
+
+  async function acceptConsultation(id: string, meetingAtIso: string) {
+    setErr(null);
+
+    try {
+      const result = await acceptAdminTelegramConsultation(id, meetingAtIso);
+      await load();
+      if (!result.notified) {
+        setErr("acceptNotify");
+      }
+    } catch {
+      setErr("acceptConsultation");
     }
   }
 
@@ -750,6 +766,10 @@ export default function AdminDashboard() {
                 const telegramPerson = [item.telegram_first_name, item.telegram_last_name]
                   .filter(Boolean)
                   .join(" ");
+                const wantsConsultation =
+                  item.wants_consultation === 1 || item.wants_consultation === true;
+                const hasMeeting = Boolean(item.meeting_url && item.meeting_at);
+                const isOpen = acceptForm?.id === item.id;
 
                 return (
                   <div className="doctor-admin__message" key={`${item.id}-telegram`}>
@@ -777,19 +797,79 @@ export default function AdminDashboard() {
                         {item.temperature || t.telegramNoData}
                       </p>
                       <p>{formatDateTime(item.created_at, locale)}</p>
+
+                      {wantsConsultation && !hasMeeting ? (
+                        <p style={{ color: "#f59e0b", fontWeight: 600 }}>
+                          📹 Запрошена видеоконсультация
+                        </p>
+                      ) : null}
+
+                      {hasMeeting ? (
+                        <div style={{ marginTop: 8, padding: 8, background: "rgba(16,185,129,0.1)", borderRadius: 6 }}>
+                          <p style={{ margin: 0 }}>
+                            🕐 <b>{formatDateTime(item.meeting_at!, locale)}</b>
+                          </p>
+                          <p style={{ margin: "4px 0 0" }}>
+                            🔗 <a href={item.meeting_url!} target="_blank" rel="noreferrer">{item.meeting_url}</a>
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {isOpen ? (
+                        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <input
+                            type="datetime-local"
+                            value={acceptForm!.value}
+                            onChange={(e) =>
+                              setAcceptForm({ id: item.id, value: e.target.value })
+                            }
+                          />
+                          <button
+                            type="button"
+                            disabled={!acceptForm!.value}
+                            onClick={async () => {
+                              const iso = new Date(acceptForm!.value).toISOString();
+                              await acceptConsultation(item.id, iso);
+                              setAcceptForm(null);
+                            }}
+                          >
+                            Подтвердить и отправить пациенту
+                          </button>
+                          <button type="button" onClick={() => setAcceptForm(null)}>
+                            Отмена
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
-                    <button
-                      className={`doctor-admin__status doctor-admin__status--${consultationTone(item.status)}`}
-                      type="button"
-                      onClick={() =>
-                        changeConsultationStatus(
-                          item.id,
-                          item.status === "reviewed" ? "new" : "reviewed"
-                        )
-                      }
-                    >
-                      {item.status === "reviewed" ? t.telegramMarkNew : t.telegramMarkReviewed}
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {wantsConsultation && !hasMeeting && !isOpen ? (
+                        <button
+                          type="button"
+                          className="doctor-admin__status doctor-admin__status--ok"
+                          onClick={() => {
+                            const now = new Date(Date.now() + 30 * 60 * 1000);
+                            const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                              .toISOString()
+                              .slice(0, 16);
+                            setAcceptForm({ id: item.id, value: localIso });
+                          }}
+                        >
+                          Принять консультацию
+                        </button>
+                      ) : null}
+                      <button
+                        className={`doctor-admin__status doctor-admin__status--${consultationTone(item.status)}`}
+                        type="button"
+                        onClick={() =>
+                          changeConsultationStatus(
+                            item.id,
+                            item.status === "reviewed" ? "new" : "reviewed"
+                          )
+                        }
+                      >
+                        {item.status === "reviewed" ? t.telegramMarkNew : t.telegramMarkReviewed}
+                      </button>
+                    </div>
                   </div>
                 );
               })

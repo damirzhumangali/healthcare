@@ -42,6 +42,9 @@ export type AdminTelegramConsultation = {
   days?: string | null;
   temperature?: string | null;
   status: TelegramConsultationStatus;
+  wants_consultation?: number | boolean | null;
+  meeting_url?: string | null;
+  meeting_at?: string | null;
   created_at: string;
   updated_at?: string;
 };
@@ -184,6 +187,28 @@ export async function updateAdminTelegramConsultationStatus(
   if (!res.ok) throw new Error("update telegram consultation status failed");
   const data = await res.json();
   return { item: data.item ?? data.consultation ?? null };
+}
+
+export async function acceptAdminTelegramConsultation(
+  id: string,
+  meetingAtIso: string
+): Promise<{ item: AdminTelegramConsultation | null; notified: boolean; notify_error: string | null }> {
+  const res = await fetch(`${API_URL}/api/admin/telegram-consultations/${id}/accept`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ meeting_at: meetingAtIso }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`accept telegram consultation failed: ${res.status} ${body}`);
+  }
+  const data = await res.json();
+  return {
+    item: data.item ?? data.consultation ?? null,
+    notified: Boolean(data.notified),
+    notify_error: data.notify_error ?? null,
+  };
 }
 
 export async function createDoctor(input: {
