@@ -6,7 +6,10 @@ import {
   ClipboardList,
   House,
   LayoutDashboard,
+  LoaderCircle,
+  MessageSquare,
   Settings,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import {
@@ -53,11 +56,17 @@ const adminText = {
     navSchedule: "Расписание",
     navAppointments: "Записи",
     navPatients: "Пациенты",
+    navTelegram: "Telegram",
     navSettings: "Настроить BMO",
     home: "На главную",
     overview: "Обзор",
     loading: "Обновляем данные...",
     clinicSnapshot: "Сегодняшняя картина по клинике",
+    filtersTitle: "Фильтры",
+    filtersSubtitle: "Управляйте списками приемов и пациентов отдельно от навигации.",
+    filterDateLabel: "Дата",
+    filterStatusLabel: "Статус",
+    filterDoctorLabel: "Врач",
     allDates: "Все даты",
     refresh: "Обновить",
     allStatuses: "Все статусы",
@@ -112,6 +121,9 @@ const adminText = {
     telegramNoData: "Не указано",
     telegramMarkReviewed: "Отметить просмотренной",
     telegramMarkNew: "Вернуть в новые",
+    emptyDashboardTitle: "Дашборд пока пуст",
+    emptyDashboardText:
+      "Когда появятся записи, пациенты или Telegram-заявки, здесь сразу отобразятся ключевые метрики и последние обновления.",
   },
   kk: {
     panelTitle: "Әкімші панелі",
@@ -119,11 +131,17 @@ const adminText = {
     navSchedule: "Кесте",
     navAppointments: "Жазылулар",
     navPatients: "Пациенттер",
+    navTelegram: "Telegram",
     navSettings: "BMO баптау",
     home: "Басты бетке",
     overview: "Шолу",
     loading: "Деректер жаңартылуда...",
     clinicSnapshot: "Клиниканың бүгінгі көрінісі",
+    filtersTitle: "Сүзгілер",
+    filtersSubtitle: "Қабылдаулар мен пациенттер тізімін навигациядан бөлек басқарыңыз.",
+    filterDateLabel: "Күн",
+    filterStatusLabel: "Мәртебе",
+    filterDoctorLabel: "Дәрігер",
     allDates: "Барлық күн",
     refresh: "Жаңарту",
     allStatuses: "Барлық мәртебе",
@@ -178,6 +196,9 @@ const adminText = {
     telegramNoData: "Көрсетілмеген",
     telegramMarkReviewed: "Қаралды деп белгілеу",
     telegramMarkNew: "Жаңаға қайтару",
+    emptyDashboardTitle: "Басқару тақтасы әзірге бос",
+    emptyDashboardText:
+      "Жазылулар, пациенттер немесе Telegram өтінімдері түскенде, негізгі метрикалар мен соңғы жаңартулар осында бірден көрінеді.",
   },
   en: {
     panelTitle: "Admin Panel",
@@ -185,11 +206,17 @@ const adminText = {
     navSchedule: "Schedule",
     navAppointments: "Appointments",
     navPatients: "Patients",
+    navTelegram: "Telegram",
     navSettings: "Configure BMO",
     home: "Home",
     overview: "Overview",
     loading: "Refreshing data...",
     clinicSnapshot: "Today's clinic snapshot",
+    filtersTitle: "Filters",
+    filtersSubtitle: "Control appointments and patient lists separately from navigation.",
+    filterDateLabel: "Date",
+    filterStatusLabel: "Status",
+    filterDoctorLabel: "Doctor",
     allDates: "All dates",
     refresh: "Refresh",
     allStatuses: "All statuses",
@@ -244,6 +271,9 @@ const adminText = {
     telegramNoData: "Not provided",
     telegramMarkReviewed: "Mark reviewed",
     telegramMarkNew: "Move back to new",
+    emptyDashboardTitle: "The dashboard is empty for now",
+    emptyDashboardText:
+      "As soon as appointments, patients, or Telegram requests appear, the main metrics and recent updates will show up here.",
   },
 } as const;
 
@@ -380,6 +410,9 @@ export default function AdminDashboard() {
   const user = useMemo(() => readCurrentUser(), []);
   const allowed = isAdminAccount(user) || isLocalDemoHost();
   const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
+  const [activeSection, setActiveSection] = useState(() =>
+    window.location.hash.replace("#", "") || "overview"
+  );
   const [date, setDate] = useState(today());
   const [status, setStatusFilter] = useState<StatusFilter>("all");
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilter>("all");
@@ -394,6 +427,13 @@ export default function AdminDashboard() {
 
   const t = adminText[locale];
   const displayName = user?.name || user?.email || t.defaultAdminName;
+  const navItems = [
+    { id: "overview", label: t.navDashboard, icon: LayoutDashboard },
+    { id: "schedule", label: t.navSchedule, icon: CalendarClock },
+    { id: "appointments", label: t.navAppointments, icon: ClipboardList },
+    { id: "patients", label: t.navPatients, icon: Users },
+    { id: "telegram", label: t.navTelegram, icon: MessageSquare },
+  ] as const;
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -471,6 +511,30 @@ export default function AdminDashboard() {
     };
   }, [doctors, summary, visibleItems, visiblePatients]);
 
+  const isInitialLoading =
+    loading &&
+    !summary &&
+    items.length === 0 &&
+    patients.length === 0 &&
+    consultations.length === 0;
+  const showEmptyDashboard =
+    !isInitialLoading &&
+    !loading &&
+    visibleItems.length === 0 &&
+    patients.length === 0 &&
+    consultations.length === 0 &&
+    (summary?.appointmentsToday ?? 0) === 0 &&
+    (summary?.patients ?? 0) === 0 &&
+    (summary?.telegramNew ?? summary?.pending ?? 0) === 0 &&
+    (summary?.done ?? 0) === 0;
+  const metricCards = [
+    { key: "today", label: t.appointmentsToday, value: stats.today, tone: "green", delta: t.todayDelta },
+    { key: "patients", label: t.patientsTotal, value: stats.patients, tone: "green", delta: t.patientsDelta },
+    { key: "pending", label: t.awaitingResponse, value: stats.pending, tone: "red", delta: t.pendingDelta },
+    { key: "done", label: t.prescriptionsIssued, value: stats.done, tone: "green", delta: t.prescriptionsDelta },
+    { key: "doctors", label: t.activeDoctors, value: stats.doctors, tone: "green", delta: t.doctorsDelta },
+  ] as const;
+
   async function changeStatus(id: string, nextStatus: AppointmentStatus) {
     setErr(null);
 
@@ -515,6 +579,19 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (allowed) void load();
   }, [allowed, load]);
+
+  useEffect(() => {
+    const syncActiveSection = () => {
+      setActiveSection(window.location.hash.replace("#", "") || "overview");
+    };
+
+    syncActiveSection();
+    window.addEventListener("hashchange", syncActiveSection);
+
+    return () => {
+      window.removeEventListener("hashchange", syncActiveSection);
+    };
+  }, []);
 
   const ringAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -585,22 +662,23 @@ export default function AdminDashboard() {
         </div>
 
         <nav className="doctor-admin__nav">
-          <a className="doctor-admin__nav-item doctor-admin__nav-item--active" href="#overview">
-            <LayoutDashboard size={18} />
-            {t.navDashboard}
-          </a>
-          <a className="doctor-admin__nav-item" href="#schedule">
-            <CalendarClock size={18} />
-            {t.navSchedule}
-          </a>
-          <a className="doctor-admin__nav-item" href="#appointments">
-            <ClipboardList size={18} />
-            {t.navAppointments}
-          </a>
-          <a className="doctor-admin__nav-item" href="#patients">
-            <Users size={18} />
-            {t.navPatients}
-          </a>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <a
+                key={item.id}
+                className={`doctor-admin__nav-item ${
+                  activeSection === item.id ? "doctor-admin__nav-item--active" : ""
+                }`}
+                href={`#${item.id}`}
+                onClick={() => setActiveSection(item.id)}
+              >
+                <Icon size={18} />
+                {item.label}
+              </a>
+            );
+          })}
           {BMO_SETTINGS_URL ? (
             <a
               className="doctor-admin__nav-item"
@@ -617,43 +695,20 @@ export default function AdminDashboard() {
 
       <main className="doctor-admin__main" id="overview">
         <header className="doctor-admin__topbar">
-          <div>
-            <h1>{t.overview}</h1>
-            <p>{loading ? t.loading : t.clinicSnapshot}</p>
+          <div className="doctor-admin__topbar-copy">
+            <div>
+              <h1>{t.overview}</h1>
+              <p>{t.clinicSnapshot}</p>
+            </div>
+            {loading ? (
+              <div className="doctor-admin__loading-pill" aria-live="polite">
+                <LoaderCircle className="doctor-admin__spin" size={16} />
+                {t.loading}
+              </div>
+            ) : null}
           </div>
 
           <div className="doctor-admin__profile">
-            <label className="doctor-admin__date">
-              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-            </label>
-            <button className="doctor-admin__refresh" type="button" onClick={() => setDate("")}>
-              {t.allDates}
-            </button>
-            <select
-              className="doctor-admin__select"
-              value={status}
-              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-            >
-              <option value="all">{t.allStatuses}</option>
-              <option value="pending">{t.statusPendingFilter}</option>
-              <option value="active">{t.statusActiveFilter}</option>
-              <option value="done">{t.statusDoneFilter}</option>
-            </select>
-            <select
-              className="doctor-admin__select"
-              value={doctorFilter}
-              onChange={(event) => setDoctorFilter(event.target.value)}
-            >
-              <option value="all">{t.allDoctors}</option>
-              {doctors.map((doctor) => (
-                <option key={doctor.id} value={doctor.id}>
-                  {doctor.name}
-                </option>
-              ))}
-            </select>
-            <button className="doctor-admin__refresh" type="button" onClick={load}>
-              {t.refresh}
-            </button>
             <div className="doctor-admin__locale" aria-label="Language switcher">
               {APP_LOCALES.map((lang) => (
                 <button
@@ -692,32 +747,112 @@ export default function AdminDashboard() {
           </div>
         ) : null}
 
+        <section className="doctor-admin__panel doctor-admin__filters">
+          <div className="doctor-admin__panel-head">
+            <div>
+              <h2>{t.filtersTitle}</h2>
+              <p className="doctor-admin__panel-subtitle">{t.filtersSubtitle}</p>
+            </div>
+            <button className="doctor-admin__refresh" type="button" onClick={load} disabled={loading}>
+              {t.refresh}
+            </button>
+          </div>
+
+          <div className="doctor-admin__filters-grid">
+            <label className="doctor-admin__field">
+              <span>{t.filterDateLabel}</span>
+              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            </label>
+            <label className="doctor-admin__field">
+              <span>{t.filterStatusLabel}</span>
+              <select
+                className="doctor-admin__select"
+                value={status}
+                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+              >
+                <option value="all">{t.allStatuses}</option>
+                <option value="pending">{t.statusPendingFilter}</option>
+                <option value="active">{t.statusActiveFilter}</option>
+                <option value="done">{t.statusDoneFilter}</option>
+              </select>
+            </label>
+            <label className="doctor-admin__field">
+              <span>{t.filterDoctorLabel}</span>
+              <select
+                className="doctor-admin__select"
+                value={doctorFilter}
+                onChange={(event) => setDoctorFilter(event.target.value)}
+              >
+                <option value="all">{t.allDoctors}</option>
+                {doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>
+                    {doctor.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="doctor-admin__filters-actions">
+              <button
+                className="doctor-admin__refresh doctor-admin__refresh--secondary"
+                type="button"
+                onClick={() => setDate("")}
+                disabled={!date}
+              >
+                <SlidersHorizontal size={16} />
+                {t.allDates}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {showEmptyDashboard ? (
+          <section className="doctor-admin__panel doctor-admin__empty-state">
+            <div className="doctor-admin__empty-illustration" aria-hidden="true">
+              <span className="doctor-admin__empty-orb doctor-admin__empty-orb--blue">
+                <LayoutDashboard size={22} />
+              </span>
+              <span className="doctor-admin__empty-orb doctor-admin__empty-orb--amber">
+                <ClipboardList size={20} />
+              </span>
+              <span className="doctor-admin__empty-orb doctor-admin__empty-orb--green">
+                <Users size={20} />
+              </span>
+            </div>
+            <div className="doctor-admin__empty-copy">
+              <h2>{t.emptyDashboardTitle}</h2>
+              <p>{t.emptyDashboardText}</p>
+            </div>
+            <div className="doctor-admin__empty-actions">
+              <Link to="/appointments/new">
+                <ClipboardList size={18} />
+                {t.newAppointment}
+              </Link>
+              <button type="button" onClick={load}>
+                <LoaderCircle size={16} />
+                {t.refresh}
+              </button>
+            </div>
+          </section>
+        ) : null}
+
         <section className="doctor-admin__metrics">
-          <article className="doctor-admin__metric">
-            <span>{t.appointmentsToday}</span>
-            <strong>{stats.today}</strong>
-            <small className="doctor-admin__green">{t.todayDelta}</small>
-          </article>
-          <article className="doctor-admin__metric">
-            <span>{t.patientsTotal}</span>
-            <strong>{stats.patients}</strong>
-            <small className="doctor-admin__green">{t.patientsDelta}</small>
-          </article>
-          <article className="doctor-admin__metric">
-            <span>{t.awaitingResponse}</span>
-            <strong>{stats.pending}</strong>
-            <small className="doctor-admin__red">{t.pendingDelta}</small>
-          </article>
-          <article className="doctor-admin__metric">
-            <span>{t.prescriptionsIssued}</span>
-            <strong>{stats.done}</strong>
-            <small className="doctor-admin__green">{t.prescriptionsDelta}</small>
-          </article>
-          <article className="doctor-admin__metric">
-            <span>{t.activeDoctors}</span>
-            <strong>{stats.doctors}</strong>
-            <small className="doctor-admin__green">{t.doctorsDelta}</small>
-          </article>
+          {isInitialLoading
+            ? Array.from({ length: 5 }).map((_, index) => (
+                <article className="doctor-admin__metric doctor-admin__metric--loading" key={`metric-skeleton-${index}`}>
+                  <span className="doctor-admin__skeleton doctor-admin__skeleton--label" aria-hidden="true" />
+                  <strong className="doctor-admin__skeleton doctor-admin__skeleton--value" aria-hidden="true" />
+                  <small className="doctor-admin__skeleton doctor-admin__skeleton--meta" aria-hidden="true" />
+                </article>
+              ))
+            : metricCards.map((metric) => (
+                <article className="doctor-admin__metric" key={metric.key}>
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                  <small className={metric.tone === "red" ? "doctor-admin__red" : "doctor-admin__green"}>
+                    {metric.delta}
+                  </small>
+                </article>
+              ))}
         </section>
 
         <section className="doctor-admin__content">
@@ -728,7 +863,12 @@ export default function AdminDashboard() {
             </div>
 
             <div className="doctor-admin__list">
-              {visibleItems.length === 0 ? (
+              {isInitialLoading ? (
+                <div className="doctor-admin__panel-loading" aria-live="polite">
+                  <LoaderCircle className="doctor-admin__spin" size={18} />
+                  {t.loading}
+                </div>
+              ) : visibleItems.length === 0 ? (
                 <p className="doctor-admin__empty">{t.noAppointments}</p>
               ) : (
                 visibleItems.map((item) => {
@@ -765,7 +905,12 @@ export default function AdminDashboard() {
             </div>
 
             <div className="doctor-admin__patient-list">
-              {visiblePatients.length === 0 ? (
+              {isInitialLoading ? (
+                <div className="doctor-admin__panel-loading" aria-live="polite">
+                  <LoaderCircle className="doctor-admin__spin" size={18} />
+                  {t.loading}
+                </div>
+              ) : visiblePatients.length === 0 ? (
                 <p className="doctor-admin__empty">{t.noPatients}</p>
               ) : (
                 visiblePatients.slice(0, 4).map((patient) => {
@@ -797,11 +942,16 @@ export default function AdminDashboard() {
               <h2>{t.telegramInbox}</h2>
               <p className="doctor-admin__panel-subtitle">{t.telegramSubtitle}</p>
             </div>
-            <span>{consultations.length}</span>
+            {consultations.length > 0 ? <span>{consultations.length}</span> : null}
           </div>
 
           <div className="doctor-admin__list">
-            {consultations.length === 0 ? (
+            {isInitialLoading ? (
+              <div className="doctor-admin__panel-loading" aria-live="polite">
+                <LoaderCircle className="doctor-admin__spin" size={18} />
+                {t.loading}
+              </div>
+            ) : consultations.length === 0 ? (
               <p className="doctor-admin__empty">{t.noTelegram}</p>
             ) : (
               consultations.map((item) => {
@@ -937,11 +1087,16 @@ export default function AdminDashboard() {
               <h2>{t.allAppointments}</h2>
               <p className="doctor-admin__panel-subtitle">{t.recordsSubtitle}</p>
             </div>
-            <span>{visibleItems.length}</span>
+            {visibleItems.length > 0 ? <span>{visibleItems.length}</span> : null}
           </div>
 
           <div className="doctor-admin__record-list">
-            {visibleItems.length === 0 ? (
+            {isInitialLoading ? (
+              <div className="doctor-admin__panel-loading" aria-live="polite">
+                <LoaderCircle className="doctor-admin__spin" size={18} />
+                {t.loading}
+              </div>
+            ) : visibleItems.length === 0 ? (
               <p className="doctor-admin__empty">{t.noRecords}</p>
             ) : (
               visibleItems.map((item) => {
@@ -997,8 +1152,34 @@ export default function AdminDashboard() {
             <ClipboardList size={18} />
             {t.newAppointment}
           </Link>
+          {BMO_SETTINGS_URL ? (
+            <a href={BMO_SETTINGS_URL} target="_blank" rel="noreferrer">
+              <Settings size={18} />
+              {t.navSettings}
+            </a>
+          ) : null}
         </section>
       </main>
+
+      <nav className="doctor-admin__mobile-nav" aria-label={`${t.panelTitle} mobile navigation`}>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <a
+              key={`mobile-${item.id}`}
+              className={`doctor-admin__mobile-nav-item ${
+                activeSection === item.id ? "doctor-admin__mobile-nav-item--active" : ""
+              }`}
+              href={`#${item.id}`}
+              onClick={() => setActiveSection(item.id)}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </a>
+          );
+        })}
+      </nav>
     </div>
   );
 }
