@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ChevronDown,
+  CircleHelp,
   Globe,
   HeartPulse,
-  Menu,
+  MapPinned,
   Moon,
   ShieldCheck,
   Sun,
-  X,
+  Users,
 } from "lucide-react";
 import CinematicHero from "./components/CinematicHero";
 import { OverlayContent, ScrollAnimationSection } from "./components/ScrollAnimation";
@@ -206,7 +207,9 @@ function Landing() {
   const nav = useNavigate();
   const [theme, setTheme] = useState<Theme>("dark");
   const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [activeMobileSection, setActiveMobileSection] = useState(() =>
+    window.location.hash.replace("#", "") || "features"
+  );
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [isAuthed, setIsAuthed] = useState(() => Boolean(getToken()));
   const [currentUserName, setCurrentUserName] = useState<string>(() => {
@@ -217,6 +220,13 @@ function Landing() {
 
   const t = text[locale];
   const isAdminUser = currentUserRole === "admin" || isAdminAccount(readStoredUser());
+  const mobileNavItems = [
+    { id: "features", label: t.navFeatures, href: "#features", icon: Users },
+    { id: "story", label: t.navStory, href: "#story", icon: HeartPulse },
+    { id: "faq", label: t.navFaq, href: "#faq", icon: CircleHelp },
+    { id: "map", label: t.navMap, href: "#map", icon: MapPinned },
+    { id: "body", label: t.navBody, to: "/body", icon: Globe },
+  ] as const;
 
   function handleLocaleChange(nextLocale: Locale) {
     setLocale(nextLocale);
@@ -232,9 +242,21 @@ function Landing() {
       return;
     }
 
-    setMobileMenu(false);
     nav(isAdminUser ? "/admin" : "/app");
   }
+
+  useEffect(() => {
+    const syncActiveSection = () => {
+      setActiveMobileSection(window.location.hash.replace("#", "") || "features");
+    };
+
+    syncActiveSection();
+    window.addEventListener("hashchange", syncActiveSection);
+
+    return () => {
+      window.removeEventListener("hashchange", syncActiveSection);
+    };
+  }, []);
 
   const pageBackgroundClass = theme === "dark" ? "bg-[#02050c]" : "bg-white";
   const rootClass = `${pageBackgroundClass} ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`;
@@ -283,25 +305,107 @@ function Landing() {
             : "border-slate-200 bg-white/80"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <a href="#top" className="flex items-center gap-2">
-            <img src="/icon-192.png" alt="HealthAssist" className="h-9 w-9 rounded-xl object-cover" />
-            <span className="font-semibold">HealthAssist</span>
-          </a>
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <a href="#top" className="flex items-center gap-2" onClick={() => setActiveMobileSection("features")}>
+              <img src="/icon-192.png" alt="HealthAssist" className="h-9 w-9 rounded-xl object-cover" />
+              <span className="font-semibold">HealthAssist</span>
+            </a>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features">{t.navFeatures}</a>
-            <a href="#story">{t.navStory}</a>
-            <a href="#faq">{t.navFaq}</a>
-            <a href="#map">{t.navMap}</a>
-            <Link to="/body" className="inline-flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              {t.navBody}
-            </Link>
-          </nav>
+            <nav className="hidden md:flex items-center gap-6 text-sm">
+              <a href="#features">{t.navFeatures}</a>
+              <a href="#story">{t.navStory}</a>
+              <a href="#faq">{t.navFaq}</a>
+              <a href="#map">{t.navMap}</a>
+              <Link to="/body" className="inline-flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                {t.navBody}
+              </Link>
+            </nav>
 
-          <div className="hidden md:flex items-center gap-2">
-            <div className="flex rounded-full border border-white/20 overflow-hidden">
+            <div className="hidden md:flex items-center gap-2">
+              <div className="flex rounded-full border border-white/20 overflow-hidden">
+                {APP_LOCALES.map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => handleLocaleChange(l)}
+                    className={`px-2.5 py-1 text-xs font-medium ${
+                      locale === l
+                        ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+                        : ""
+                    }`}
+                  >
+                    {l === "kk" ? "KZ" : l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
+                className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
+                  theme === "dark" ? "border-white/20" : "border-slate-300"
+                }`}
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+              {isAuthed ? (
+                <>
+                  <span className={`text-xs ${mutedClass}`}>
+                    {currentUserName || "Google user"}
+                  </span>
+                  <button
+                    onClick={openUserArea}
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
+                  >
+                    {isAdminUser ? t.navAdmin : t.navCabinet}
+                  </button>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsAuthed(false);
+                      setCurrentUserName("");
+                      setCurrentUserRole("");
+                    }}
+                    className={`rounded-full px-3 py-1.5 text-xs border ${
+                      theme === "dark" ? "border-white/20" : "border-slate-300"
+                    }`}
+                  >
+                    {t.navLogout}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/register"
+                    className={`rounded-full px-3 py-1.5 text-xs border ${
+                      theme === "dark" ? "border-white/20" : "border-slate-300"
+                    }`}
+                  >
+                    {t.navRegister}
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+                  >
+                    {t.navLogin}
+                  </Link>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
+              className={`md:hidden h-9 w-9 rounded-xl border flex items-center justify-center ${
+                theme === "dark" ? "border-white/20" : "border-slate-300"
+              }`}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+          </div>
+
+          <div className="md:hidden mt-3 flex flex-wrap items-center gap-2">
+            <div className={`flex rounded-full border overflow-hidden ${
+              theme === "dark" ? "border-white/20" : "border-slate-300"
+            }`}>
               {APP_LOCALES.map((l) => (
                 <button
                   key={l}
@@ -316,22 +420,12 @@ function Landing() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
-              className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
-                theme === "dark" ? "border-white/20" : "border-slate-300"
-              }`}
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
+
             {isAuthed ? (
               <>
-                <span className={`text-xs ${mutedClass}`}>
-                  {currentUserName || "Google user"}
-                </span>
                 <button
                   onClick={openUserArea}
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                 >
                   {isAdminUser ? t.navAdmin : t.navCabinet}
                 </button>
@@ -368,107 +462,10 @@ function Landing() {
               </>
             )}
           </div>
-
-          <button
-            onClick={() => setMobileMenu((v) => !v)}
-            className="md:hidden h-9 w-9 rounded-xl border border-white/20 flex items-center justify-center"
-          >
-            {mobileMenu ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </button>
         </div>
       </header>
 
-      {mobileMenu && (
-        <div className={`md:hidden px-4 py-3 border-b ${theme === "dark" ? "border-white/10" : "border-slate-200"}`}>
-          <nav className="flex flex-col gap-2 text-sm">
-            <a href="#features" onClick={() => setMobileMenu(false)}>
-              {t.navFeatures}
-            </a>
-            <a href="#story" onClick={() => setMobileMenu(false)}>
-              {t.navStory}
-            </a>
-            <a href="#faq" onClick={() => setMobileMenu(false)}>
-              {t.navFaq}
-            </a>
-            <a href="#map" onClick={() => setMobileMenu(false)}>
-              {t.navMap}
-            </a>
-            <Link to="/body" onClick={() => setMobileMenu(false)} className="inline-flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              {t.navBody}
-            </Link>
-            {!isAuthed && (
-              <>
-                <Link to="/register" onClick={() => setMobileMenu(false)}>
-                  {t.navRegister}
-                </Link>
-                <Link to="/login" onClick={() => setMobileMenu(false)}>
-                  {t.navLogin}
-                </Link>
-              </>
-            )}
-          </nav>
-          
-          <div className={`flex items-center justify-between gap-2 mt-4 pt-3 border-t ${theme === "dark" ? "border-white/10" : "border-slate-200"}`}>
-            <div className="flex rounded-full border border-white/20 overflow-hidden">
-              {APP_LOCALES.map((l) => (
-                <button
-                  key={l}
-                  onClick={() => handleLocaleChange(l)}
-                  className={`px-2.5 py-1 text-xs font-medium ${
-                    locale === l
-                      ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                      : ""
-                  }`}
-                >
-                  {l === "kk" ? "KZ" : l.toUpperCase()}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
-              className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
-                theme === "dark" ? "border-white/20" : "border-slate-300"
-              }`}
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-          </div>
-          
-          {!isAuthed && (
-            <div className="flex flex-col gap-2 mt-4">
-              <Link 
-                to="/register" 
-                onClick={() => setMobileMenu(false)}
-                className={`rounded-full px-4 py-2 text-sm font-medium border ${
-                  theme === "dark" ? "border-white/20" : "border-slate-300"
-                }`}
-              >
-                {t.navRegister}
-              </Link>
-              <Link
-                to="/login"
-                onClick={() => setMobileMenu(false)}
-                className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-              >
-                {t.navLogin}
-              </Link>
-            </div>
-          )}
-          {isAuthed && (
-            <div className="flex flex-col gap-2 mt-4">
-              <button
-                onClick={openUserArea}
-                className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
-              >
-                {isAdminUser ? t.navAdmin : t.navCabinet}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <main id="top" className={pageBackgroundClass}>
+      <main id="top" className={`${pageBackgroundClass} pb-24 md:pb-0`}>
         <CinematicHero
           kicker={t.heroKicker}
           lines={[t.heroStudioLine1, t.heroStudioLine2, t.heroStudioLine3]}
@@ -479,7 +476,7 @@ function Landing() {
           theme={theme}
         />
 
-        <section id="features">
+        <section id="features" className="scroll-mt-28">
           <div className="max-w-7xl mx-auto px-4 pt-20 pb-16 md:pt-24">
             <h2 className="text-2xl md:text-3xl font-semibold">{t.featuresTitle}</h2>
             <p className={`mt-2 ${mutedClass}`}>{t.featuresSub}</p>
@@ -498,7 +495,7 @@ function Landing() {
           </div>
         </section>
 
-        <section id="story" className="pb-16">
+        <section id="story" className="scroll-mt-28 pb-16">
           <ScrollAnimationSection
             frameUrls={imageFrames}
             sectionHeightVh={400}
@@ -539,7 +536,7 @@ function Landing() {
           </ScrollAnimationSection>
         </section>
 
-        <section id="faq" className="max-w-5xl mx-auto px-4 pb-24">
+        <section id="faq" className="scroll-mt-28 max-w-5xl mx-auto px-4 pb-24">
           <h2 className="text-2xl md:text-3xl font-semibold">{t.faqTitle}</h2>
           <div className="mt-6 grid md:grid-cols-2 gap-4">
             {faqs.map((item, idx) => {
@@ -562,7 +559,7 @@ function Landing() {
           </div>
         </section>
 
-        <section id="map" className="max-w-7xl mx-auto px-4 pb-24">
+        <section id="map" className="scroll-mt-28 max-w-7xl mx-auto px-4 pb-24">
           <h2 className="text-2xl md:text-3xl font-semibold">{t.mapTitle}</h2>
           <p className={`mt-2 ${mutedClass}`}>{t.mapSub}</p>
 
@@ -614,8 +611,57 @@ function Landing() {
         </section>
       </main>
 
+      <nav
+        className={`md:hidden fixed inset-x-3 bottom-3 z-50 rounded-[26px] border p-2 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl ${
+          theme === "dark"
+            ? "border-white/10 bg-slate-950/90"
+            : "border-slate-200 bg-white/92"
+        }`}
+        aria-label="Mobile navigation"
+      >
+        <div className="grid grid-cols-5 gap-1">
+          {mobileNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeMobileSection === item.id;
+            const itemClass = `flex min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 py-2 text-center text-[11px] font-semibold leading-tight transition ${
+              isActive
+                ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 shadow-lg shadow-cyan-500/20"
+                : theme === "dark"
+                  ? "text-slate-300"
+                  : "text-slate-600"
+            }`;
+
+            if ("to" in item) {
+              return (
+                <Link
+                  key={item.id}
+                  to={item.to}
+                  onClick={() => setActiveMobileSection(item.id)}
+                  className={itemClass}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            }
+
+            return (
+              <a
+                key={item.id}
+                href={item.href}
+                onClick={() => setActiveMobileSection(item.id)}
+                className={itemClass}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </a>
+            );
+          })}
+        </div>
+      </nav>
+
       <footer
-        className={`border-t py-8 ${pageBackgroundClass} ${
+        className={`border-t py-8 pb-28 md:pb-8 ${pageBackgroundClass} ${
           theme === "dark" ? "border-white/10" : "border-slate-200"
         }`}
       >
