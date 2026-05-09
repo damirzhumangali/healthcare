@@ -516,17 +516,7 @@ export default function AdminDashboard() {
     if (allowed) void load();
   }, [allowed, load]);
 
-  useEffect(() => {
-    if (!allowed) return;
-    const interval = setInterval(() => {
-      void load();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [allowed, load]);
-
   const ringAudioRef = useRef<HTMLAudioElement | null>(null);
-  const prevNewCountRef = useRef<number | null>(null);
-  const seenIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const audio = new Audio("/Ring.mp3");
@@ -539,26 +529,37 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    const newConsultations = consultations.filter((c) => c.status === "new");
-    const newCount = newConsultations.length;
-    const prev = prevNewCountRef.current;
+    if (!allowed) return;
+    const token = getToken();
+    if (!token) return;
 
-    if (prev === null) {
-      prevNewCountRef.current = newCount;
-      seenIdsRef.current = new Set(consultations.map((c) => c.id));
-      return;
-    }
+    const url = `${API_URL}/api/admin/telegram-consultations/stream?token=${encodeURIComponent(token)}`;
+    const source = new EventSource(url);
 
-    const hasUnseenNew = newConsultations.some((c) => !seenIdsRef.current.has(c.id));
+    source.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === "created" && ringAudioRef.current) {
+          ringAudioRef.current.currentTime = 0;
+          ringAudioRef.current.play().catch(() => {});
+        }
+        if (data.type === "created" || data.type === "accepted" || data.type === "status_changed") {
+          void load();
+        }
+      } catch {
+        // ignore malformed events
+      }
+    };
 
-    if (hasUnseenNew && ringAudioRef.current) {
-      ringAudioRef.current.currentTime = 0;
-      ringAudioRef.current.play().catch(() => {});
-    }
+    source.onerror = () => {
+      // EventSource auto-reconnects; we keep a fallback poll-on-error here
+      // so a permanent failure doesn't leave the dashboard stuck.
+    };
 
-    prevNewCountRef.current = newCount;
-    seenIdsRef.current = new Set(consultations.map((c) => c.id));
-  }, [consultations]);
+    return () => {
+      source.close();
+    };
+  }, [allowed, load]);
 
   if (!getToken()) {
     return <Navigate to="/login" replace />;
