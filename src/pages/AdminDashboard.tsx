@@ -29,8 +29,8 @@ import {
   updateAdminTelegramConsultationStatus,
 } from "../lib/apiAdmin";
 import { isAdminAccount } from "../lib/adminAccess";
-import { BMO_SETTINGS_URL } from "../lib/apiBase";
-import { getToken } from "../lib/auth";
+import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
+import { getToken, setToken } from "../lib/auth";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
 
 type StoredUser = {
@@ -300,6 +300,35 @@ function isLocalDemoHost() {
   return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 }
 
+async function ensureLocalBackendToken(user: StoredUser | null) {
+  if (!user?.email) {
+    throw new Error("missing_local_user");
+  }
+
+  const res = await fetch(`${API_URL}/auth/local/dev-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: user.email,
+      name: user.name,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("local_dev_token_exchange_failed");
+  }
+
+  const data = await res.json();
+  if (!data?.token || !data?.user) {
+    throw new Error("invalid_local_dev_token_response");
+  }
+
+  setToken(data.token);
+  localStorage.setItem("healthassist_current_user", JSON.stringify(data.user));
+}
+
 function patientLabel(item: Appointment, fallback: string) {
   const idTail = (item.patient_id || item.patientId || "").slice(-4);
   return (
@@ -367,9 +396,13 @@ export default function AdminDashboard() {
   const load = useCallback(async () => {
     const token = getToken();
     if (isLocalDemoHost() && !isJwtLikeToken(token)) {
-      setErr("serverAuth");
-      setLoading(false);
-      return;
+      try {
+        await ensureLocalBackendToken(readCurrentUser());
+      } catch {
+        setErr("serverAuth");
+        setLoading(false);
+        return;
+      }
     }
 
     setErr(null);
