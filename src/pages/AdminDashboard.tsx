@@ -799,9 +799,16 @@ export default function AdminDashboard() {
                       <p>{formatDateTime(item.created_at, locale)}</p>
 
                       {wantsConsultation && !hasMeeting ? (
-                        <p style={{ color: "#f59e0b", fontWeight: 600 }}>
-                          📹 Запрошена видеоконсультация
-                        </p>
+                        <div style={{ marginTop: 6, padding: 6, background: "rgba(245,158,11,0.12)", borderRadius: 6 }}>
+                          <p style={{ margin: 0, color: "#f59e0b", fontWeight: 600 }}>
+                            📹 Запрошена видеоконсультация
+                          </p>
+                          {item.requested_at ? (
+                            <p style={{ margin: "4px 0 0" }}>
+                              Пациент выбрал: <b>{formatDateTime(item.requested_at, locale)}</b>
+                            </p>
+                          ) : null}
+                        </div>
                       ) : null}
 
                       {hasMeeting ? (
@@ -847,14 +854,16 @@ export default function AdminDashboard() {
                           type="button"
                           className="doctor-admin__status doctor-admin__status--ok"
                           onClick={() => {
-                            const now = new Date(Date.now() + 30 * 60 * 1000);
-                            const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                            const base = item.requested_at
+                              ? new Date(item.requested_at)
+                              : new Date(Date.now() + 30 * 60 * 1000);
+                            const localIso = new Date(base.getTime() - base.getTimezoneOffset() * 60000)
                               .toISOString()
                               .slice(0, 16);
                             setAcceptForm({ id: item.id, value: localIso });
                           }}
                         >
-                          Принять консультацию
+                          {item.requested_at ? "Принять (время пациента)" : "Принять консультацию"}
                         </button>
                       ) : null}
                       <button

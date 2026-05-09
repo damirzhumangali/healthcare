@@ -43,6 +43,7 @@ export type AdminTelegramConsultation = {
   temperature?: string | null;
   status: TelegramConsultationStatus;
   wants_consultation?: number | boolean | null;
+  requested_at?: string | null;
   meeting_url?: string | null;
   meeting_at?: string | null;
   created_at: string;
