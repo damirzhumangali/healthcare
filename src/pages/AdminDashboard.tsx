@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -515,6 +515,50 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (allowed) void load();
   }, [allowed, load]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    const interval = setInterval(() => {
+      void load();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [allowed, load]);
+
+  const ringAudioRef = useRef<HTMLAudioElement | null>(null);
+  const prevNewCountRef = useRef<number | null>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const audio = new Audio("/Ring.mp3");
+    audio.preload = "auto";
+    audio.volume = 0.7;
+    ringAudioRef.current = audio;
+    return () => {
+      ringAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const newConsultations = consultations.filter((c) => c.status === "new");
+    const newCount = newConsultations.length;
+    const prev = prevNewCountRef.current;
+
+    if (prev === null) {
+      prevNewCountRef.current = newCount;
+      seenIdsRef.current = new Set(consultations.map((c) => c.id));
+      return;
+    }
+
+    const hasUnseenNew = newConsultations.some((c) => !seenIdsRef.current.has(c.id));
+
+    if (hasUnseenNew && ringAudioRef.current) {
+      ringAudioRef.current.currentTime = 0;
+      ringAudioRef.current.play().catch(() => {});
+    }
+
+    prevNewCountRef.current = newCount;
+    seenIdsRef.current = new Set(consultations.map((c) => c.id));
+  }, [consultations]);
 
   if (!getToken()) {
     return <Navigate to="/login" replace />;
