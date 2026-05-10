@@ -118,8 +118,8 @@ const text = {
     footerCityLabel: "Город",
     footerCityValue: "Астана, Казахстан",
     footerSocialTitle: "Соцсети",
-    footerTelegram: "Telegram",
-    footerTelegramHref: "https://t.me/healthassist_bmo",
+    footerTelegram: "@telehealth_assist_bot",
+    footerTelegramHref: "https://t.me/telehealth_assist_bot",
     footerPrivacyPolicy: "Политика конфиденциальности",
     footerTerms: "Пользовательское соглашение",
     footerMedicalDisclaimer: "Отказ от медицинской ответственности",
@@ -193,8 +193,8 @@ const text = {
     footerCityLabel: "Қала",
     footerCityValue: "Астана, Қазақстан",
     footerSocialTitle: "Әлеуметтік желі",
-    footerTelegram: "Telegram",
-    footerTelegramHref: "https://t.me/healthassist_bmo",
+    footerTelegram: "@telehealth_assist_bot",
+    footerTelegramHref: "https://t.me/telehealth_assist_bot",
     footerPrivacyPolicy: "Құпиялық саясаты",
     footerTerms: "Пайдаланушы келісімі",
     footerMedicalDisclaimer: "Медициналық жауапкершіліктен бас тарту",
@@ -268,8 +268,8 @@ const text = {
     footerCityLabel: "City",
     footerCityValue: "Astana, Kazakhstan",
     footerSocialTitle: "Social",
-    footerTelegram: "Telegram",
-    footerTelegramHref: "https://t.me/healthassist_bmo",
+    footerTelegram: "@telehealth_assist_bot",
+    footerTelegramHref: "https://t.me/telehealth_assist_bot",
     footerPrivacyPolicy: "Privacy Policy",
     footerTerms: "Terms of Use",
     footerMedicalDisclaimer: "Medical Disclaimer",
@@ -382,17 +382,13 @@ function Landing() {
     () => [
       { label: t.footerAbout, href: "#top", onClick: () => setActiveMobileSection("features") },
       { label: t.footerHowItWorks, href: "#story", onClick: () => setActiveMobileSection("story") },
-      { label: t.footerForDoctors, to: "/doctor" },
-      { label: t.footerForPatients, href: "#features", onClick: () => setActiveMobileSection("features") },
     ],
     [t]
   );
 
   const footerSupportLinks = useMemo(
     () => [
-      { label: t.footerFaq, href: "#faq", onClick: () => setActiveMobileSection("faq") },
       { label: t.footerContactUs, href: `mailto:${t.footerEmailValue}` },
-      { label: t.footerTechSupport, href: `mailto:${t.footerEmailValue}?subject=HealthAssist%20Support` },
     ],
     [t]
   );
