@@ -62,6 +62,10 @@ const text = {
     navGoogle: "Войти через Google",
     navLogout: "Выйти",
     navRegister: "Регистрация",
+    navRegisterMobile: "Рег.",
+    navLoginMobile: "Вход",
+    navAdminMobile: "Админ",
+    navCabinetMobile: "Каб.",
     heroKicker: "Digital Healthcare Platform",
     heroTitle: "Практические советы по здоровью на каждый день",
     heroSub:
@@ -110,6 +114,10 @@ const text = {
     navGoogle: "Google арқылы кіру",
     navLogout: "Шығу",
     navRegister: "Тіркелу",
+    navRegisterMobile: "Тірк.",
+    navLoginMobile: "Кіру",
+    navAdminMobile: "Админ",
+    navCabinetMobile: "Каб.",
     heroKicker: "Digital Healthcare Platform",
     heroTitle: "Күнделікті денсаулыққа пайдалы нұсқаулық",
     heroSub:
@@ -158,6 +166,10 @@ const text = {
     navGoogle: "Sign in with Google",
     navLogout: "Sign out",
     navRegister: "Register",
+    navRegisterMobile: "Join",
+    navLoginMobile: "Login",
+    navAdminMobile: "Admin",
+    navCabinetMobile: "Home",
     heroKicker: "Digital Healthcare Platform",
     heroTitle: "Practical health guidance for daily life",
     heroSub:
@@ -306,14 +318,18 @@ function Landing() {
             : "border-slate-200 bg-white/80"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-2.5 py-3 md:px-4">
           <div className="flex items-center justify-between gap-2 md:gap-4">
             <a
               href="#top"
-              className="flex shrink-0 items-center gap-2"
+              className="flex shrink-0 items-center"
               onClick={() => setActiveMobileSection("features")}
             >
-              <img src="/icon-192.png" alt="HealthAssist" className="h-9 w-9 rounded-xl object-cover" />
+              <img
+                src="/icon-192.png"
+                alt="HealthAssist"
+                className="h-[30px] w-[30px] rounded-xl object-cover md:h-9 md:w-9"
+              />
               <span className="hidden font-semibold md:inline">HealthAssist</span>
             </a>
 
@@ -397,7 +413,7 @@ function Landing() {
               )}
             </div>
 
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 md:hidden">
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1 md:hidden">
               <div
                 className={`flex shrink-0 rounded-full border overflow-hidden ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
@@ -407,7 +423,7 @@ function Landing() {
                   <button
                     key={l}
                     onClick={() => handleLocaleChange(l)}
-                    className={`px-2 py-1 text-[11px] font-medium ${
+                    className={`min-w-[30px] px-1 py-1 text-[10px] font-medium ${
                       locale === l
                         ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                         : ""
@@ -422,9 +438,9 @@ function Landing() {
                 <>
                   <button
                     onClick={openUserArea}
-                    className="inline-flex h-8 min-w-[78px] items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-3 text-xs font-semibold text-slate-950"
+                    className="inline-flex h-[30px] min-w-[62px] items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2 text-[10px] font-semibold text-slate-950"
                   >
-                    {isAdminUser ? t.navAdmin : t.navCabinet}
+                    {isAdminUser ? t.navAdminMobile : t.navCabinetMobile}
                   </button>
                   <button
                     onClick={() => {
@@ -433,7 +449,7 @@ function Landing() {
                       setCurrentUserName("");
                       setCurrentUserRole("");
                     }}
-                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                    className={`inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
                     }`}
                     aria-label={t.navLogout}
@@ -446,24 +462,24 @@ function Landing() {
                 <>
                   <Link
                     to="/register"
-                    className={`inline-flex h-8 w-[66px] shrink-0 items-center justify-center rounded-full border px-2 text-xs font-medium ${
+                    className={`inline-flex h-[30px] w-[52px] shrink-0 items-center justify-center rounded-full border px-1 text-[10px] font-medium ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
                     }`}
                   >
-                    {t.navRegister}
+                    {t.navRegisterMobile}
                   </Link>
                   <Link
                     to="/login"
-                    className="inline-flex h-8 w-[66px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2 text-xs font-semibold text-slate-950"
+                    className="inline-flex h-[30px] w-[52px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-1 text-[10px] font-semibold text-slate-950"
                   >
-                    {t.navLogin}
+                    {t.navLoginMobile}
                   </Link>
                 </>
               )}
 
               <button
                 onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
-                className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                className={`inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-xl border ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
                 aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
