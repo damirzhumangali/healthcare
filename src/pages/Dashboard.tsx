@@ -323,14 +323,11 @@ export default function Dashboard() {
 
         <Card>
           <div className="stack">
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+            <div>
               <div>
                 <h2 className="h2" style={{ margin: 0 }}>{t.myAppointments}</h2>
                 <p className="muted" style={{ margin: "6px 0 0" }}>{t.myAppointmentsHint}</p>
               </div>
-              <Button variant="ghost" onClick={loadAppointments} disabled={appointmentsLoading}>
-                {appointmentsLoading ? t.loading : t.refresh}
-              </Button>
             </div>
 
             {appointmentsLoading ? (
