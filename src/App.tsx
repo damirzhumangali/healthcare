@@ -52,6 +52,7 @@ const text = {
   ru: {
     navFeatures: "Пациентам",
     navStory: "Симптомы",
+    navStoryMobile: "BMO",
     navFaq: "Вопросы",
     navMap: "Клиники",
     navBody: "3D тело",
@@ -104,6 +105,7 @@ const text = {
   kk: {
     navFeatures: "Пациенттерге",
     navStory: "Белгілер",
+    navStoryMobile: "BMO",
     navFaq: "Сұрақтар",
     navMap: "Емханалар",
     navBody: "3D дене",
@@ -156,6 +158,7 @@ const text = {
   en: {
     navFeatures: "For Patients",
     navStory: "Symptoms",
+    navStoryMobile: "BMO",
     navFaq: "Questions",
     navMap: "Clinics",
     navBody: "3D Body",
@@ -235,7 +238,7 @@ function Landing() {
   const isAdminUser = currentUserRole === "admin" || isAdminAccount(readStoredUser());
   const mobileNavItems = [
     { id: "features", label: t.navFeatures, href: "#features", icon: Users },
-    { id: "story", label: t.navStory, href: "#story", icon: HeartPulse },
+    { id: "story", label: t.navStoryMobile, href: "#story", icon: HeartPulse },
     { id: "faq", label: t.navFaq, href: "#faq", icon: CircleHelp },
     { id: "map", label: t.navMap, href: "#map", icon: MapPinned },
     { id: "body", label: t.navBody, to: "/body", icon: Globe },
