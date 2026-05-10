@@ -25,6 +25,7 @@ import MeasurementDetails from "./pages/MeasurementDetails";
 import AppointmentForm from "./pages/AppointmentForm";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import LegalDocumentPage from "./pages/LegalDocumentPage";
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
 import { getToken, logout } from "./lib/auth";
@@ -100,7 +101,29 @@ const text = {
     mapTitle: "Поликлиники в Астане",
     mapSub: "Найдите ближайшую поликлинику и постройте маршрут.",
     mapHint: "Карта показывает результаты по запросу «поликлиники в Астане».",
-    footer: "Готово к адаптации под твой бренд и контент.",
+    footerNavTitle: "Навигация",
+    footerAbout: "О сервисе",
+    footerHowItWorks: "Как это работает",
+    footerForDoctors: "Для врачей",
+    footerForPatients: "Для пациентов",
+    footerSupportTitle: "Поддержка",
+    footerFaq: "Часто задаваемые вопросы",
+    footerContactUs: "Связаться с нами",
+    footerTechSupport: "Техподдержка",
+    footerContactsTitle: "Контакты",
+    footerPhoneLabel: "Телефон",
+    footerPhoneValue: "+7 (700) 000-00-00",
+    footerEmailLabel: "Email",
+    footerEmailValue: "support@healthassist.kz",
+    footerCityLabel: "Город",
+    footerCityValue: "Астана, Казахстан",
+    footerSocialTitle: "Соцсети",
+    footerTelegram: "Telegram",
+    footerTelegramHref: "https://t.me/healthassist_bmo",
+    footerPrivacyPolicy: "Политика конфиденциальности",
+    footerTerms: "Пользовательское соглашение",
+    footerMedicalDisclaimer: "Отказ от медицинской ответственности",
+    footerBottom: "Цифровая медицинская платформа для пациентов и врачей.",
   },
   kk: {
     navFeatures: "Пациенттерге",
@@ -153,7 +176,29 @@ const text = {
     mapTitle: "Астанадағы емханалар",
     mapSub: "Ең жақын емхананы тауып, маршрут құрыңыз.",
     mapHint: "Карта «Астанадағы емханалар» сұрауы бойынша нәтижелерді көрсетеді.",
-    footer: "Сенің бренд пен контентке бейімдеуге дайын.",
+    footerNavTitle: "Навигация",
+    footerAbout: "Сервис туралы",
+    footerHowItWorks: "Қалай жұмыс істейді",
+    footerForDoctors: "Дәрігерлерге",
+    footerForPatients: "Пациенттерге",
+    footerSupportTitle: "Қолдау",
+    footerFaq: "Жиі қойылатын сұрақтар",
+    footerContactUs: "Бізбен байланысу",
+    footerTechSupport: "Техқолдау",
+    footerContactsTitle: "Байланыс",
+    footerPhoneLabel: "Телефон",
+    footerPhoneValue: "+7 (700) 000-00-00",
+    footerEmailLabel: "Email",
+    footerEmailValue: "support@healthassist.kz",
+    footerCityLabel: "Қала",
+    footerCityValue: "Астана, Қазақстан",
+    footerSocialTitle: "Әлеуметтік желі",
+    footerTelegram: "Telegram",
+    footerTelegramHref: "https://t.me/healthassist_bmo",
+    footerPrivacyPolicy: "Құпиялық саясаты",
+    footerTerms: "Пайдаланушы келісімі",
+    footerMedicalDisclaimer: "Медициналық жауапкершіліктен бас тарту",
+    footerBottom: "Пациенттер мен дәрігерлерге арналған цифрлық медициналық платформа.",
   },
   en: {
     navFeatures: "For Patients",
@@ -206,7 +251,29 @@ const text = {
     mapTitle: "Clinics in Astana",
     mapSub: "Find a nearby clinic and build directions.",
     mapHint: "The map shows search results for “clinics in Astana”.",
-    footer: "Ready to be adapted to your brand and content.",
+    footerNavTitle: "Navigation",
+    footerAbout: "About",
+    footerHowItWorks: "How it works",
+    footerForDoctors: "For doctors",
+    footerForPatients: "For patients",
+    footerSupportTitle: "Support",
+    footerFaq: "Frequently asked questions",
+    footerContactUs: "Contact us",
+    footerTechSupport: "Technical support",
+    footerContactsTitle: "Contacts",
+    footerPhoneLabel: "Phone",
+    footerPhoneValue: "+7 (700) 000-00-00",
+    footerEmailLabel: "Email",
+    footerEmailValue: "support@healthassist.kz",
+    footerCityLabel: "City",
+    footerCityValue: "Astana, Kazakhstan",
+    footerSocialTitle: "Social",
+    footerTelegram: "Telegram",
+    footerTelegramHref: "https://t.me/healthassist_bmo",
+    footerPrivacyPolicy: "Privacy Policy",
+    footerTerms: "Terms of Use",
+    footerMedicalDisclaimer: "Medical Disclaimer",
+    footerBottom: "Digital healthcare platform for patients and doctors.",
   },
 } as const;
 
@@ -279,6 +346,7 @@ function Landing() {
   const surfaceClass =
     theme === "dark" ? "bg-slate-900/70 border-white/10" : "bg-white border-slate-200";
   const mutedClass = theme === "dark" ? "text-slate-300" : "text-slate-600";
+  const footerLabelClass = theme === "dark" ? "text-slate-100" : "text-slate-900";
 
   const features = useMemo(
     () => [
@@ -306,6 +374,34 @@ function Landing() {
       { q: t.q1, a: t.a1 },
       { q: t.q2, a: t.a2 },
       { q: t.q3, a: t.a3 },
+    ],
+    [t]
+  );
+
+  const footerNavigationLinks = useMemo(
+    () => [
+      { label: t.footerAbout, href: "#top", onClick: () => setActiveMobileSection("features") },
+      { label: t.footerHowItWorks, href: "#story", onClick: () => setActiveMobileSection("story") },
+      { label: t.footerForDoctors, to: "/doctor" },
+      { label: t.footerForPatients, href: "#features", onClick: () => setActiveMobileSection("features") },
+    ],
+    [t]
+  );
+
+  const footerSupportLinks = useMemo(
+    () => [
+      { label: t.footerFaq, href: "#faq", onClick: () => setActiveMobileSection("faq") },
+      { label: t.footerContactUs, href: `mailto:${t.footerEmailValue}` },
+      { label: t.footerTechSupport, href: `mailto:${t.footerEmailValue}?subject=HealthAssist%20Support` },
+    ],
+    [t]
+  );
+
+  const footerLegalLinks = useMemo(
+    () => [
+      { label: t.footerPrivacyPolicy, to: "/privacy" },
+      { label: t.footerTerms, to: "/terms" },
+      { label: t.footerMedicalDisclaimer, to: "/medical-disclaimer" },
     ],
     [t]
   );
@@ -694,9 +790,107 @@ function Landing() {
           theme === "dark" ? "border-white/10" : "border-slate-200"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <span>© {new Date().getFullYear()} HealthAssist</span>
-          <span className={mutedClass}>{t.footer}</span>
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid gap-8 border-b pb-8 md:grid-cols-2 xl:grid-cols-4 xl:gap-10">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                {t.footerNavTitle}
+              </h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm">
+                {footerNavigationLinks.map((item) =>
+                  "to" in item ? (
+                    <Link
+                      key={item.label}
+                      to={item.to}
+                      className={`transition-colors hover:text-cyan-300 ${mutedClass}`}
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      onClick={item.onClick}
+                      className={`transition-colors hover:text-cyan-300 ${mutedClass}`}
+                    >
+                      {item.label}
+                    </a>
+                  )
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                {t.footerSupportTitle}
+              </h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm">
+                {footerSupportLinks.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={item.onClick}
+                    className={`transition-colors hover:text-cyan-300 ${mutedClass}`}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                {t.footerContactsTitle}
+              </h2>
+              <div className={`mt-4 flex flex-col gap-3 text-sm ${mutedClass}`}>
+                <a href={`tel:${t.footerPhoneValue.replace(/[^+\d]/g, "")}`} className="transition-colors hover:text-cyan-300">
+                  <span className={`font-medium ${footerLabelClass}`}>{t.footerPhoneLabel}</span>
+                  <span className="ml-2">{t.footerPhoneValue}</span>
+                </a>
+                <a href={`mailto:${t.footerEmailValue}`} className="transition-colors hover:text-cyan-300">
+                  <span className={`font-medium ${footerLabelClass}`}>{t.footerEmailLabel}</span>
+                  <span className="ml-2">{t.footerEmailValue}</span>
+                </a>
+                <div>
+                  <span className={`font-medium ${footerLabelClass}`}>{t.footerCityLabel}</span>
+                  <span className="ml-2">{t.footerCityValue}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                {t.footerSocialTitle}
+              </h2>
+              <div className="mt-4 flex flex-col gap-3 text-sm">
+                <a
+                  href={t.footerTelegramHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`transition-colors hover:text-cyan-300 ${mutedClass}`}
+                >
+                  {t.footerTelegram}
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className={`flex flex-col gap-2 pt-5 text-sm md:flex-row md:items-center md:justify-between ${mutedClass}`}>
+            <span>© {new Date().getFullYear()} HealthAssist</span>
+            <span>{t.footerBottom}</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3 text-sm">
+            {footerLegalLinks.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`transition-colors hover:text-cyan-300 ${mutedClass}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </footer>
     </div>
@@ -710,6 +904,12 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/body" element={<BodyMap />} />
+      <Route path="/privacy" element={<LegalDocumentPage documentId="privacy" />} />
+      <Route path="/terms" element={<LegalDocumentPage documentId="terms" />} />
+      <Route
+        path="/medical-disclaimer"
+        element={<LegalDocumentPage documentId="medical-disclaimer" />}
+      />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
         path="/appointments/new"
