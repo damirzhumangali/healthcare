@@ -40,9 +40,9 @@ const copy = {
     bookDoctor: "Записаться к врачу",
     newMeasurement: "Добавить измерение",
     adminPanel: "Зайти в админку",
-    myAppointments: "Мои записи",
-    myAppointmentsHint: "Здесь появятся ваши приемы после записи к врачу.",
-    noAppointments: "Записей пока нет. Выберите врача и удобное время.",
+    myAppointments: "История",
+    myAppointmentsHint: "Здесь будут отображаться ваши записи и посещения.",
+    noAppointments: "История пока пуста.",
     appointmentError: "Не удалось загрузить записи. Попробуйте обновить страницу.",
     doctor: "Врач",
     reason: "Причина",
@@ -82,9 +82,9 @@ const copy = {
     bookDoctor: "Дәрігерге жазылу",
     newMeasurement: "Өлшеу қосу",
     adminPanel: "Админкаға кіру",
-    myAppointments: "Менің жазбаларым",
-    myAppointmentsHint: "Дәрігерге жазылғаннан кейін қабылдауларыңыз осында көрінеді.",
-    noAppointments: "Әзірге жазба жоқ. Дәрігер мен ыңғайлы уақытты таңдаңыз.",
+    myAppointments: "Тарих",
+    myAppointmentsHint: "Мұнда сіздің жазылуларыңыз бен қабылдауларыңыз көрсетіледі.",
+    noAppointments: "Тарих әзірге бос.",
     appointmentError: "Жазбаларды жүктеу мүмкін болмады. Бетті жаңартып көріңіз.",
     doctor: "Дәрігер",
     reason: "Себебі",
@@ -124,9 +124,9 @@ const copy = {
     bookDoctor: "Book a Doctor",
     newMeasurement: "Add Measurement",
     adminPanel: "Open Admin",
-    myAppointments: "My Appointments",
-    myAppointmentsHint: "Your doctor visits will appear here after booking.",
-    noAppointments: "No appointments yet. Choose a doctor and a convenient time.",
+    myAppointments: "History",
+    myAppointmentsHint: "Your appointments and visits will appear here.",
+    noAppointments: "History is empty for now.",
     appointmentError: "Failed to load appointments. Try refreshing the page.",
     doctor: "Doctor",
     reason: "Reason",
@@ -333,12 +333,7 @@ export default function Dashboard() {
             {appointmentsLoading ? (
               <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
             ) : appointments.length === 0 ? (
-              <div className="stack">
-                <p className="muted" style={{ margin: 0 }}>{t.noAppointments}</p>
-                <div className="row">
-                  <Button onClick={() => nav("/appointments/new")}>{t.bookDoctor}</Button>
-                </div>
-              </div>
+              <p className="muted" style={{ margin: 0 }}>{t.noAppointments}</p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
                 {appointments.map((appointment) => (
