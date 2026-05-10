@@ -788,7 +788,7 @@ function Landing() {
       >
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid gap-8 border-b pb-8 md:grid-cols-2 xl:grid-cols-4 xl:gap-10">
-            <div>
+            <div className="hidden md:block">
               <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 {t.footerNavTitle}
               </h2>
@@ -816,7 +816,7 @@ function Landing() {
               </div>
             </div>
 
-            <div>
+            <div className="hidden md:block">
               <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 {t.footerSupportTitle}
               </h2>
@@ -834,7 +834,7 @@ function Landing() {
               </div>
             </div>
 
-            <div>
+            <div className="hidden md:block">
               <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 {t.footerContactsTitle}
               </h2>
@@ -872,11 +872,11 @@ function Landing() {
           </div>
 
           <div className={`flex flex-col gap-2 pt-5 text-sm md:flex-row md:items-center md:justify-between ${mutedClass}`}>
-            <span>© {new Date().getFullYear()} HealthAssist</span>
-            <span>{t.footerBottom}</span>
+            <span>© 2026 HealthAssist</span>
+            <span className="hidden md:inline">{t.footerBottom}</span>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <div className="mt-4 flex flex-col gap-3 text-sm md:flex-row md:flex-wrap">
             {footerLegalLinks.map((item) => (
               <Link
                 key={item.to}
