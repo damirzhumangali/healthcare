@@ -64,7 +64,7 @@ const text = {
     navGoogle: "Войти через Google",
     navLogout: "Выйти",
     navRegister: "Регистрация",
-    navRegisterMobile: "Рег.",
+    navRegisterMobile: "Регистрация",
     navLoginMobile: "Вход",
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
@@ -139,7 +139,7 @@ const text = {
     navGoogle: "Google арқылы кіру",
     navLogout: "Шығу",
     navRegister: "Тіркелу",
-    navRegisterMobile: "Тірк.",
+    navRegisterMobile: "Тіркелу",
     navLoginMobile: "Кіру",
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
@@ -214,7 +214,7 @@ const text = {
     navGoogle: "Sign in with Google",
     navLogout: "Sign out",
     navRegister: "Register",
-    navRegisterMobile: "Join",
+    navRegisterMobile: "Register",
     navLoginMobile: "Login",
     navAdminMobile: "Admin",
     navCabinetMobile: "Home",
@@ -557,7 +557,7 @@ function Landing() {
                 <>
                   <Link
                     to="/register"
-                    className={`inline-flex h-[30px] w-[52px] shrink-0 items-center justify-center rounded-full border px-1 text-[10px] font-medium ${
+                    className={`inline-flex h-[30px] min-w-[82px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-2 text-[9px] font-medium ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
                     }`}
                   >
