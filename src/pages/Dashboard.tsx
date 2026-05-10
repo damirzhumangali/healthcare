@@ -39,7 +39,6 @@ const copy = {
     quickActionsHint: "Выберите, что нужно сделать сейчас.",
     bookDoctor: "Записаться к врачу",
     newMeasurement: "Добавить измерение",
-    qrStation: "Открыть QR-станцию",
     adminPanel: "Зайти в админку",
     myAppointments: "Мои записи",
     myAppointmentsHint: "Здесь появятся ваши приемы после записи к врачу.",
@@ -65,7 +64,7 @@ const copy = {
     issued: "Получен",
     history: "История измерений",
     loading: "Загрузка...",
-    noMeasurements: "Измерений пока нет. Добавьте вручную или откройте QR-станцию.",
+    noMeasurements: "Измерений пока нет. Добавьте вручную.",
     pressure: "Давление",
     temp: "Темп",
     pulse: "Пульс",
@@ -82,7 +81,6 @@ const copy = {
     quickActionsHint: "Қазір не істеу керегін таңдаңыз.",
     bookDoctor: "Дәрігерге жазылу",
     newMeasurement: "Өлшеу қосу",
-    qrStation: "QR-станцияны ашу",
     adminPanel: "Админкаға кіру",
     myAppointments: "Менің жазбаларым",
     myAppointmentsHint: "Дәрігерге жазылғаннан кейін қабылдауларыңыз осында көрінеді.",
@@ -108,7 +106,7 @@ const copy = {
     issued: "Алынды",
     history: "Өлшеулер тарихы",
     loading: "Жүктелуде...",
-    noMeasurements: "Әлі өлшеулер жоқ. Қолмен қосыңыз немесе QR-станцияны ашыңыз.",
+    noMeasurements: "Әлі өлшеулер жоқ. Қолмен қосыңыз.",
     pressure: "Қысым",
     temp: "Темп",
     pulse: "Пульс",
@@ -125,7 +123,6 @@ const copy = {
     quickActionsHint: "Choose what you need to do now.",
     bookDoctor: "Book a Doctor",
     newMeasurement: "Add Measurement",
-    qrStation: "Open QR Station",
     adminPanel: "Open Admin",
     myAppointments: "My Appointments",
     myAppointmentsHint: "Your doctor visits will appear here after booking.",
@@ -151,7 +148,7 @@ const copy = {
     issued: "Taken",
     history: "Measurement History",
     loading: "Loading...",
-    noMeasurements: "No measurements yet. Add one manually or open the QR station.",
+    noMeasurements: "No measurements yet. Add one manually.",
     pressure: "Pressure",
     temp: "Temp",
     pulse: "Pulse",
@@ -317,10 +314,6 @@ export default function Dashboard() {
                 }}
               >
                 {t.newMeasurement}
-              </Button>
-
-              <Button variant="ghost" onClick={() => nav("/scan/device-001")}>
-                {t.qrStation}
               </Button>
             </div>
           </div>
