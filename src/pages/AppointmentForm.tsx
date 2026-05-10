@@ -170,13 +170,13 @@ export default function AppointmentForm() {
             >
               <ArrowLeft size={18} />
             </Link>
-            <div className="language-switcher language-switcher--topbar" aria-label="Language switcher">
+            <div className="appointment-form__locale" aria-label="Language switcher">
               {APP_LOCALES.map((lang) => (
                 <button
                   key={lang}
                   type="button"
-                  className={`language-switcher__item ${
-                    locale === lang ? "language-switcher__item--active" : ""
+                  className={`appointment-form__locale-item ${
+                    locale === lang ? "appointment-form__locale-item--active" : ""
                   }`}
                   onClick={() => changeLocale(lang)}
                 >
@@ -186,7 +186,7 @@ export default function AppointmentForm() {
             </div>
             <Link
               to="/"
-              className="btn btn--ghost appointment-form__nav-btn"
+              className="btn btn--ghost appointment-form__nav-btn appointment-form__home-btn"
               aria-label={t.home}
               title={t.home}
             >

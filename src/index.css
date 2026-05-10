@@ -346,9 +346,35 @@ button, input{font:inherit}
 .appointment-form__toolbar{
   display:flex;
   align-items:center;
-  justify-content:flex-end;
+  width:100%;
   gap:10px;
   flex-wrap:nowrap;
+}
+.appointment-form__locale{
+  margin-left:auto;
+  display:flex;
+  height:28px;
+  width:84px;
+  flex:0 0 auto;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;
+  background:transparent;
+}
+.appointment-form__locale-item{
+  flex:1;
+  min-width:0;
+  border:0;
+  background:transparent;
+  color:#cbd5e1;
+  font-size:9px;
+  font-weight:500;
+  padding:4px 2px;
+  cursor:pointer;
+}
+.appointment-form__locale-item--active{
+  background:linear-gradient(to right, #22d3ee, #34d399);
+  color:#0f172a;
 }
 .appointment-form__nav-btn{
   min-height:44px;
@@ -455,7 +481,7 @@ button, input{font:inherit}
   }
   .appointment-form__toolbar{
     width:100%;
-    justify-content:space-between;
+    justify-content:flex-start;
   }
 }
 
@@ -510,6 +536,9 @@ button, input{font:inherit}
   }
   .appointment-form__actions{
     grid-template-columns:1fr;
+  }
+  .appointment-form__home-btn{
+    display:none;
   }
 }
 
