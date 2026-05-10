@@ -68,8 +68,8 @@ function appointmentSort(a: Appointment, b: Appointment) {
 }
 
 function appointmentKey(item: Appointment) {
+  if (item.id) return `id:${item.id}`;
   return [
-    item.id,
     item.patient_id || item.patientId || "",
     item.patient_email || item.patientEmail || "",
     item.doctor_id || item.doctorId || "",
