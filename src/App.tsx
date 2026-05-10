@@ -510,7 +510,7 @@ function Landing() {
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 overflow-hidden md:hidden">
               <div
-                className={`flex h-7 w-[92px] shrink-0 rounded-full border overflow-hidden ${
+                className={`flex h-7 w-[84px] shrink-0 rounded-full border overflow-hidden ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
               >
@@ -557,7 +557,7 @@ function Landing() {
                 <>
                   <Link
                     to="/register"
-                    className={`inline-flex h-7 w-[72px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full border px-1 text-[8px] font-medium ${
+                    className={`inline-flex h-7 w-[68px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full border px-1 text-[8px] font-medium ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
                     }`}
                   >
@@ -565,7 +565,7 @@ function Landing() {
                   </Link>
                   <Link
                     to="/login"
-                    className="inline-flex h-7 w-[46px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-1 text-[9px] font-semibold text-slate-950"
+                    className="inline-flex h-7 w-[42px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-1 text-[9px] font-semibold text-slate-950"
                   >
                     {t.navLoginMobile}
                   </Link>
@@ -574,7 +574,7 @@ function Landing() {
 
               <button
                 onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
-                className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${
+                className={`landing-mobile-theme-toggle inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
                 aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}

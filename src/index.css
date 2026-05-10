@@ -458,6 +458,12 @@ button, input{font:inherit}
   }
 }
 
+@media (max-width: 390px){
+  .landing-mobile-theme-toggle{
+    display:none !important;
+  }
+}
+
 .admin-shell{
   min-height:100vh;
   background:#0f1110;
