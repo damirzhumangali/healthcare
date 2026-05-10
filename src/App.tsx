@@ -14,11 +14,10 @@ import {
 } from "lucide-react";
 import CinematicHero from "./components/CinematicHero";
 import { OverlayContent, ScrollAnimationSection } from "./components/ScrollAnimation";
-import { Link, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import BodyMap from "./pages/BodyMap";
 import AuthCallback from "./pages/AuthCallback";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ScanDevice from "./pages/ScanDevice";
 import MeasurementDetails from "./pages/MeasurementDetails";
@@ -63,8 +62,6 @@ const text = {
     navLogin: "Войти",
     navGoogle: "Войти через Google",
     navLogout: "Выйти",
-    navRegister: "Регистрация",
-    navRegisterMobile: "Регистрация",
     navLoginMobile: "Вход",
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
@@ -138,8 +135,6 @@ const text = {
     navLogin: "Кіру",
     navGoogle: "Google арқылы кіру",
     navLogout: "Шығу",
-    navRegister: "Тіркелу",
-    navRegisterMobile: "Тіркелу",
     navLoginMobile: "Кіру",
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
@@ -213,8 +208,6 @@ const text = {
     navLogin: "Sign in",
     navGoogle: "Sign in with Google",
     navLogout: "Sign out",
-    navRegister: "Register",
-    navRegisterMobile: "Register",
     navLoginMobile: "Login",
     navAdminMobile: "Admin",
     navCabinetMobile: "Home",
@@ -510,14 +503,6 @@ function Landing() {
               ) : (
                 <>
                   <Link
-                    to="/register"
-                    className={`rounded-full px-3 py-1.5 text-xs border ${
-                      theme === "dark" ? "border-white/20" : "border-slate-300"
-                    }`}
-                  >
-                    {t.navRegister}
-                  </Link>
-                  <Link
                     to="/login"
                     className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                   >
@@ -574,16 +559,8 @@ function Landing() {
               ) : (
                 <>
                   <Link
-                    to="/register"
-                    className={`inline-flex h-7 w-[68px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full border px-1 text-[8px] font-medium ${
-                      theme === "dark" ? "border-white/20" : "border-slate-300"
-                    }`}
-                  >
-                    {t.navRegisterMobile}
-                  </Link>
-                  <Link
                     to="/login"
-                    className="inline-flex h-7 w-[42px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-1 text-[9px] font-semibold text-slate-950"
+                    className="inline-flex h-7 w-[52px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-1 text-[9px] font-semibold text-slate-950"
                   >
                     {t.navLoginMobile}
                   </Link>
@@ -916,7 +893,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<Navigate to="/login" replace />} />
       <Route path="/body" element={<BodyMap />} />
       <Route path="/privacy" element={<LegalDocumentPage documentId="privacy" />} />
       <Route path="/terms" element={<LegalDocumentPage documentId="terms" />} />

@@ -12,41 +12,38 @@ type Locale = "ru" | "kk" | "en";
 const copy = {
   ru: {
     title: "Вход",
-    subtitle: "Войдите по email/паролю или через Google. Если аккаунта нет - зарегистрируйтесь.",
+    subtitle: "Войдите через Google, чтобы продолжить работу с сервисом.",
     email: "Email",
     emailPlaceholder: "patient@healthassist.kz",
     password: "Пароль",
     passwordPlaceholder: "Введите пароль",
     loginBtn: "Войти",
-    registerBtn: "Регистрация",
     homeBtn: "На главную",
-    googleBtn: "Войти через Google",
+    googleBtn: "Продолжить через Google",
     loginError: "Ошибка входа",
   },
   kk: {
     title: "Кіру",
-    subtitle: "Email/құпиясөз арқылы немесе Google арқылы кіріңіз. Аккаунт болмаса - тіркеліңіз.",
+    subtitle: "Сервисті жалғастыру үшін Google арқылы кіріңіз.",
     email: "Email",
     emailPlaceholder: "patient@healthassist.kz",
     password: "Құпиясөз",
     passwordPlaceholder: "Құпиясөзді енгізіңіз",
     loginBtn: "Кіру",
-    registerBtn: "Тіркелу",
     homeBtn: "Басты бетке",
-    googleBtn: "Google арқылы кіру",
+    googleBtn: "Google арқылы жалғастыру",
     loginError: "Кіру қатесі",
   },
   en: {
     title: "Sign In",
-    subtitle: "Sign in with email/password or via Google. If you don't have an account - register.",
+    subtitle: "Sign in with Google to continue using the service.",
     email: "Email",
     emailPlaceholder: "patient@healthassist.kz",
     password: "Password",
     passwordPlaceholder: "Enter password",
     loginBtn: "Sign In",
-    registerBtn: "Register",
     homeBtn: "Home",
-    googleBtn: "Sign in with Google",
+    googleBtn: "Continue with Google",
     loginError: "Sign in error",
   },
 } as const;
@@ -173,9 +170,6 @@ export default function Login() {
             {allowLocalCredentials ? (
               <div className="auth-actions">
                 <Button>{t.loginBtn}</Button>
-                <Button type="button" variant="ghost" onClick={() => nav("/register")}>
-                  {t.registerBtn}
-                </Button>
               </div>
             ) : null}
             <Button type="button" variant="ghost" onClick={() => nav("/")}>

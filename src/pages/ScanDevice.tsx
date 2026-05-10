@@ -15,7 +15,6 @@ const copy = {
     needLogin: "Нужен вход",
     needLoginDesc: "Чтобы начать измерение и сохранить результат — войди в аккаунт.",
     signIn: "Войти",
-    register: "Регистрация",
     readyToMeasure: "Готово к измерению",
     readyToMeasureDesc: "Нажми кнопку — сервер создаст измерение как с датчиков, и оно появится в кабинете.",
     startMeasurement: "Начать измерение",
@@ -30,7 +29,6 @@ const copy = {
     needLogin: "Кіру керек",
     needLoginDesc: "Өлшеуді бастау және нәтижені сақтау үшін аккаунтқа кіріңіз.",
     signIn: "Кіру",
-    register: "Тіркелу",
     readyToMeasure: "Өлшеуге дайын",
     readyToMeasureDesc: "Батырманы басыңыз — сервер датчиктардан өлшеуді жасайды, ол кабинетте пайда болады.",
     startMeasurement: "Өлшеуді бастау",
@@ -45,7 +43,6 @@ const copy = {
     needLogin: "Sign In Required",
     needLoginDesc: "To start measurement and save results - sign in to your account.",
     signIn: "Sign In",
-    register: "Register",
     readyToMeasure: "Ready to Measure",
     readyToMeasureDesc: "Click the button - server will create measurement as from sensors, and it will appear in dashboard.",
     startMeasurement: "Start Measurement",
@@ -115,7 +112,6 @@ export default function ScanDevice() {
 
               <div className="row">
                 <Button onClick={() => nav("/login")}>{t.signIn}</Button>
-                <Button variant="ghost" onClick={() => nav("/register")}>{t.register}</Button>
               </div>
             </div>
           ) : (
