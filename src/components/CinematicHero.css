@@ -425,7 +425,7 @@
 
   .cinematic-hero__title {
     max-width: 10ch;
-    font-size: clamp(2.35rem, 11vw, 3.9rem);
+    font-size: clamp(2.15rem, 10.2vw, 3.55rem);
     line-height: 0.95;
   }
 
@@ -500,7 +500,7 @@
 
   .cinematic-hero__title {
     max-width: 9ch;
-    font-size: clamp(1.9rem, 12.4vw, 3rem);
+    font-size: clamp(1.72rem, 11.3vw, 2.72rem);
     line-height: 0.96;
     vertical-align: baseline;
     display: flex;

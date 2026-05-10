@@ -5,6 +5,7 @@ import {
   CircleHelp,
   Globe,
   HeartPulse,
+  LogOut,
   MapPinned,
   Moon,
   ShieldCheck,
@@ -306,10 +307,14 @@ function Landing() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <a href="#top" className="flex items-center gap-2" onClick={() => setActiveMobileSection("features")}>
+          <div className="flex items-center justify-between gap-2 md:gap-4">
+            <a
+              href="#top"
+              className="flex shrink-0 items-center gap-2"
+              onClick={() => setActiveMobileSection("features")}
+            >
               <img src="/icon-192.png" alt="HealthAssist" className="h-9 w-9 rounded-xl object-cover" />
-              <span className="font-semibold">HealthAssist</span>
+              <span className="hidden font-semibold md:inline">HealthAssist</span>
             </a>
 
             <nav className="hidden md:flex items-center gap-6 text-sm">
@@ -392,75 +397,80 @@ function Landing() {
               )}
             </div>
 
-            <button
-              onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
-              className={`md:hidden h-9 w-9 rounded-xl border flex items-center justify-center ${
-                theme === "dark" ? "border-white/20" : "border-slate-300"
-              }`}
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-          </div>
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 md:hidden">
+              <div
+                className={`flex shrink-0 rounded-full border overflow-hidden ${
+                  theme === "dark" ? "border-white/20" : "border-slate-300"
+                }`}
+              >
+                {APP_LOCALES.map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => handleLocaleChange(l)}
+                    className={`px-2 py-1 text-[11px] font-medium ${
+                      locale === l
+                        ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+                        : ""
+                    }`}
+                  >
+                    {l === "kk" ? "KZ" : l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
 
-          <div className="md:hidden mt-3 flex flex-wrap items-center gap-2">
-            <div className={`flex rounded-full border overflow-hidden ${
-              theme === "dark" ? "border-white/20" : "border-slate-300"
-            }`}>
-              {APP_LOCALES.map((l) => (
-                <button
-                  key={l}
-                  onClick={() => handleLocaleChange(l)}
-                  className={`px-2.5 py-1 text-xs font-medium ${
-                    locale === l
-                      ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                      : ""
-                  }`}
-                >
-                  {l === "kk" ? "KZ" : l.toUpperCase()}
-                </button>
-              ))}
+              {isAuthed ? (
+                <>
+                  <button
+                    onClick={openUserArea}
+                    className="inline-flex h-8 min-w-[78px] items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-3 text-xs font-semibold text-slate-950"
+                  >
+                    {isAdminUser ? t.navAdmin : t.navCabinet}
+                  </button>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsAuthed(false);
+                      setCurrentUserName("");
+                      setCurrentUserRole("");
+                    }}
+                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                      theme === "dark" ? "border-white/20" : "border-slate-300"
+                    }`}
+                    aria-label={t.navLogout}
+                    title={t.navLogout}
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/register"
+                    className={`inline-flex h-8 w-[66px] shrink-0 items-center justify-center rounded-full border px-2 text-xs font-medium ${
+                      theme === "dark" ? "border-white/20" : "border-slate-300"
+                    }`}
+                  >
+                    {t.navRegister}
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="inline-flex h-8 w-[66px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2 text-xs font-semibold text-slate-950"
+                  >
+                    {t.navLogin}
+                  </Link>
+                </>
+              )}
+
+              <button
+                onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
+                className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
+                  theme === "dark" ? "border-white/20" : "border-slate-300"
+                }`}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              >
+                {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              </button>
             </div>
-
-            {isAuthed ? (
-              <>
-                <button
-                  onClick={openUserArea}
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                >
-                  {isAdminUser ? t.navAdmin : t.navCabinet}
-                </button>
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsAuthed(false);
-                    setCurrentUserName("");
-                    setCurrentUserRole("");
-                  }}
-                  className={`rounded-full px-3 py-1.5 text-xs border ${
-                    theme === "dark" ? "border-white/20" : "border-slate-300"
-                  }`}
-                >
-                  {t.navLogout}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/register"
-                  className={`rounded-full px-3 py-1.5 text-xs border ${
-                    theme === "dark" ? "border-white/20" : "border-slate-300"
-                  }`}
-                >
-                  {t.navRegister}
-                </Link>
-                <Link
-                  to="/login"
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                >
-                  {t.navLogin}
-                </Link>
-              </>
-            )}
           </div>
         </div>
       </header>
