@@ -446,11 +446,13 @@ button, input{font:inherit}
 }
 
 @media (max-width: 390px){
-  .landing-mobile-theme-toggle{
-    display:none !important;
-  }
   .topbar{
     padding:8px 10px;
+  }
+  .landing-mobile-theme-toggle{
+    width:26px;
+    height:26px;
+    border-radius:10px;
   }
   .language-switcher{
     width:84px;
