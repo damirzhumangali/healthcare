@@ -80,6 +80,7 @@ function GoogleMark() {
 
 export default function Login() {
   const nav = useNavigate();
+  const allowLocalCredentials = !import.meta.env.PROD;
   const [locale, setLocale] = useState<Locale>(() => {
     const v = window.localStorage.getItem("ha_locale");
     if (v === "en" || v === "kk" || v === "ru") return v;
@@ -87,6 +88,13 @@ export default function Login() {
   });
 
   const t = copy[locale];
+  const subtitle = allowLocalCredentials
+    ? t.subtitle
+    : locale === "kk"
+      ? "Қауіпсіздік үшін production-нұсқада email/құпиясөз арқылы кіру өшірілген. Google арқылы кіріңіз."
+      : locale === "en"
+        ? "For security, email/password sign-in is disabled in production. Use Google Sign-In."
+        : "Для безопасности в продакшене вход по email и паролю отключен. Используйте Google.";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -99,6 +107,11 @@ export default function Login() {
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
+    if (!allowLocalCredentials) {
+      setErr(subtitle);
+      return;
+    }
+
     try {
       login(email, password);
       nav("/app");
@@ -132,34 +145,39 @@ export default function Login() {
         <div className="stack">
           <h1 className="h1">{t.title}</h1>
           <p className="muted">
-            {t.subtitle}
+            {subtitle}
           </p>
 
           <form className="stack" onSubmit={onSubmit}>
-            <Input
-              label={t.email}
-              placeholder={t.emailPlaceholder}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-            <Input
-              label={t.password}
-              type="password"
-              placeholder={t.passwordPlaceholder}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
+            {allowLocalCredentials ? (
+              <>
+                <Input
+                  label={t.email}
+                  placeholder={t.emailPlaceholder}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+                <Input
+                  label={t.password}
+                  type="password"
+                  placeholder={t.passwordPlaceholder}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </>
+            ) : null}
             {err ? <div className="alert">{err}</div> : null}
 
-            <div className="auth-actions">
-              <Button>{t.loginBtn}</Button>
-              <Button type="button" variant="ghost" onClick={() => nav("/register")}>
-                {t.registerBtn}
-              </Button>
-            </div>
-
+            {allowLocalCredentials ? (
+              <div className="auth-actions">
+                <Button>{t.loginBtn}</Button>
+                <Button type="button" variant="ghost" onClick={() => nav("/register")}>
+                  {t.registerBtn}
+                </Button>
+              </div>
+            ) : null}
             <Button type="button" variant="ghost" onClick={() => nav("/")}>
               {t.homeBtn}
             </Button>

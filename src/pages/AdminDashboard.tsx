@@ -34,7 +34,7 @@ import {
 } from "../lib/apiAdmin";
 import { isAdminAccount } from "../lib/adminAccess";
 import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
-import { getToken, setToken } from "../lib/auth";
+import { getToken, hasSession, setCurrentUser, setToken } from "../lib/auth";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
 
 type StoredUser = {
@@ -341,6 +341,7 @@ async function ensureLocalBackendToken(user: StoredUser | null) {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify({
       email: user.email,
       name: user.name,
@@ -357,7 +358,7 @@ async function ensureLocalBackendToken(user: StoredUser | null) {
   }
 
   setToken(data.token);
-  localStorage.setItem("healthassist_current_user", JSON.stringify(data.user));
+  setCurrentUser(data.user);
 }
 
 function patientLabel(item: Appointment, fallback: string) {
@@ -607,11 +608,15 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!allowed) return;
-    const token = getToken();
-    if (!token) return;
+    if (!hasSession()) return;
 
-    const url = `${API_URL}/api/admin/telegram-consultations/stream?token=${encodeURIComponent(token)}`;
-    const source = new EventSource(url);
+    const token = getToken();
+    const url = token
+      ? `${API_URL}/api/admin/telegram-consultations/stream?token=${encodeURIComponent(token)}`
+      : `${API_URL}/api/admin/telegram-consultations/stream`;
+    const source = token
+      ? new EventSource(url)
+      : new EventSource(url, { withCredentials: true });
 
     source.onmessage = (e) => {
       try {
@@ -638,7 +643,7 @@ export default function AdminDashboard() {
     };
   }, [allowed, load]);
 
-  if (!getToken()) {
+  if (!hasSession()) {
     return <Navigate to="/login" replace />;
   }
 

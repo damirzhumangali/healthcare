@@ -55,10 +55,15 @@ const LOCAL_APPOINTMENTS_KEY = "healthassist_appointments_v1";
 
 function authHeaders() {
   const token = getToken();
-  return {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
   };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
 }
 
 function readLocalDoctors(): DoctorOption[] {
@@ -130,6 +135,7 @@ export async function fetchAdminSummary(): Promise<AdminSummary> {
   try {
     const res = await fetch(`${API_URL}/api/admin/summary`, {
       headers: authHeaders(),
+      credentials: "include",
     });
     if (!res.ok) throw new Error("fetch admin summary failed");
     const data = await res.json();
@@ -143,6 +149,7 @@ export async function fetchAdminPatients(): Promise<{ items: AdminPatient[] }> {
   try {
     const res = await fetch(`${API_URL}/api/admin/patients`, {
       headers: authHeaders(),
+      credentials: "include",
     });
     if (!res.ok) throw new Error("fetch admin patients failed");
     const data = await res.json();
@@ -166,6 +173,7 @@ export async function fetchAdminTelegramConsultations(): Promise<{
   try {
     const res = await fetch(`${API_URL}/api/admin/telegram-consultations`, {
       headers: authHeaders(),
+      credentials: "include",
     });
     if (!res.ok) throw new Error("fetch telegram consultations failed");
     const data = await res.json();
@@ -182,6 +190,7 @@ export async function updateAdminTelegramConsultationStatus(
   const res = await fetch(`${API_URL}/api/admin/telegram-consultations/${id}/status`, {
     method: "PATCH",
     headers: authHeaders(),
+    credentials: "include",
     body: JSON.stringify({ status }),
   });
 
@@ -197,6 +206,7 @@ export async function acceptAdminTelegramConsultation(
   const res = await fetch(`${API_URL}/api/admin/telegram-consultations/${id}/accept`, {
     method: "POST",
     headers: authHeaders(),
+    credentials: "include",
     body: JSON.stringify({ meeting_at: meetingAtIso }),
   });
 
@@ -222,6 +232,7 @@ export async function createDoctor(input: {
     const res = await fetch(`${API_URL}/api/doctors`, {
       method: "POST",
       headers: authHeaders(),
+      credentials: "include",
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("create doctor failed");
@@ -250,6 +261,7 @@ export async function updateDoctor(
     const res = await fetch(`${API_URL}/api/doctors/${id}`, {
       method: "PATCH",
       headers: authHeaders(),
+      credentials: "include",
       body: JSON.stringify(input),
     });
     if (!res.ok) throw new Error("update doctor failed");

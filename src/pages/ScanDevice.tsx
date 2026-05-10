@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import { getToken } from "../lib/auth";
+import { hasSession } from "../lib/auth";
 import { createMeasurement } from "../lib/apiMeasurements";
 
 type Locale = "ru" | "kk" | "en";
@@ -58,7 +58,7 @@ const copy = {
 export default function ScanDevice() {
   const nav = useNavigate();
   const { deviceId = "device-001" } = useParams();
-  const authed = !!getToken();
+  const authed = hasSession();
   
   const [locale, setLocale] = useState<Locale>(() => {
     const v = window.localStorage.getItem("ha_locale");

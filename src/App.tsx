@@ -28,7 +28,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
-import { getToken, logout } from "./lib/auth";
+import { hasSession, logout, requiresServerSessionValidation, syncSessionFromServer } from "./lib/auth";
 import { isAdminAccount } from "./lib/adminAccess";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "./lib/locale";
 
@@ -294,15 +294,12 @@ function Landing() {
     window.location.hash.replace("#", "") || "features"
   );
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
-  const [isAuthed, setIsAuthed] = useState(() => Boolean(getToken()));
-  const [currentUserName, setCurrentUserName] = useState<string>(() => {
-    const user = readStoredUser();
-    return user?.name || user?.email || "";
-  });
-  const [currentUserRole, setCurrentUserRole] = useState<string>(() => readStoredUser()?.role || "");
+  const [isAuthed, setIsAuthed] = useState(() => hasSession());
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(() => readStoredUser());
 
   const t = text[locale];
-  const isAdminUser = currentUserRole === "admin" || isAdminAccount(readStoredUser());
+  const currentUserName = currentUser?.name || currentUser?.email || "";
+  const isAdminUser = isAdminAccount(currentUser);
   const mobileNavItems = [
     { id: "features", label: t.navFeatures, href: "#features", icon: Users },
     { id: "story", label: t.navStoryMobile, href: "#story", icon: HeartPulse },
@@ -317,16 +314,39 @@ function Landing() {
   }
 
   function openUserArea() {
-    const token = getToken();
-
-    if (!token) {
+    if (!hasSession()) {
       setIsAuthed(false);
+      setCurrentUser(null);
       nav("/login");
       return;
     }
 
     nav(isAdminUser ? "/admin" : "/app");
   }
+
+  useEffect(() => {
+    if (!requiresServerSessionValidation()) {
+      return;
+    }
+
+    let cancelled = false;
+
+    syncSessionFromServer()
+      .then((user) => {
+        if (cancelled) return;
+        setCurrentUser(user);
+        setIsAuthed(Boolean(user));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCurrentUser(null);
+        setIsAuthed(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const syncActiveSection = () => {
@@ -478,8 +498,7 @@ function Landing() {
                     onClick={() => {
                       logout();
                       setIsAuthed(false);
-                      setCurrentUserName("");
-                      setCurrentUserRole("");
+                      setCurrentUser(null);
                     }}
                     className={`rounded-full px-3 py-1.5 text-xs border ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
@@ -541,8 +560,7 @@ function Landing() {
                     onClick={() => {
                       logout();
                       setIsAuthed(false);
-                      setCurrentUserName("");
-                      setCurrentUserRole("");
+                      setCurrentUser(null);
                     }}
                     className={`inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
@@ -915,8 +933,22 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route path="/doctor" element={<DoctorDashboard />} />
-      <Route path="/admin" element={<AdminDashboard />} />
+      <Route
+        path="/doctor"
+        element={
+          <RequireAuth>
+            <DoctorDashboard />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <AdminDashboard />
+          </RequireAuth>
+        }
+      />
       <Route
         path="/app"
         element={

@@ -9,7 +9,7 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
-import { getToken } from "../lib/auth";
+import { hasSession } from "../lib/auth";
 
 type StoredUser = {
   id?: string;
@@ -89,7 +89,7 @@ export default function DoctorDashboard() {
     if (allowed) void load();
   }, [allowed, load]);
 
-  if (!getToken()) {
+  if (!hasSession()) {
     return <Navigate to="/login" replace />;
   }
 

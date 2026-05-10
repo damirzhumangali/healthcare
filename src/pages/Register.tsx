@@ -55,6 +55,7 @@ const copy = {
 
 export default function Register() {
   const nav = useNavigate();
+  const allowLocalRegistration = !import.meta.env.PROD;
   const [locale, setLocale] = useState<Locale>(() => {
     const v = window.localStorage.getItem("ha_locale");
     if (v === "en" || v === "kk" || v === "ru") return v;
@@ -62,6 +63,12 @@ export default function Register() {
   });
 
   const t = copy[locale];
+  const securityMessage =
+    locale === "kk"
+      ? "Қауіпсіздік үшін production-нұсқада email/құпиясөз арқылы тіркелу өшірілген. Google арқылы кіруді пайдаланыңыз."
+      : locale === "en"
+        ? "For security, email/password registration is disabled in production. Use Google Sign-In."
+        : "Для безопасности в продакшене регистрация по email и паролю отключена. Используйте вход через Google.";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +82,11 @@ export default function Register() {
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
+    if (!allowLocalRegistration) {
+      setErr(securityMessage);
+      return;
+    }
+
     try {
       if (password !== password2) throw new Error(t.passwordMismatch);
       register(email, password);
@@ -110,41 +122,50 @@ export default function Register() {
           <h1 className="h1">{t.title}</h1>
 
           <form className="stack" onSubmit={onSubmit}>
-            <Input
-              label={t.email}
-              placeholder={t.emailPlaceholder}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
+            {allowLocalRegistration ? (
+              <>
+                <Input
+                  label={t.email}
+                  placeholder={t.emailPlaceholder}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
 
-            <Input
-              label={t.password}
-              type="password"
-              placeholder={t.passwordPlaceholder}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
+                <Input
+                  label={t.password}
+                  type="password"
+                  placeholder={t.passwordPlaceholder}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
 
-            <Input
-              label={t.password2}
-              type="password"
-              placeholder={t.password2Placeholder}
-              value={password2}
-              onChange={(e) => setPassword2(e.target.value)}
-              autoComplete="new-password"
-            />
+                <Input
+                  label={t.password2}
+                  type="password"
+                  placeholder={t.password2Placeholder}
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </>
+            ) : null}
 
             {err ? <div className="alert">{err}</div> : null}
 
-            <div className="auth-actions">
-              <Button>{t.createAccount}</Button>
-              <Button type="button" variant="ghost" onClick={() => nav("/login")}>
+            {allowLocalRegistration ? (
+              <div className="auth-actions">
+                <Button>{t.createAccount}</Button>
+                <Button type="button" variant="ghost" onClick={() => nav("/login")}>
+                  {t.hasAccount}
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" onClick={() => nav("/login")}>
                 {t.hasAccount}
               </Button>
-            </div>
-
+            )}
             <Button type="button" variant="ghost" onClick={() => nav("/")}>
               {t.backToHome}
             </Button>

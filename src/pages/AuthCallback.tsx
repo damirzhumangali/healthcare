@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import { exchangeGoogleCode } from "../lib/apiAuth";
-import { setToken } from "../lib/auth";
+import { setSession } from "../lib/auth";
 import { isAdminAccount } from "../lib/adminAccess";
 
 export default function AuthCallback() {
@@ -26,8 +26,11 @@ export default function AuthCallback() {
 
     exchangeGoogleCode(code)
       .then(({ token, user }) => {
-        setToken(token);
-        localStorage.setItem("healthassist_current_user", JSON.stringify(user));
+        setSession({
+          token,
+          user,
+          persistToken: !import.meta.env.PROD,
+        });
         nav(isAdminAccount(user) ? "/admin" : "/app");
       })
       .catch(() => setMsg("Ошибка входа через Google. Попробуй снова."));

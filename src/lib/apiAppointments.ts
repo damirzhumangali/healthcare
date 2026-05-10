@@ -150,10 +150,15 @@ function normalizeAppointmentList(data: { items?: Appointment[]; appointments?: 
 
 function authHeaders() {
   const token = getToken();
-  return {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
   };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
 }
 
 function normalizeDoctors(data: { items?: DoctorOption[]; doctors?: DoctorOption[] }) {
@@ -169,6 +174,7 @@ export async function fetchDoctors(includeInactive = false): Promise<{ items: Do
   try {
     const res = await fetch(url, {
       headers: includeInactive ? authHeaders() : undefined,
+      credentials: includeInactive ? "include" : undefined,
     });
 
     if (!res.ok) throw new Error("fetch doctors failed");
@@ -189,6 +195,7 @@ export async function createAppointment(input: {
     const res = await fetch(`${API_URL}/api/appointments`, {
       method: "POST",
       headers: authHeaders(),
+      credentials: "include",
       body: JSON.stringify({
         ...input,
         doctor_id: input.doctorId,
@@ -219,6 +226,7 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
   try {
     const res = await fetch(url, {
       headers: authHeaders(),
+      credentials: "include",
     });
 
     if (!res.ok) throw new Error("fetch appointments failed");
@@ -234,6 +242,7 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
     const res = await fetch(`${API_URL}/api/appointments/${id}/status`, {
       method: "PATCH",
       headers: authHeaders(),
+      credentials: "include",
       body: JSON.stringify({ status }),
     });
 

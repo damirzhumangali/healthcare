@@ -1,3 +1,11 @@
+import {
+  getCurrentUser,
+  getToken,
+  logout,
+  setCurrentUser,
+  setToken,
+} from "./auth";
+
 export type User = {
   id: string;
   email: string;
@@ -6,8 +14,7 @@ export type User = {
 };
 
 const USERS_KEY = "healthassist_users";
-const TOKEN_KEY = "healthassist_token";
-const CURRENT_USER_KEY = "healthassist_current_user";
+const IS_PRODUCTION = import.meta.env.PROD;
 
 function readUsers(): User[] {
   const raw = localStorage.getItem(USERS_KEY);
@@ -22,21 +29,13 @@ function uuid() {
   return crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
 }
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function getCurrentUser(): { id: string; email: string; name?: string; role?: string } | null {
-  const raw = localStorage.getItem(CURRENT_USER_KEY);
-  return raw ? JSON.parse(raw) : null;
-}
-
-export function logout() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(CURRENT_USER_KEY);
-}
+export { getToken, getCurrentUser, logout };
 
 export function register(email: string, password: string) {
+  if (IS_PRODUCTION) {
+    throw new Error("В продакшене регистрация по email и паролю отключена. Используйте вход через Google.");
+  }
+
   const e = email.trim().toLowerCase();
   if (!e.includes("@")) throw new Error("Введите корректный email");
   if (password.length < 6) throw new Error("Пароль должен быть минимум 6 символов");
@@ -50,12 +49,16 @@ export function register(email: string, password: string) {
 
   // авто-логин после регистрации
   const token = "token_" + user.id;
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify({ id: user.id, email: user.email }));
+  setToken(token);
+  setCurrentUser({ id: user.id, email: user.email });
   return { token, user: { id: user.id, email: user.email } };
 }
 
 export function login(email: string, password: string) {
+  if (IS_PRODUCTION) {
+    throw new Error("В продакшене вход по email и паролю отключен. Используйте вход через Google.");
+  }
+
   const e = email.trim().toLowerCase();
   const users = readUsers();
   const user = users.find(u => u.email === e);
@@ -63,7 +66,7 @@ export function login(email: string, password: string) {
   if (user.password !== password) throw new Error("Неверный пароль");
 
   const token = "token_" + user.id;
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify({ id: user.id, email: user.email }));
+  setToken(token);
+  setCurrentUser({ id: user.id, email: user.email });
   return { token, user: { id: user.id, email: user.email } };
 }
