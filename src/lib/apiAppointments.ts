@@ -50,6 +50,18 @@ function writeAppointments(items: Appointment[]) {
   localStorage.setItem(LOCAL_APPOINTMENTS_KEY, JSON.stringify(items));
 }
 
+function persistAppointment(item: Appointment) {
+  const current = readAppointments();
+  const merged = new Map<string, Appointment>();
+
+  current.forEach((entry) => {
+    merged.set(appointmentKey(entry), entry);
+  });
+  merged.set(appointmentKey(item), item);
+
+  writeAppointments(Array.from(merged.values()).sort(appointmentSort));
+}
+
 function appointmentSort(a: Appointment, b: Appointment) {
   const byDate = a.date.localeCompare(b.date);
   return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
@@ -184,7 +196,14 @@ export async function createAppointment(input: {
     });
 
     if (!res.ok) throw new Error("create appointment failed");
-    return res.json();
+    const data = await res.json();
+    const created = data.item ?? data.appointment ?? null;
+
+    if (created) {
+      persistAppointment(created);
+    }
+
+    return data;
   } catch {
     return createLocalAppointment(input);
   }
