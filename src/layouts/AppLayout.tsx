@@ -18,6 +18,7 @@ const copy = {
     logoutShort: "Выйти",
     lightTheme: "Включить светлый режим",
     darkTheme: "Включить ночной режим",
+    telegramSupport: "Открыть Telegram-бот",
   },
   kk: {
     account: "Аккаунт:",
@@ -26,6 +27,7 @@ const copy = {
     logoutShort: "Шығу",
     lightTheme: "Жарық режимді қосу",
     darkTheme: "Түнгі режимді қосу",
+    telegramSupport: "Telegram-ботты ашу",
   },
   en: {
     account: "Account:",
@@ -34,8 +36,26 @@ const copy = {
     logoutShort: "Sign out",
     lightTheme: "Switch to light mode",
     darkTheme: "Switch to dark mode",
+    telegramSupport: "Open Telegram bot",
   },
 } as const;
+
+function TelegramIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M21.2 4.2L18 19.2C17.76 20.26 17.12 20.52 16.22 20.02L11.36 16.44L9.02 18.7C8.76 18.96 8.54 19.18 8.04 19.18L8.38 14.22L17.4 6.08C17.8 5.72 17.32 5.52 16.8 5.86L5.66 12.88L0.86 11.38C-0.18 11.06 -0.2 10.34 1.08 9.84L19.88 2.58C20.76 2.26 21.52 2.8 21.2 4.2Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 export default function AppLayout() {
   const nav = useNavigate();
@@ -183,6 +203,16 @@ export default function AppLayout() {
       <main className="container">
         <Outlet />
       </main>
+      <a
+        href="https://t.me/telehealth_assist_bot"
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-5 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#27A7E7] text-white shadow-[0_16px_40px_rgba(39,167,231,0.34)] transition-transform hover:scale-105 md:bottom-6 md:right-6"
+        aria-label={t.telegramSupport}
+        title={t.telegramSupport}
+      >
+        <TelegramIcon className="h-5 w-5" />
+      </a>
       </div>
     </AppPreferencesProvider>
   );
