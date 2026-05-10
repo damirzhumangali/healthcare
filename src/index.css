@@ -200,9 +200,9 @@ button, input{font:inherit}
 }
 .btn:active{transform: translateY(1px)}
 .btn--primary{
-  background: linear-gradient(180deg, var(--primary), var(--primary2));
+  background: linear-gradient(90deg, #22d3ee, #34d399);
   color: #0b0f14;
-  border-color: rgba(79,140,255,.35);
+  border-color: rgba(52, 211, 153, .32);
 }
 .btn--ghost{
   background: rgba(255,255,255,.04);
