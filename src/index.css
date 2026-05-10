@@ -331,6 +331,63 @@ button, input{font:inherit}
   filter:brightness(1.05);
 }
 
+.appointment-form{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.appointment-form__hero{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding-top:18px;
+}
+.appointment-form__toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:nowrap;
+}
+.appointment-form__nav-btn{
+  min-height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+.appointment-form__nav-btn--icon{
+  width:44px;
+  padding:0;
+}
+.appointment-form__home-label{
+  display:inline;
+}
+.appointment-form .field__label{
+  font-size:14px;
+  font-weight:700;
+  color:color-mix(in srgb, var(--text) 78%, var(--muted));
+}
+.appointment-form__textarea{
+  min-height:96px;
+}
+.appointment-form__actions{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.appointment-form__actions .btn{
+  width:100%;
+  min-height:56px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+ }
+
 @media (max-width: 900px){
   .topbar{
     align-items:center;
@@ -392,6 +449,14 @@ button, input{font:inherit}
     border-radius:999px;
     font-size:11px;
   }
+  .appointment-form__hero{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .appointment-form__toolbar{
+    width:100%;
+    justify-content:space-between;
+  }
 }
 
 @media (max-width: 640px){
@@ -443,6 +508,9 @@ button, input{font:inherit}
     font-size:10px;
     border-radius:999px;
   }
+  .appointment-form__actions{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width: 390px){
@@ -465,6 +533,16 @@ button, input{font:inherit}
   .theme-toggle{
     width:26px;
     height:26px;
+  }
+  .appointment-form__toolbar{
+    gap:8px;
+  }
+  .appointment-form__nav-btn{
+    min-width:44px;
+    padding-inline:12px;
+  }
+  .appointment-form__home-label{
+    display:none;
   }
 }
 

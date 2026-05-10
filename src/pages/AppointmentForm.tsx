@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { ArrowLeft, House } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import Button from "../components/Button";
 import Card from "../components/Card";
 import Input from "../components/Input";
 import { createAppointment, DOCTORS, fetchDoctors, type DoctorOption } from "../lib/apiAppointments";
@@ -67,6 +67,14 @@ const appointmentText = {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function cleanDoctorName(name: string) {
+  return name.replace(/^(?:Др\.|Dr\.)\s*/i, "").trim();
+}
+
+function doctorOptionLabel(doctor: DoctorOption) {
+  return `${cleanDoctorName(doctor.name)} — ${doctor.specialty}`;
 }
 
 export default function AppointmentForm() {
@@ -145,15 +153,23 @@ export default function AppointmentForm() {
 
   return (
     <div className="container">
-      <div className="stack">
-        <div className="patient-actions">
+      <div className="appointment-form">
+        <div className="appointment-form__hero">
           <div>
             <h1 className="h1" style={{ marginBottom: 4 }}>{t.title}</h1>
             <p className="muted" style={{ margin: 0 }}>
               {t.subtitle}
             </p>
           </div>
-          <div className="patient-actions__buttons">
+          <div className="appointment-form__toolbar">
+            <Link
+              to="/app"
+              className="btn btn--ghost appointment-form__nav-btn appointment-form__nav-btn--icon"
+              aria-label={t.back}
+              title={t.back}
+            >
+              <ArrowLeft size={18} />
+            </Link>
             <div className="language-switcher language-switcher--topbar" aria-label="Language switcher">
               {APP_LOCALES.map((lang) => (
                 <button
@@ -168,11 +184,14 @@ export default function AppointmentForm() {
                 </button>
               ))}
             </div>
-            <Link to="/">
-              <Button variant="ghost">{t.home}</Button>
-            </Link>
-            <Link to="/app">
-              <Button variant="ghost">{t.back}</Button>
+            <Link
+              to="/"
+              className="btn btn--ghost appointment-form__nav-btn"
+              aria-label={t.home}
+              title={t.home}
+            >
+              <House size={16} />
+              <span className="appointment-form__home-label">{t.home}</span>
             </Link>
           </div>
         </div>
@@ -188,7 +207,7 @@ export default function AppointmentForm() {
               >
                 {doctors.map((doctor) => (
                   <option key={doctor.id} value={doctor.id}>
-                    {doctor.name} - {doctor.specialty}
+                    {doctorOptionLabel(doctor)}
                   </option>
                 ))}
               </select>
@@ -213,8 +232,8 @@ export default function AppointmentForm() {
             <label className="field">
               <span className="field__label">{t.reason}</span>
               <textarea
-                className="input"
-                rows={5}
+                className="input appointment-form__textarea"
+                rows={3}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder={t.reasonPlaceholder}
@@ -230,11 +249,13 @@ export default function AppointmentForm() {
               </div>
             ) : null}
 
-            <div className="row">
-              <Button disabled={loading}>{loading ? t.creating : t.submit}</Button>
-              <Button type="button" variant="ghost" onClick={() => nav("/app")}>
+            <div className="appointment-form__actions">
+              <button type="submit" className="btn btn--primary" disabled={loading}>
+                {loading ? t.creating : t.submit}
+              </button>
+              <button type="button" className="btn btn--ghost" onClick={() => nav("/app")}>
                 {t.cancel}
-              </Button>
+              </button>
             </div>
           </form>
         </Card>

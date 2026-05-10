@@ -30,9 +30,9 @@ export type DoctorOption = {
 };
 
 export const DOCTORS: DoctorOption[] = [
-  { id: "doctor-001", name: "Др. Айжан Нурбекова", specialty: "Терапевт" },
-  { id: "doctor-002", name: "Др. Ерлан Садыков", specialty: "Кардиолог" },
-  { id: "doctor-003", name: "Др. Мария Ким", specialty: "Невролог" },
+  { id: "doctor-001", name: "Айжан Нурбекова", specialty: "Терапевт" },
+  { id: "doctor-002", name: "Ерлан Садыков", specialty: "Кардиолог" },
+  { id: "doctor-003", name: "Мария Ким", specialty: "Невролог" },
 ];
 
 const LOCAL_APPOINTMENTS_KEY = "healthassist_appointments_v1";
