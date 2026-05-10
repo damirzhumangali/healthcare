@@ -10,6 +10,30 @@ import {
   type Locale,
 } from "../lib/appPreferences";
 
+const copy = {
+  ru: {
+    account: "Аккаунт:",
+    patientArea: "Кабинет пациента",
+    logout: "Выйти",
+    lightTheme: "Включить светлый режим",
+    darkTheme: "Включить ночной режим",
+  },
+  kk: {
+    account: "Аккаунт:",
+    patientArea: "Пациент кабинеті",
+    logout: "Шығу",
+    lightTheme: "Жарық режимді қосу",
+    darkTheme: "Түнгі режимді қосу",
+  },
+  en: {
+    account: "Account:",
+    patientArea: "Patient Dashboard",
+    logout: "Sign out",
+    lightTheme: "Switch to light mode",
+    darkTheme: "Switch to dark mode",
+  },
+} as const;
+
 export default function AppLayout() {
   const nav = useNavigate();
   const user = getCurrentUser();
@@ -39,6 +63,7 @@ export default function AppLayout() {
     }),
     [locale, setLocale, theme, setTheme]
   );
+  const t = copy[locale];
 
   if (isAdminAccount(user)) {
     return <Navigate to="/admin" replace />;
@@ -55,11 +80,11 @@ export default function AppLayout() {
             <div className="brand__sub">
               {user ? (
                 <>
-                  <span>Аккаунт:</span>
+                  <span>{t.account}</span>
                   <strong className="brand__account">{user.name || user.email}</strong>
                 </>
               ) : (
-                "Кабинет пациента"
+                t.patientArea
               )}
             </div>
           </div>
@@ -70,7 +95,7 @@ export default function AppLayout() {
             type="button"
             className="theme-toggle"
             onClick={preferences.toggleTheme}
-            aria-label={theme === "dark" ? "Включить светлый режим" : "Включить ночной режим"}
+            aria-label={theme === "dark" ? t.lightTheme : t.darkTheme}
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -99,7 +124,7 @@ export default function AppLayout() {
               nav("/login");
             }}
           >
-            Выйти
+            {t.logout}
           </Button>
         </div>
       </header>
