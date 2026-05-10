@@ -50,6 +50,37 @@ function writeAppointments(items: Appointment[]) {
   localStorage.setItem(LOCAL_APPOINTMENTS_KEY, JSON.stringify(items));
 }
 
+function appointmentSort(a: Appointment, b: Appointment) {
+  const byDate = a.date.localeCompare(b.date);
+  return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
+}
+
+function appointmentKey(item: Appointment) {
+  return [
+    item.id,
+    item.patient_id || item.patientId || "",
+    item.patient_email || item.patientEmail || "",
+    item.doctor_id || item.doctorId || "",
+    item.date,
+    item.time,
+    item.reason,
+  ].join("|");
+}
+
+function mergeAppointments(serverItems: Appointment[], localItems: Appointment[]) {
+  const merged = new Map<string, Appointment>();
+
+  localItems.forEach((item) => {
+    merged.set(appointmentKey(item), item);
+  });
+
+  serverItems.forEach((item) => {
+    merged.set(appointmentKey(item), item);
+  });
+
+  return Array.from(merged.values()).sort(appointmentSort);
+}
+
 function readCurrentUser() {
   try {
     const raw = localStorage.getItem("healthassist_current_user");
@@ -90,10 +121,7 @@ function createLocalAppointment(input: {
 function fetchLocalAppointments(date?: string): { items: Appointment[] } {
   const items = readAppointments()
     .filter((item) => (date ? item.date === date : true))
-    .sort((a, b) => {
-      const byDate = a.date.localeCompare(b.date);
-      return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
-    });
+    .sort(appointmentSort);
   return { items };
 }
 
@@ -167,6 +195,7 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
   if (date) params.set("date", date);
   const query = params.toString();
   const url = query ? `${API_URL}/api/appointments?${query}` : `${API_URL}/api/appointments`;
+  const localItems = fetchLocalAppointments(date).items;
 
   try {
     const res = await fetch(url, {
@@ -174,9 +203,10 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
     });
 
     if (!res.ok) throw new Error("fetch appointments failed");
-    return normalizeAppointmentList(await res.json());
+    const data = normalizeAppointmentList(await res.json());
+    return { items: mergeAppointments(data.items ?? [], localItems) };
   } catch {
-    return fetchLocalAppointments(date);
+    return { items: localItems };
   }
 }
 
