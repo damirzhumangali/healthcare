@@ -34,7 +34,7 @@ export default function VkAuthCallback() {
         setSession({
           token,
           user,
-          persistToken: !import.meta.env.PROD,
+          persistToken: true,
         });
         nav(consumePostLoginRedirect(isAdminAccount(user) ? "/admin" : "/app"), {
           replace: true,

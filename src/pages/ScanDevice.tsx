@@ -676,7 +676,7 @@ export default function ScanDevice() {
             ) : (
               <div className="stack station-ready">
                 <h2 className="h2" style={{ marginTop: 6 }}>
-                  {t.directModeTitle}
+                  {t.readyTitle}
                 </h2>
                 <p className="muted" style={{ marginTop: -6 }}>
                   {t.directModeDesc}
@@ -691,6 +691,47 @@ export default function ScanDevice() {
                 >
                   {t.linkedPatient}: <b>{patientLabel}</b>
                 </div>
+
+                <div className="station-board">
+                  <div className="station-board__grid">
+                    <div className="station-board__tile station-board__tile--primary">
+                      <div className="station-board__label">{t.tempMetric}</div>
+                      <div className="station-board__value">{t.waitingValue}</div>
+                      <p className="muted station-board__hint">{t.tempHint}</p>
+                    </div>
+
+                    <div className="station-board__tile station-board__tile--primary">
+                      <div className="station-board__label">{t.pulseMetric}</div>
+                      <div className="station-board__value">{t.waitingValue}</div>
+                      <p className="muted station-board__hint">{t.pulseHint}</p>
+                    </div>
+
+                    <div className="station-board__tile">
+                      <div className="station-board__label">{t.spo2Metric}</div>
+                      <div className="station-board__value station-board__value--small">
+                        {t.waitingValue}
+                      </div>
+                      <p className="muted station-board__hint">{t.spo2Hint}</p>
+                    </div>
+
+                    <div className="station-board__tile">
+                      <div className="station-board__label">{t.pressureMetric}</div>
+                      <div className="station-board__value station-board__value--small">
+                        {t.waitingValue}
+                      </div>
+                      <p className="muted station-board__hint">{t.pressureHint}</p>
+                    </div>
+                  </div>
+
+                  <div className="station-ready__empty">
+                    <h3 className="h2">{t.waitingMeasurements}</h3>
+                    <p className="muted" style={{ margin: "6px 0 0" }}>
+                      {t.waitingMeasurementsDesc}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="muted station-ready__hint">{t.dashboardSyncHint}</p>
 
                 {err ? <div className="alert">{err}</div> : null}
 

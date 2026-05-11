@@ -112,6 +112,7 @@ export default function DevicePairing() {
   const [err, setErr] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(() => !pairingToken);
   const [expired, setExpired] = useState(false);
+  const [autoApproveTried, setAutoApproveTried] = useState(false);
 
   const t = copy[locale];
   const currentUser = useMemo(() => getCurrentUser(), []);
@@ -124,11 +125,83 @@ export default function DevicePairing() {
   }, [locale]);
 
   useEffect(() => {
+    setAutoApproveTried(false);
+    setSession(null);
+    setErr(null);
+    setExpired(false);
+    setInvalid(!pairingToken);
+  }, [pairingToken]);
+
+  useEffect(() => {
     if (!pairingToken) return;
     if (authed) return;
 
     nav(`/login?next=${encodeURIComponent(nextUrl)}`, { replace: true });
   }, [authed, nav, nextUrl, pairingToken]);
+
+  useEffect(() => {
+    if (!authed || !pairingToken || session?.status === "approved" || expired || invalid) {
+      return;
+    }
+
+    if (submitting || autoApproveTried) {
+      return;
+    }
+
+    let cancelled = false;
+    setAutoApproveTried(true);
+    setSubmitting(true);
+    setErr(null);
+
+    void approveDevicePairingSession(pairingToken, currentUser)
+      .then((next) => {
+        if (cancelled) return;
+        setSession(next);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+
+        const status =
+          typeof error === "object" &&
+          error !== null &&
+          "status" in error &&
+          typeof (error as { status?: unknown }).status === "number"
+            ? Number((error as { status?: unknown }).status)
+            : NaN;
+
+        if (status === 404) {
+          setInvalid(true);
+          setErr(t.invalid);
+        } else if (status === 410 || status === 409) {
+          setExpired(true);
+          setErr(null);
+        } else if (status === 401) {
+          setErr(t.loginNeededDesc);
+        } else {
+          setErr(t.approveError);
+        }
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setSubmitting(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authed,
+    autoApproveTried,
+    currentUser,
+    expired,
+    invalid,
+    pairingToken,
+    session?.status,
+    submitting,
+    t.approveError,
+    t.invalid,
+    t.loginNeededDesc,
+  ]);
 
   if (invalid) {
     return (
@@ -263,6 +336,7 @@ export default function DevicePairing() {
                     setErr(null);
                     setExpired(false);
                     setInvalid(false);
+                    setAutoApproveTried(true);
                     setSubmitting(true);
 
                     try {
