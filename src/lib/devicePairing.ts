@@ -473,16 +473,9 @@ async function createRemoteSession(deviceId: string) {
 }
 
 async function fetchRemoteSession(pairingToken: string, pollSecret?: string | null) {
-  const headers: Record<string, string> = {
-    ...authHeaders(),
-  };
-
-  if (pollSecret) {
-    headers["x-pairing-secret"] = pollSecret;
-  }
-
-  const res = await fetch(pairingEndpoint(`/${encodeURIComponent(pairingToken)}`), {
-    headers,
+  const qs = pollSecret ? `?pollSecret=${encodeURIComponent(pollSecret)}` : "";
+  const res = await fetch(`${pairingEndpoint(`/${encodeURIComponent(pairingToken)}`)}${qs}`, {
+    headers: authHeaders(),
     credentials: "include",
   });
 
