@@ -172,16 +172,12 @@ export default function DevicePairing() {
             ? Number((error as { status?: unknown }).status)
             : NaN;
 
-        if (status === 404) {
-          setInvalid(true);
-          setErr(t.invalid);
-        } else if (status === 410 || status === 409) {
-          setExpired(true);
-          setErr(null);
-        } else if (status === 401) {
+        if (status === 401) {
           setErr(t.loginNeededDesc);
         } else {
-          setErr(t.approveError);
+          // Token expired, invalid, already used, or server error —
+          // send the patient to their cabinet instead of showing an error screen.
+          nav("/app", { replace: true });
         }
       })
       .finally(() => {
