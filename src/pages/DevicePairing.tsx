@@ -157,6 +157,9 @@ export default function DevicePairing() {
       .then((next) => {
         if (cancelled) return;
         setSession(next);
+        setTimeout(() => {
+          if (!cancelled) nav("/app", { replace: true });
+        }, 1500);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -345,6 +348,7 @@ export default function DevicePairing() {
                         currentUser
                       );
                       setSession(next);
+                      setTimeout(() => nav("/app", { replace: true }), 1500);
                     } catch (error) {
                       const status =
                         typeof error === "object" &&
