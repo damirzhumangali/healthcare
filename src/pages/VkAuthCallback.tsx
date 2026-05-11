@@ -1,31 +1,35 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
-import { exchangeGoogleCode } from "../lib/apiAuth";
+import { isAdminAccount } from "../lib/adminAccess";
 import { consumePostLoginRedirect } from "../lib/authRedirect";
 import { setSession } from "../lib/auth";
-import { isAdminAccount } from "../lib/adminAccess";
+import { clearVkFlowState, createVkSession, exchangeVkCode } from "../lib/vkAuth";
 
-export default function AuthCallback() {
+export default function VkAuthCallback() {
   const nav = useNavigate();
-  const [msg, setMsg] = useState("Авторизация через Google...");
+  const [msg, setMsg] = useState("Авторизация через VK ID...");
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
+    const deviceId = url.searchParams.get("device_id");
     const err = url.searchParams.get("error");
 
     if (err) {
-      queueMicrotask(() => setMsg(`Google error: ${err}`));
+      clearVkFlowState();
+      queueMicrotask(() => setMsg(`VK ID error: ${err}`));
       return;
     }
 
-    if (!code) {
-      queueMicrotask(() => setMsg("Нет параметра code. Попробуй войти снова."));
+    if (!code || !deviceId) {
+      clearVkFlowState();
+      queueMicrotask(() => setMsg("Нет параметров code/device_id. Попробуй войти снова."));
       return;
     }
 
-    exchangeGoogleCode(code)
+    exchangeVkCode({ code, deviceId })
+      .then((tokens) => createVkSession(tokens.access_token))
       .then(({ token, user }) => {
         setSession({
           token,
@@ -36,7 +40,10 @@ export default function AuthCallback() {
           replace: true,
         });
       })
-      .catch(() => setMsg("Ошибка входа через Google. Попробуй снова."));
+      .catch(() => {
+        clearVkFlowState();
+        setMsg("Ошибка входа через VK ID. Попробуй снова.");
+      });
   }, [nav]);
 
   return (

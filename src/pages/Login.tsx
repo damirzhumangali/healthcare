@@ -1,11 +1,13 @@
 import type { FormEvent } from "react";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import { getGoogleAuthUrl } from "../lib/apiAuth";
 import { login } from "../lib/authStore";
+import { resolvePostLoginRedirect, storePostLoginRedirect } from "../lib/authRedirect";
+import { isVkAuthEnabled, startVkLogin } from "../lib/vkAuth";
 
 type Locale = "ru" | "kk" | "en";
 
@@ -20,6 +22,7 @@ const copy = {
     loginBtn: "Войти",
     homeBtn: "На главную",
     googleBtn: "Продолжить через Google",
+    vkBtn: "Продолжить через VK ID",
     loginError: "Ошибка входа",
   },
   kk: {
@@ -32,6 +35,7 @@ const copy = {
     loginBtn: "Кіру",
     homeBtn: "Басты бетке",
     googleBtn: "Google арқылы жалғастыру",
+    vkBtn: "VK ID арқылы жалғастыру",
     loginError: "Кіру қатесі",
   },
   en: {
@@ -44,6 +48,7 @@ const copy = {
     loginBtn: "Sign In",
     homeBtn: "Home",
     googleBtn: "Continue with Google",
+    vkBtn: "Continue with VK ID",
     loginError: "Sign in error",
   },
 } as const;
@@ -75,9 +80,31 @@ function GoogleMark() {
   );
 }
 
+function VkMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5 shrink-0"
+    >
+      <rect width="24" height="24" rx="12" fill="#0077FF" />
+      <path
+        fill="#fff"
+        d="M12.56 15.91c-4.39 0-6.9-3.01-7-8.02h2.2c.07 3.67 1.69 5.22 2.97 5.54V7.89h2.07v3.16c1.26-.14 2.59-1.58 3.04-3.16h2.07c-.35 1.95-1.79 3.39-2.81 3.98 1.02.48 2.66 1.75 3.28 4.04H16.1c-.49-1.52-1.71-2.7-3.3-2.86v2.86h-.24Z"
+      />
+    </svg>
+  );
+}
+
 export default function Login() {
   const nav = useNavigate();
+  const location = useLocation();
   const allowLocalCredentials = !import.meta.env.PROD;
+  const showVkButton = isVkAuthEnabled();
+  const theme = window.localStorage.getItem("ha_theme") === "light" ? "light" : "dark";
+  const postLoginRedirect = resolvePostLoginRedirect(
+    new URLSearchParams(location.search).get("next")
+  );
   const [locale, setLocale] = useState<Locale>(() => {
     const v = window.localStorage.getItem("ha_locale");
     if (v === "en" || v === "kk" || v === "ru") return v;
@@ -111,7 +138,7 @@ export default function Login() {
 
     try {
       login(email, password);
-      nav("/app");
+      nav(postLoginRedirect);
     } catch (e: any) {
       setErr(e?.message ?? t.loginError);
     }
@@ -183,6 +210,7 @@ export default function Login() {
             variant="ghost"
             className="inline-flex w-full items-center justify-center gap-3"
             onClick={async () => {
+              storePostLoginRedirect(postLoginRedirect);
               const url = await getGoogleAuthUrl();
               window.location.href = url;
             }}
@@ -190,6 +218,24 @@ export default function Login() {
             <GoogleMark />
             {t.googleBtn}
           </Button>
+
+          {showVkButton ? (
+            <Button
+              variant="ghost"
+              className="inline-flex w-full items-center justify-center gap-3"
+              onClick={async () => {
+                try {
+                  storePostLoginRedirect(postLoginRedirect);
+                  await startVkLogin({ locale, theme });
+                } catch {
+                  setErr(t.loginError);
+                }
+              }}
+            >
+              <VkMark />
+              {t.vkBtn}
+            </Button>
+          ) : null}
         </div>
       </Card>
     </div>

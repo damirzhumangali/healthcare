@@ -166,6 +166,87 @@ button, input{font:inherit}
 }
 .center .card{max-width: 480px; width: 100%}
 
+.station-screen{
+  padding-block:24px;
+}
+.station-screen .card{
+  max-width:min(1080px, 100%);
+}
+.station-shell{
+  gap:18px;
+}
+.station-pairing{
+  display:grid;
+  gap:16px;
+}
+.station-pairing__copy{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.station-pairing__auto{
+  margin-top:-8px;
+  margin-bottom:0;
+}
+.station-pairing__qr{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+.station-link-card{
+  width:100%;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,.03);
+}
+.station-link-card__label{
+  font-size:12px;
+  margin-bottom:6px;
+}
+.station-link-card__url{
+  overflow-wrap:anywhere;
+  font-size:13px;
+  font-weight:700;
+}
+.station-link-card__hint{
+  font-size:12px;
+  margin-top:8px;
+}
+.station-link-card__warning{
+  margin-top:10px;
+}
+.station-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.station-actions__primary,
+.station-actions__button{
+  width:100%;
+  min-height:56px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.station-actions__secondary{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.station-pairing__hint{
+  margin-top:-4px;
+  margin-bottom:0;
+}
+.station-ready{
+  gap:16px;
+}
+.station-ready__actions .btn{
+  min-height:52px;
+}
+
 .h1{font-size:30px; margin:0}
 .h2{font-size:18px; margin:0}
 .muted{color:var(--muted)}
@@ -539,6 +620,52 @@ button, input{font:inherit}
   }
   .appointment-form__home-btn{
     display:none;
+  }
+  .station-actions__secondary{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (min-width: 900px) and (orientation: landscape), (min-width: 1080px){
+  .station-screen{
+    padding-inline:24px;
+  }
+  .station-screen .card{
+    border-radius:24px;
+    padding:24px;
+  }
+  .station-pairing{
+    grid-template-columns:minmax(0, 1.05fr) minmax(320px, 400px);
+    grid-template-areas:
+      "copy qr"
+      "actions qr"
+      "hint qr";
+    align-items:start;
+    gap:22px 26px;
+  }
+  .station-pairing__copy{
+    grid-area:copy;
+  }
+  .station-pairing__qr{
+    grid-area:qr;
+    align-self:stretch;
+  }
+  .station-actions{
+    grid-area:actions;
+    max-width:520px;
+  }
+  .station-pairing__hint{
+    grid-area:hint;
+    max-width:520px;
+  }
+  .station-ready__actions{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
+  }
+  .station-ready__actions .btn{
+    width:100%;
+    justify-content:center;
   }
 }
 

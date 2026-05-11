@@ -20,11 +20,13 @@ import AuthCallback from "./pages/AuthCallback";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ScanDevice from "./pages/ScanDevice";
+import DevicePairing from "./pages/DevicePairing";
 import MeasurementDetails from "./pages/MeasurementDetails";
 import AppointmentForm from "./pages/AppointmentForm";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
+import VkAuthCallback from "./pages/VkAuthCallback";
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
 import { hasSession, logout, requiresServerSessionValidation, syncSessionFromServer } from "./lib/auth";
@@ -902,6 +904,7 @@ export default function App() {
         element={<LegalDocumentPage documentId="medical-disclaimer" />}
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/vk/callback" element={<VkAuthCallback />} />
       <Route
         path="/appointments/new"
         element={
@@ -938,6 +941,7 @@ export default function App() {
         <Route path="measurements/:id" element={<MeasurementDetails />} />
       </Route>
       <Route path="/scan/:deviceId" element={<ScanDevice />} />
+      <Route path="/pair/:deviceId/:pairingToken" element={<DevicePairing />} />
     </Routes>
   );
 }
