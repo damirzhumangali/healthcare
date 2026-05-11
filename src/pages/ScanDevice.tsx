@@ -25,7 +25,6 @@ const copy = {
     waitingPairDesc:
       "Пациент сканирует QR телефоном, входит в аккаунт и подтверждает вход на планшете.",
     qrRefresh: "Новый QR",
-    signInTablet: "Войти на планшете",
     pairingError: "Не получилось подготовить QR-сессию. Попробуйте обновить код.",
     pairingUnavailable: "QR временно недоступен",
     pairingUnavailableDesc:
@@ -68,7 +67,6 @@ const copy = {
     waitingPairDesc:
       "Пациент телефонмен QR кодты сканерлеп, аккаунтқа кіріп, планшеттегі кіруді растайды.",
     qrRefresh: "Жаңа QR",
-    signInTablet: "Планшетте кіру",
     pairingError: "QR сессиясын дайындау мүмкін болмады. Кодты жаңартып көріңіз.",
     pairingUnavailable: "QR уақытша қолжетімсіз",
     pairingUnavailableDesc:
@@ -111,7 +109,6 @@ const copy = {
     waitingPairDesc:
       "The patient scans the QR with their phone, signs in, and confirms tablet access.",
     qrRefresh: "New QR",
-    signInTablet: "Sign in on tablet",
     pairingError: "Could not prepare the QR session. Try generating a new code.",
     pairingUnavailable: "QR is temporarily unavailable",
     pairingUnavailableDesc:
@@ -678,15 +675,6 @@ export default function ScanDevice() {
               </p>
 
               <div className="station-actions">
-                <Button
-                  className="station-actions__primary"
-                  onClick={() =>
-                    nav(`/login?next=${encodeURIComponent(stationLoginNext)}`)
-                  }
-                >
-                  {t.signInTablet}
-                </Button>
-
                 <div className="station-actions__secondary">
                   <Button
                     variant="ghost"
@@ -719,15 +707,6 @@ export default function ScanDevice() {
               ) : null}
 
               <div className="station-actions">
-                <Button
-                  className="station-actions__primary"
-                  onClick={() =>
-                    nav(`/login?next=${encodeURIComponent(stationLoginNext)}`)
-                  }
-                >
-                  {t.signInTablet}
-                </Button>
-
                 <div className="station-actions__secondary">
                   <Button
                     variant="ghost"
