@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/auth/callback",
+      "destination": "/index.html"
+    },
+    {
       "source": "/auth/(.*)",
       "destination": "https://healthcare-backend-telt.onrender.com/auth/$1"
     },
