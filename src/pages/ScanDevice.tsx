@@ -816,18 +816,6 @@ export default function ScanDevice() {
                 </div>
               ) : null}
 
-              <div className="station-actions">
-                <div className="station-actions__secondary">
-                  <Button
-                    variant="ghost"
-                    className="station-actions__button"
-                    onClick={() => void handleCreatePairing(true)}
-                  >
-                    {t.qrRefresh}
-                  </Button>
-                </div>
-              </div>
-
             </div>
           )}
         </div>
