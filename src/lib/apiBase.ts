@@ -10,10 +10,23 @@ const resolvedApiBase = envApiBaseUrl?.trim()
   ? envApiBaseUrl
   : legacyEnvApiBase;
 
-export const API_URL = resolvedApiBase?.trim()
-  ? normalizeBaseUrl(resolvedApiBase)
-  : import.meta.env.PROD
-    ? ""
+function shouldUseSameOriginApi() {
+  if (!import.meta.env.PROD) {
+    return false;
+  }
+
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  const host = window.location.hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
+}
+
+export const API_URL = shouldUseSameOriginApi()
+  ? ""
+  : resolvedApiBase?.trim()
+    ? normalizeBaseUrl(resolvedApiBase)
     : "http://localhost:4015";
 
 export const BMO_SETTINGS_URL = envBmoSettingsUrl?.trim()
