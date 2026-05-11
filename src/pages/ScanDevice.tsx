@@ -255,6 +255,7 @@ export default function ScanDevice() {
   const [pairingError, setPairingError] = useState<string | null>(null);
   const [sessionBusy, setSessionBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [qrSecondsLeft, setQrSecondsLeft] = useState<number | null>(null);
 
   const stationLoginMode =
     new URLSearchParams(location.search).get("stationLogin") === "1";
@@ -454,6 +455,22 @@ export default function ScanDevice() {
       window.clearInterval(timer);
     };
   }, [deviceId, deviceSession?.session.sessionToken]);
+
+  useEffect(() => {
+    if (!pairing?.expiresAt || pairing.status !== "pending" || deviceSession) {
+      setQrSecondsLeft(null);
+      return;
+    }
+
+    const tick = () => {
+      const ms = Date.parse(pairing.expiresAt) - Date.now();
+      setQrSecondsLeft(Math.max(0, Math.ceil(ms / 1000)));
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [pairing?.expiresAt, pairing?.status, deviceSession]);
 
   async function handleCreatePairing(forceNew = false) {
     setPairingError(null);
@@ -782,6 +799,20 @@ export default function ScanDevice() {
               {pairing ? (
                 <div className="station-pairing__qr">
                   <QrCode value={pairUrl} />
+                  {qrSecondsLeft !== null && (
+                    <div style={{
+                      marginTop: 10,
+                      textAlign: "center",
+                      fontSize: 13,
+                      color: qrSecondsLeft <= 30 ? "#f87171" : "rgba(255,255,255,0.45)",
+                    }}>
+                      {locale === "kk"
+                        ? `QR ${qrSecondsLeft}с кейін жаңарады`
+                        : locale === "en"
+                          ? `QR refreshes in ${qrSecondsLeft}s`
+                          : `QR обновится через ${qrSecondsLeft}с`}
+                    </div>
+                  )}
                 </div>
               ) : null}
 
