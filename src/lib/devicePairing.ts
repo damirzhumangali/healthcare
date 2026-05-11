@@ -617,9 +617,37 @@ export async function fetchDevicePairingSession(
   }
 }
 
+function isRetriableApproveError(error: unknown): boolean {
+  const status =
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof (error as { status?: unknown }).status === "number"
+      ? Number((error as { status?: unknown }).status)
+      : NaN;
+  return status !== 401 && status !== 404 && status !== 409 && status !== 410;
+}
+
+async function approveRemoteSessionWithRetry(pairingToken: string): Promise<DevicePairingSession> {
+  const MAX_ATTEMPTS = 3;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      return await approveRemoteSession(pairingToken);
+    } catch (error) {
+      lastError = error;
+      if (!isRetriableApproveError(error)) throw error;
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await new Promise<void>((r) => setTimeout(r, 3000));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export async function approveDevicePairingSession(pairingToken: string, user?: SessionUser | null) {
   try {
-    return await approveRemoteSession(pairingToken);
+    return await approveRemoteSessionWithRetry(pairingToken);
   } catch (error) {
     if (!LOCAL_PAIRING_ENABLED) {
       throw error;
