@@ -33,9 +33,9 @@ const copy = {
     pairingApproved: "Пациент подтверждён",
     pairingExpired: "QR код истек",
     pairingAutoUpdate: "Статус обновляется автоматически после подтверждения с телефона.",
-    readyTitle: "Станция связана с пациентом",
+    readyTitle: "Экран измерений",
     readyDesc:
-      "Пациент подтвержден. Когда ESP32 пришлет показатели, они появятся на планшете и в кабинете пациента.",
+      "Пациент подтвержден. Планшет открыт на странице температуры и пульса. Когда ESP32 пришлет данные, значения обновятся автоматически.",
     linkedPatient: "Пациент",
     refreshSession: "Обновить данные",
     refreshingSession: "Обновляю...",
@@ -50,6 +50,11 @@ const copy = {
     pulseMetric: "Пульс",
     spo2Metric: "SpO₂",
     pressureMetric: "Давление",
+    waitingValue: "Ожидание",
+    tempHint: "Появится после измерения датчиком температуры.",
+    pulseHint: "Появится после измерения пульса.",
+    spo2Hint: "Появится вместе с пульсом, если модуль поддерживает SpO₂.",
+    pressureHint: "Показывается только если backend получит давление.",
     directModeTitle: "Планшет вошел напрямую",
     directModeDesc:
       "Это запасной режим без безопасной QR-привязки пациента. Для робота и датчиков лучше использовать вход через QR с телефона.",
@@ -75,9 +80,9 @@ const copy = {
     pairingApproved: "Пациент расталды",
     pairingExpired: "QR кодтың мерзімі бітті",
     pairingAutoUpdate: "Статус телефоннан расталғаннан кейін автоматты түрде жаңарады.",
-    readyTitle: "Станция пациентпен байланыстырылды",
+    readyTitle: "Өлшеу экраны",
     readyDesc:
-      "Пациент расталды. ESP32 көрсеткіш жібергенде, ол планшетте де, пациент кабинетінде де бірден көрінеді.",
+      "Пациент расталды. Планшет температура мен пульс экранында ашылды. ESP32 дерек жібергенде, мәндер автоматты түрде жаңарады.",
     linkedPatient: "Пациент",
     refreshSession: "Деректерді жаңарту",
     refreshingSession: "Жаңартылуда...",
@@ -92,6 +97,11 @@ const copy = {
     pulseMetric: "Пульс",
     spo2Metric: "SpO₂",
     pressureMetric: "Қысым",
+    waitingValue: "Күтілуде",
+    tempHint: "Температура датчигі өлшегеннен кейін шығады.",
+    pulseHint: "Пульс өлшенгеннен кейін шығады.",
+    spo2Hint: "Егер модуль қолдаса, пульспен бірге шығады.",
+    pressureHint: "Backend қысымды алса ғана көрсетіледі.",
     directModeTitle: "Планшет тікелей кірді",
     directModeDesc:
       "Бұл пациентті қауіпсіз QR арқылы байланыстырмайтын қосалқы режим. Робот пен датчиктер үшін QR арқылы кіру дұрыс болады.",
@@ -117,9 +127,9 @@ const copy = {
     pairingApproved: "Patient confirmed",
     pairingExpired: "QR code expired",
     pairingAutoUpdate: "The status updates automatically after confirmation on the phone.",
-    readyTitle: "Station linked to patient",
+    readyTitle: "Measurements Screen",
     readyDesc:
-      "The patient is confirmed. When ESP32 sends readings, they will appear on the tablet and in the patient dashboard.",
+      "The patient is confirmed. The tablet is now on the temperature and pulse screen. When ESP32 sends data, the values update automatically.",
     linkedPatient: "Patient",
     refreshSession: "Refresh data",
     refreshingSession: "Refreshing...",
@@ -134,6 +144,11 @@ const copy = {
     pulseMetric: "Pulse",
     spo2Metric: "SpO₂",
     pressureMetric: "Pressure",
+    waitingValue: "Waiting",
+    tempHint: "It will appear after the temperature sensor sends a reading.",
+    pulseHint: "It will appear after the pulse sensor sends a reading.",
+    spo2Hint: "It appears together with pulse if the module supports SpO₂.",
+    pressureHint: "Shown only if the backend receives blood pressure.",
     directModeTitle: "Tablet signed in directly",
     directModeDesc:
       "This is a fallback mode without secure QR patient pairing. For the robot and sensors, QR flow from the patient phone is the better option.",
@@ -575,51 +590,74 @@ export default function ScanDevice() {
                   {t.linkedPatient}: <b>{patientLabel}</b>
                 </div>
 
-                {latestMeasurement ? (
-                  <div className="stack">
+                <div className="station-board">
+                  <div className="station-board__grid">
+                    <div className="station-board__tile station-board__tile--primary">
+                      <div className="station-board__label">{t.tempMetric}</div>
+                      <div className="station-board__value">
+                        {latestMeasurement?.tempC != null
+                          ? formatMetric(latestMeasurement.tempC, " °C")
+                          : t.waitingValue}
+                      </div>
+                      <p className="muted station-board__hint">
+                        {latestMeasurement?.tempC != null ? t.latestMeasurement : t.tempHint}
+                      </p>
+                    </div>
+
+                    <div className="station-board__tile station-board__tile--primary">
+                      <div className="station-board__label">{t.pulseMetric}</div>
+                      <div className="station-board__value">
+                        {latestMeasurement?.hr != null
+                          ? formatMetric(latestMeasurement.hr, " bpm")
+                          : t.waitingValue}
+                      </div>
+                      <p className="muted station-board__hint">
+                        {latestMeasurement?.hr != null ? t.latestMeasurement : t.pulseHint}
+                      </p>
+                    </div>
+
+                    <div className="station-board__tile">
+                      <div className="station-board__label">{t.spo2Metric}</div>
+                      <div className="station-board__value station-board__value--small">
+                        {latestMeasurement?.spo2 != null
+                          ? formatMetric(latestMeasurement.spo2, " %")
+                          : t.waitingValue}
+                      </div>
+                      <p className="muted station-board__hint">
+                        {latestMeasurement?.spo2 != null ? t.latestMeasurement : t.spo2Hint}
+                      </p>
+                    </div>
+
+                    <div className="station-board__tile">
+                      <div className="station-board__label">{t.pressureMetric}</div>
+                      <div className="station-board__value station-board__value--small">
+                        {latestMeasurement ? formatPressure(latestMeasurement) : t.waitingValue}
+                      </div>
+                      <p className="muted station-board__hint">
+                        {latestMeasurement &&
+                        (latestMeasurement.systolic != null || latestMeasurement.diastolic != null)
+                          ? t.latestMeasurement
+                          : t.pressureHint}
+                      </p>
+                    </div>
+                  </div>
+
+                  {latestMeasurement ? (
                     <div className="station-ready__section">
                       <h3 className="h2">{t.latestMeasurement}</h3>
                       <p className="muted" style={{ margin: "6px 0 0" }}>
                         {t.measuredAt}: {formatDateTime(latestMeasurement.createdAt)}
                       </p>
                     </div>
-
-                    <div className="grid station-ready__metrics">
-                      <div className="metric">
-                        <div className="metric__label">{t.tempMetric}</div>
-                        <div className="metric__value">
-                          {formatMetric(latestMeasurement.tempC, " °C")}
-                        </div>
-                      </div>
-
-                      <div className="metric">
-                        <div className="metric__label">{t.pulseMetric}</div>
-                        <div className="metric__value">
-                          {formatMetric(latestMeasurement.hr, " bpm")}
-                        </div>
-                      </div>
-
-                      <div className="metric">
-                        <div className="metric__label">{t.spo2Metric}</div>
-                        <div className="metric__value">
-                          {formatMetric(latestMeasurement.spo2, " %")}
-                        </div>
-                      </div>
-
-                      <div className="metric">
-                        <div className="metric__label">{t.pressureMetric}</div>
-                        <div className="metric__value">{formatPressure(latestMeasurement)}</div>
-                      </div>
+                  ) : (
+                    <div className="station-ready__empty">
+                      <h3 className="h2">{t.waitingMeasurements}</h3>
+                      <p className="muted" style={{ margin: "6px 0 0" }}>
+                        {t.waitingMeasurementsDesc}
+                      </p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="station-ready__empty">
-                    <h3 className="h2">{t.waitingMeasurements}</h3>
-                    <p className="muted" style={{ margin: "6px 0 0" }}>
-                      {t.waitingMeasurementsDesc}
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 <p className="muted station-ready__hint">{t.dashboardSyncHint}</p>
 
