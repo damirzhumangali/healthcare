@@ -13,7 +13,6 @@ import {
   type DeviceSessionState,
 } from "../lib/devicePairing";
 import { getCurrentUser, hasSession, logout } from "../lib/auth";
-import { isLocalPublicAppUrl } from "../lib/publicAppUrl";
 
 type Locale = "ru" | "kk" | "en";
 
@@ -26,7 +25,6 @@ const copy = {
     waitingPairDesc:
       "Пациент сканирует QR телефоном, входит в аккаунт и подтверждает вход на планшете.",
     qrRefresh: "Новый QR",
-    openPairLink: "Открыть ссылку",
     signInTablet: "Войти на планшете",
     pairingError: "Не получилось подготовить QR-сессию. Попробуйте обновить код.",
     pairingUnavailable: "QR временно недоступен",
@@ -36,13 +34,6 @@ const copy = {
     pairingApproved: "Пациент подтверждён",
     pairingExpired: "QR код истек",
     pairingAutoUpdate: "Статус обновляется автоматически после подтверждения с телефона.",
-    directLoginHint: "Если нужно, можно войти прямо на планшете без QR.",
-    pairLinkLabel: "Ссылка для пациента",
-    pairLinkHint:
-      "Токен скрыт в интерфейсе. Полная ссылка есть только внутри QR и кнопки открытия.",
-    qrLifetime: "QR действует 2 минуты, потом станция создаст новый.",
-    devLinkWarning:
-      "Сейчас используется localhost. Для телефона пациента это не подойдет вне текущего компьютера. Для реального теста укажи VITE_PUBLIC_APP_URL или открой сайт с домена.",
     readyTitle: "Станция связана с пациентом",
     readyDesc:
       "Пациент подтвержден. Когда ESP32 пришлет показатели, они появятся на планшете и в кабинете пациента.",
@@ -77,7 +68,6 @@ const copy = {
     waitingPairDesc:
       "Пациент телефонмен QR кодты сканерлеп, аккаунтқа кіріп, планшеттегі кіруді растайды.",
     qrRefresh: "Жаңа QR",
-    openPairLink: "Сілтемені ашу",
     signInTablet: "Планшетте кіру",
     pairingError: "QR сессиясын дайындау мүмкін болмады. Кодты жаңартып көріңіз.",
     pairingUnavailable: "QR уақытша қолжетімсіз",
@@ -87,13 +77,6 @@ const copy = {
     pairingApproved: "Пациент расталды",
     pairingExpired: "QR кодтың мерзімі бітті",
     pairingAutoUpdate: "Статус телефоннан расталғаннан кейін автоматты түрде жаңарады.",
-    directLoginHint: "Қажет болса, QR-сыз тікелей планшетте кіруге болады.",
-    pairLinkLabel: "Пациентке арналған сілтеме",
-    pairLinkHint:
-      "Интерфейсте токен жасырылған. Толық сілтеме тек QR мен ашу батырмасында бар.",
-    qrLifetime: "QR 2 минут жарамды, содан кейін станция жаңасын жасайды.",
-    devLinkWarning:
-      "Қазір localhost қолданылып тұр. Бұл науқастың телефонында ағымдағы компьютерден тыс ашылмайды. Нақты тест үшін VITE_PUBLIC_APP_URL орнатыңыз немесе сайтты доменнен ашыңыз.",
     readyTitle: "Станция пациентпен байланыстырылды",
     readyDesc:
       "Пациент расталды. ESP32 көрсеткіш жібергенде, ол планшетте де, пациент кабинетінде де бірден көрінеді.",
@@ -128,7 +111,6 @@ const copy = {
     waitingPairDesc:
       "The patient scans the QR with their phone, signs in, and confirms tablet access.",
     qrRefresh: "New QR",
-    openPairLink: "Open link",
     signInTablet: "Sign in on tablet",
     pairingError: "Could not prepare the QR session. Try generating a new code.",
     pairingUnavailable: "QR is temporarily unavailable",
@@ -138,13 +120,6 @@ const copy = {
     pairingApproved: "Patient confirmed",
     pairingExpired: "QR code expired",
     pairingAutoUpdate: "The status updates automatically after confirmation on the phone.",
-    directLoginHint: "If needed, you can sign in directly on this tablet without QR.",
-    pairLinkLabel: "Patient link",
-    pairLinkHint:
-      "The token is masked in the UI. The full link exists only inside the QR and open-link action.",
-    qrLifetime: "The QR is valid for 2 minutes, then the station creates a new one.",
-    devLinkWarning:
-      "This currently uses localhost. It will not work on a patient phone outside this computer. For a real test set VITE_PUBLIC_APP_URL or open the site from a domain.",
     readyTitle: "Station linked to patient",
     readyDesc:
       "The patient is confirmed. When ESP32 sends readings, they will appear on the tablet and in the patient dashboard.",
@@ -284,14 +259,6 @@ export default function ScanDevice() {
     currentUser?.email ||
     "HealthAssist";
   const pairUrl = pairing?.pairingUrl ?? "";
-  const pairUrlDisplay = useMemo(() => {
-    if (!pairUrl || !pairing?.pairingToken) {
-      return "";
-    }
-
-    return pairUrl.replace(pairing.pairingToken, maskToken(pairing.pairingToken));
-  }, [pairUrl, pairing?.pairingToken]);
-  const usingLocalPublicUrl = pairUrl ? isLocalPairUrl(pairUrl) : isLocalPublicAppUrl();
   const latestMeasurement = deviceSession?.measurements[0] ?? null;
 
   useEffect(() => {
@@ -367,6 +334,7 @@ export default function ScanDevice() {
           if (cancelled) return;
 
           setPairing(next);
+          setPairingError(null);
 
           if (next.status === "approved") {
             const snapshot = pairingToSessionSnapshot(next);
@@ -389,6 +357,64 @@ export default function ScanDevice() {
       window.clearInterval(timer);
     };
   }, [deviceId, pairing?.pairingToken, pairing?.pollSecret, pairing?.status]);
+
+  useEffect(() => {
+    if (!pairing?.pairingToken || deviceSession) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function rotatePairing() {
+      try {
+        const nextPairing = await createDevicePairingSession(deviceId, { forceNew: true });
+        if (cancelled) return;
+
+        setPairing(nextPairing);
+        setPairingError(null);
+      } catch {
+        if (cancelled) return;
+        setPairingError(copy[locale].pairingError);
+      }
+    }
+
+    if (pairing.status === "expired" || pairing.status === "closed") {
+      void rotatePairing();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (pairing.status !== "pending") {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const expiresAtMs = Date.parse(pairing.expiresAt);
+    if (!Number.isFinite(expiresAtMs)) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const delayMs = Math.max(250, expiresAtMs - Date.now() + 250);
+    const timer = window.setTimeout(() => {
+      void rotatePairing();
+    }, delayMs);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    deviceId,
+    deviceSession,
+    locale,
+    pairing?.expiresAt,
+    pairing?.pairingToken,
+    pairing?.status,
+  ]);
 
   useEffect(() => {
     if (!deviceSession?.session.sessionToken) {
@@ -689,23 +715,6 @@ export default function ScanDevice() {
               {pairing ? (
                 <div className="station-pairing__qr">
                   <QrCode value={pairUrl} />
-                  <div className="station-link-card">
-                    <div className="muted station-link-card__label">
-                      {t.pairLinkLabel}
-                    </div>
-                    <div className="station-link-card__url">{pairUrlDisplay}</div>
-                    <div className="muted station-link-card__hint">
-                      {t.pairLinkHint}
-                    </div>
-                    <div className="muted station-link-card__hint">
-                      {t.qrLifetime}
-                    </div>
-                    {usingLocalPublicUrl ? (
-                      <div className="alert station-link-card__warning">
-                        {t.devLinkWarning}
-                      </div>
-                    ) : null}
-                  </div>
                 </div>
               ) : null}
 
@@ -727,21 +736,9 @@ export default function ScanDevice() {
                   >
                     {t.qrRefresh}
                   </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="station-actions__button"
-                    onClick={() => {
-                      if (!pairUrl) return;
-                      window.open(pairUrl, "_blank", "noopener,noreferrer");
-                    }}
-                  >
-                    {t.openPairLink}
-                  </Button>
                 </div>
               </div>
 
-              <p className="muted station-pairing__hint">{t.directLoginHint}</p>
             </div>
           )}
         </div>
