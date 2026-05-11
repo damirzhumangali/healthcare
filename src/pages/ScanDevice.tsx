@@ -443,6 +443,18 @@ export default function ScanDevice() {
 
           if (!next) {
             setDeviceSession(null);
+            setPairing(null);
+            setPairingLoading(true);
+            void createDevicePairingSession(deviceId, { forceNew: true })
+              .then((nextPairing) => {
+                if (!cancelled) {
+                  setPairing(nextPairing);
+                  setPairingLoading(false);
+                }
+              })
+              .catch(() => {
+                if (!cancelled) setPairingLoading(false);
+              });
           } else {
             setDeviceSession(next);
           }
@@ -611,10 +623,8 @@ export default function ScanDevice() {
                   <div className="station-board__grid">
                     <div className="station-board__tile station-board__tile--primary">
                       <div className="station-board__label">{t.tempMetric}</div>
-                      <div className="station-board__value">
-                        {latestMeasurement?.tempC != null
-                          ? formatMetric(latestMeasurement.tempC, " °C")
-                          : t.waitingValue}
+                      <div className={`station-board__value${latestMeasurement?.tempC == null ? " station-board__value--waiting" : ""}`}>
+                        {latestMeasurement?.tempC != null ? formatMetric(latestMeasurement.tempC, " °C") : null}
                       </div>
                       <p className="muted station-board__hint">
                         {latestMeasurement?.tempC != null ? t.latestMeasurement : t.tempHint}
@@ -623,10 +633,8 @@ export default function ScanDevice() {
 
                     <div className="station-board__tile station-board__tile--primary">
                       <div className="station-board__label">{t.pulseMetric}</div>
-                      <div className="station-board__value">
-                        {latestMeasurement?.hr != null
-                          ? formatMetric(latestMeasurement.hr, " bpm")
-                          : t.waitingValue}
+                      <div className={`station-board__value${latestMeasurement?.hr == null ? " station-board__value--waiting" : ""}`}>
+                        {latestMeasurement?.hr != null ? formatMetric(latestMeasurement.hr, " bpm") : null}
                       </div>
                       <p className="muted station-board__hint">
                         {latestMeasurement?.hr != null ? t.latestMeasurement : t.pulseHint}
@@ -635,10 +643,8 @@ export default function ScanDevice() {
 
                     <div className="station-board__tile">
                       <div className="station-board__label">{t.spo2Metric}</div>
-                      <div className="station-board__value station-board__value--small">
-                        {latestMeasurement?.spo2 != null
-                          ? formatMetric(latestMeasurement.spo2, " %")
-                          : t.waitingValue}
+                      <div className={`station-board__value${latestMeasurement?.spo2 == null ? " station-board__value--waiting" : " station-board__value--small"}`}>
+                        {latestMeasurement?.spo2 != null ? formatMetric(latestMeasurement.spo2, " %") : null}
                       </div>
                       <p className="muted station-board__hint">
                         {latestMeasurement?.spo2 != null ? t.latestMeasurement : t.spo2Hint}
@@ -647,8 +653,14 @@ export default function ScanDevice() {
 
                     <div className="station-board__tile">
                       <div className="station-board__label">{t.pressureMetric}</div>
-                      <div className="station-board__value station-board__value--small">
-                        {latestMeasurement ? formatPressure(latestMeasurement) : t.waitingValue}
+                      <div className={`station-board__value${
+                        latestMeasurement && (latestMeasurement.systolic != null || latestMeasurement.diastolic != null)
+                          ? " station-board__value--small"
+                          : " station-board__value--waiting"
+                      }`}>
+                        {latestMeasurement && (latestMeasurement.systolic != null || latestMeasurement.diastolic != null)
+                          ? formatPressure(latestMeasurement)
+                          : null}
                       </div>
                       <p className="muted station-board__hint">
                         {latestMeasurement &&
@@ -667,12 +679,7 @@ export default function ScanDevice() {
                       </p>
                     </div>
                   ) : (
-                    <div className="station-ready__empty">
-                      <h3 className="h2">{t.waitingMeasurements}</h3>
-                      <p className="muted" style={{ margin: "6px 0 0" }}>
-                        {t.waitingMeasurementsDesc}
-                      </p>
-                    </div>
+                    <p className="muted station-board__waiting-hint">{t.waitingMeasurementsDesc}</p>
                   )}
                 </div>
 
@@ -713,39 +720,30 @@ export default function ScanDevice() {
                   <div className="station-board__grid">
                     <div className="station-board__tile station-board__tile--primary">
                       <div className="station-board__label">{t.tempMetric}</div>
-                      <div className="station-board__value">{t.waitingValue}</div>
+                      <div className="station-board__value station-board__value--waiting" />
                       <p className="muted station-board__hint">{t.tempHint}</p>
                     </div>
 
                     <div className="station-board__tile station-board__tile--primary">
                       <div className="station-board__label">{t.pulseMetric}</div>
-                      <div className="station-board__value">{t.waitingValue}</div>
+                      <div className="station-board__value station-board__value--waiting" />
                       <p className="muted station-board__hint">{t.pulseHint}</p>
                     </div>
 
                     <div className="station-board__tile">
                       <div className="station-board__label">{t.spo2Metric}</div>
-                      <div className="station-board__value station-board__value--small">
-                        {t.waitingValue}
-                      </div>
+                      <div className="station-board__value station-board__value--waiting" />
                       <p className="muted station-board__hint">{t.spo2Hint}</p>
                     </div>
 
                     <div className="station-board__tile">
                       <div className="station-board__label">{t.pressureMetric}</div>
-                      <div className="station-board__value station-board__value--small">
-                        {t.waitingValue}
-                      </div>
+                      <div className="station-board__value station-board__value--waiting" />
                       <p className="muted station-board__hint">{t.pressureHint}</p>
                     </div>
                   </div>
 
-                  <div className="station-ready__empty">
-                    <h3 className="h2">{t.waitingMeasurements}</h3>
-                    <p className="muted" style={{ margin: "6px 0 0" }}>
-                      {t.waitingMeasurementsDesc}
-                    </p>
-                  </div>
+                  <p className="muted station-board__waiting-hint">{t.waitingMeasurementsDesc}</p>
                 </div>
 
                 <p className="muted station-ready__hint">{t.dashboardSyncHint}</p>

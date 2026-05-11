@@ -300,17 +300,68 @@ button, input{font:inherit}
 .station-ready__metrics{
   align-items:stretch;
 }
-.station-ready__empty{
-  padding:14px;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:14px;
-  background:rgba(255,255,255,.03);
-}
 .station-ready__hint{
   margin:0;
 }
 .station-ready__actions .btn{
   min-height:52px;
+}
+
+/* ── skeleton shimmer ──────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.station-board__value--waiting {
+  font-size: 1rem !important;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+}
+.station-board__value--waiting::before {
+  content: '';
+  display: block;
+  height: 10px;
+  width: 56%;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,.05) 0%,
+    rgba(255,255,255,.14) 50%,
+    rgba(255,255,255,.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+.station-board__waiting-hint {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+  padding: 6px 0 2px;
+}
+
+/* ── tablet layout ─────────────────────────────────────── */
+@media (min-width: 640px) {
+  .station-screen .card {
+    padding: 28px 32px;
+  }
+  .station-shell {
+    gap: 24px;
+  }
+  .station-pairing {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 48px;
+  }
+}
+@media (min-width: 720px) {
+  .station-board__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .station-board__tile,
+  .station-board__tile--primary {
+    min-height: 148px;
+  }
 }
 
 .h1{font-size:30px; margin:0}
