@@ -4,7 +4,6 @@ import Button from "../components/Button";
 import Card from "../components/Card";
 import {
   approveDevicePairingSession,
-  fetchDevicePairingSession,
   type DevicePairingSession,
 } from "../lib/devicePairing";
 import { getCurrentUser, hasSession } from "../lib/auth";
@@ -27,13 +26,13 @@ const copy = {
     signIn: "Войти",
     ready: "Готово к подтверждению",
     readyDesc:
-      "После подтверждения станция привяжет текущий аккаунт пациента и сможет показать измерения.",
+      "После подтверждения станция привяжет текущий аккаунт пациента и сможет принимать измерения с датчиков.",
     account: "Аккаунт",
     confirm: "Подтвердить вход на планшете",
     confirming: "Подтверждаем...",
     success: "Планшет подтвержден",
     successDesc:
-      "Возвращайтесь к станции. После синхронизации там можно будет запускать измерения.",
+      "Возвращайтесь к станции. После синхронизации там можно будет ждать измерения от ESP32.",
     alreadyApproved: "Эта станция уже связана с аккаунтом пациента.",
     openStation: "Открыть станцию",
     approveError: "Не получилось подтвердить вход. Попробуйте еще раз.",
@@ -53,13 +52,13 @@ const copy = {
     signIn: "Кіру",
     ready: "Растауға дайын",
     readyDesc:
-      "Растағаннан кейін станция ағымдағы пациент аккаунтын байланыстырып, өлшеулерді көрсете алады.",
+      "Растағаннан кейін станция ағымдағы пациент аккаунтын байланыстырып, датчик өлшемдерін қабылдай алады.",
     account: "Аккаунт",
     confirm: "Планшетке кіруді растау",
     confirming: "Расталуда...",
     success: "Планшет расталды",
     successDesc:
-      "Станцияға қайта оралыңыз. Синхрондаудан кейін өлшеуді бастауға болады.",
+      "Станцияға қайта оралыңыз. Синхрондаудан кейін ESP32 өлшеулерін күтуге болады.",
     alreadyApproved: "Бұл станция пациент аккаунтымен әлдеқашан байланыстырылған.",
     openStation: "Станцияны ашу",
     approveError: "Кіруді растау мүмкін болмады. Қайта көріңіз.",
@@ -79,13 +78,13 @@ const copy = {
     signIn: "Sign In",
     ready: "Ready to confirm",
     readyDesc:
-      "After confirmation the station will link the current patient account and can show measurements.",
+      "After confirmation the station will link the current patient account and can accept sensor measurements.",
     account: "Account",
     confirm: "Confirm sign-in on tablet",
     confirming: "Confirming...",
     success: "Tablet confirmed",
     successDesc:
-      "Return to the station. Once it syncs, measurements can be started there.",
+      "Return to the station. Once it syncs, it can wait for incoming ESP32 measurements.",
     alreadyApproved: "This station is already linked to a patient account.",
     openStation: "Open station",
     approveError: "Failed to confirm sign-in. Try again.",
@@ -95,7 +94,13 @@ const copy = {
 export default function DevicePairing() {
   const nav = useNavigate();
   const location = useLocation();
-  const { deviceId = "", pairingToken = "" } = useParams();
+  const params = useParams();
+  const search = new URLSearchParams(location.search);
+
+  const tokenFromQuery = search.get("token") || "";
+  const tokenFromPath = params.pairingToken || "";
+  const pairingToken = tokenFromQuery || tokenFromPath;
+  const fallbackDeviceId = params.deviceId || search.get("deviceId") || "";
 
   const [locale, setLocale] = useState<Locale>(() => {
     const value = window.localStorage.getItem("ha_locale");
@@ -103,80 +108,42 @@ export default function DevicePairing() {
     return "ru";
   });
   const [session, setSession] = useState<DevicePairingSession | null>(null);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState(() => !pairingToken);
+  const [expired, setExpired] = useState(false);
 
   const t = copy[locale];
   const currentUser = useMemo(() => getCurrentUser(), []);
   const authed = hasSession() && Boolean(currentUser);
   const nextUrl = `${location.pathname}${location.search}`;
+  const stationDeviceId = session?.deviceId || fallbackDeviceId;
 
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);
   }, [locale]);
 
   useEffect(() => {
-    if (loading) return;
+    if (!pairingToken) return;
     if (authed) return;
-    if (!session || session.status !== "waiting") return;
 
     nav(`/login?next=${encodeURIComponent(nextUrl)}`, { replace: true });
-  }, [authed, loading, nav, nextUrl, session]);
+  }, [authed, nav, nextUrl, pairingToken]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setErr(null);
-
-      try {
-        const next = await fetchDevicePairingSession(pairingToken);
-        if (!cancelled) {
-          setSession(next);
-        }
-      } catch {
-        if (!cancelled) {
-          setErr(t.invalid);
-          setSession(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    if (!deviceId || !pairingToken) {
-      setErr(t.invalid);
-      setLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [deviceId, pairingToken, t.invalid]);
-
-  if (loading) {
+  if (invalid) {
     return (
       <div className="center min-h-screen">
         <Card>
           <div className="stack">
             <div className="kicker">{t.kicker}</div>
-            <h1 className="h2">{t.loading}</h1>
+            <h1 className="h2">{t.invalid}</h1>
           </div>
         </Card>
       </div>
     );
   }
 
-  if (!authed && session?.status === "waiting") {
+  if (!authed) {
     return (
       <div className="center min-h-screen">
         <Card>
@@ -194,6 +161,7 @@ export default function DevicePairing() {
 
   const accountLabel = currentUser?.name || currentUser?.email || "HealthAssist";
   const approvedLabel = session?.user?.name || session?.user?.email || accountLabel;
+  const stationLink = stationDeviceId ? `/scan/${stationDeviceId}` : "/scan/device-001";
 
   return (
     <div className="center min-h-screen relative">
@@ -221,16 +189,16 @@ export default function DevicePairing() {
             <div className="kicker">{t.kicker}</div>
             <h1 className="h1">{t.title}</h1>
             <p className="muted" style={{ margin: "6px 0 0" }}>
-              {t.device}: <b>{deviceId}</b>
+              {t.device}: <b>{stationDeviceId || "device-001"}</b>
             </p>
           </div>
 
           {err ? <div className="alert">{err}</div> : null}
 
-          {session?.status === "expired" ? (
+          {expired || session?.status === "expired" || session?.status === "closed" ? (
             <div className="stack">
               <h2 className="h2">{t.expired}</h2>
-              <Link to={`/scan/${deviceId}`}>
+              <Link to={stationLink}>
                 <Button variant="ghost">{t.openStation}</Button>
               </Link>
             </div>
@@ -252,7 +220,7 @@ export default function DevicePairing() {
               <p className="muted" style={{ margin: 0 }}>
                 {t.alreadyApproved}
               </p>
-              <Link to={`/scan/${deviceId}`}>
+              <Link to={stationLink}>
                 <Button>{t.openStation}</Button>
               </Link>
             </div>
@@ -279,8 +247,6 @@ export default function DevicePairing() {
                 {t.readyDesc}
               </p>
 
-              {err ? <div className="alert">{err}</div> : null}
-
               <div
                 style={{
                   padding: 12,
@@ -295,17 +261,34 @@ export default function DevicePairing() {
                 <Button
                   onClick={async () => {
                     setErr(null);
+                    setExpired(false);
+                    setInvalid(false);
                     setSubmitting(true);
 
                     try {
                       const next = await approveDevicePairingSession(
                         pairingToken,
-                        deviceId,
                         currentUser
                       );
                       setSession(next);
-                    } catch {
-                      setErr(t.approveError);
+                    } catch (error) {
+                      const status =
+                        typeof error === "object" &&
+                        error !== null &&
+                        "status" in error &&
+                        typeof (error as { status?: unknown }).status === "number"
+                          ? Number((error as { status?: unknown }).status)
+                          : NaN;
+
+                      if (status === 404) {
+                        setInvalid(true);
+                        setErr(t.invalid);
+                      } else if (status === 410 || status === 409) {
+                        setExpired(true);
+                        setErr(null);
+                      } else {
+                        setErr(t.approveError);
+                      }
                     } finally {
                       setSubmitting(false);
                     }

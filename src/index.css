@@ -243,6 +243,23 @@ button, input{font:inherit}
 .station-ready{
   gap:16px;
 }
+.station-ready__section{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.station-ready__metrics{
+  align-items:stretch;
+}
+.station-ready__empty{
+  padding:14px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+}
+.station-ready__hint{
+  margin:0;
+}
 .station-ready__actions .btn{
   min-height:52px;
 }

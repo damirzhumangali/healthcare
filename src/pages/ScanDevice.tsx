@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import Card from "../components/Card";
 import Button from "../components/Button";
+import Card from "../components/Card";
 import QrCode from "../components/QrCode";
 import {
+  closeDeviceSession,
   createDevicePairingSession,
   fetchDevicePairingSession,
+  fetchDeviceSession,
+  type DeviceMeasurement,
   type DevicePairingSession,
+  type DeviceSessionState,
 } from "../lib/devicePairing";
 import { getCurrentUser, hasSession, logout } from "../lib/auth";
-import { createMeasurement } from "../lib/apiMeasurements";
-import { buildPublicAppUrl, isLocalPublicAppUrl } from "../lib/publicAppUrl";
+import { isLocalPublicAppUrl } from "../lib/publicAppUrl";
 
 type Locale = "ru" | "kk" | "en";
 
@@ -26,6 +29,9 @@ const copy = {
     openPairLink: "Открыть ссылку",
     signInTablet: "Войти на планшете",
     pairingError: "Не получилось подготовить QR-сессию. Попробуйте обновить код.",
+    pairingUnavailable: "QR временно недоступен",
+    pairingUnavailableDesc:
+      "Сейчас не удалось создать безопасную QR-сессию. Можно войти прямо на планшете и продолжить работу без QR.",
     pairingPending: "Ожидаем подтверждение пациента",
     pairingApproved: "Пациент подтверждён",
     pairingExpired: "QR код истек",
@@ -34,19 +40,34 @@ const copy = {
     pairLinkLabel: "Ссылка для пациента",
     pairLinkHint:
       "Токен скрыт в интерфейсе. Полная ссылка есть только внутри QR и кнопки открытия.",
-    qrLifetime: "QR действует около 10 минут.",
+    qrLifetime: "QR действует 2 минуты, потом станция создаст новый.",
     devLinkWarning:
       "Сейчас используется localhost. Для телефона пациента это не подойдет вне текущего компьютера. Для реального теста укажи VITE_PUBLIC_APP_URL или открой сайт с домена.",
-    readyToMeasure: "Готово к измерению",
-    readyToMeasureDesc:
-      "Нажми кнопку — сервер создаст измерение как с датчиков, и оно появится в кабинете.",
-    startMeasurement: "Начать измерение",
-    measuring: "Измеряю...",
-    openDashboard: "Открыть кабинет",
+    readyTitle: "Станция связана с пациентом",
+    readyDesc:
+      "Пациент подтвержден. Когда ESP32 пришлет показатели, они появятся на планшете и в кабинете пациента.",
     linkedPatient: "Пациент",
+    refreshSession: "Обновить данные",
+    refreshingSession: "Обновляю...",
+    waitingMeasurements: "Ожидаем данные от датчиков",
+    waitingMeasurementsDesc:
+      "ESP32 пока не отправил новое измерение. Как только данные придут, они появятся здесь автоматически.",
+    dashboardSyncHint:
+      "История на сайте пациента обновляется автоматически после сохранения измерения сервером.",
+    latestMeasurement: "Последнее измерение",
+    measuredAt: "Время",
+    tempMetric: "Температура",
+    pulseMetric: "Пульс",
+    spo2Metric: "SpO₂",
+    pressureMetric: "Давление",
+    directModeTitle: "Планшет вошел напрямую",
+    directModeDesc:
+      "Это запасной режим без безопасной QR-привязки пациента. Для робота и датчиков лучше использовать вход через QR с телефона.",
+    openDashboard: "Открыть кабинет",
     endSession: "Завершить сеанс",
-    measurementError:
-      "Не получилось создать измерение. Проверь backend и VITE_API_BASE_URL, затем попробуй ещё раз.",
+    sessionError:
+      "Не получилось получить актуальные данные станции. Проверь backend и активную device-session.",
+    sessionEndError: "Не получилось завершить сеанс. Попробуйте еще раз.",
   },
   kk: {
     kicker: "QR → СТАНЦИЯ",
@@ -59,6 +80,9 @@ const copy = {
     openPairLink: "Сілтемені ашу",
     signInTablet: "Планшетте кіру",
     pairingError: "QR сессиясын дайындау мүмкін болмады. Кодты жаңартып көріңіз.",
+    pairingUnavailable: "QR уақытша қолжетімсіз",
+    pairingUnavailableDesc:
+      "Қазір қауіпсіз QR сессиясын құру мүмкін болмады. Қажет болса, планшетте тікелей кіріп, QR-сыз жалғастыра аласыз.",
     pairingPending: "Пациенттің растауын күтіп тұрмыз",
     pairingApproved: "Пациент расталды",
     pairingExpired: "QR кодтың мерзімі бітті",
@@ -67,19 +91,34 @@ const copy = {
     pairLinkLabel: "Пациентке арналған сілтеме",
     pairLinkHint:
       "Интерфейсте токен жасырылған. Толық сілтеме тек QR мен ашу батырмасында бар.",
-    qrLifetime: "QR шамамен 10 минут жарамды.",
+    qrLifetime: "QR 2 минут жарамды, содан кейін станция жаңасын жасайды.",
     devLinkWarning:
       "Қазір localhost қолданылып тұр. Бұл науқастың телефонында ағымдағы компьютерден тыс ашылмайды. Нақты тест үшін VITE_PUBLIC_APP_URL орнатыңыз немесе сайтты доменнен ашыңыз.",
-    readyToMeasure: "Өлшеуге дайын",
-    readyToMeasureDesc:
-      "Батырманы басыңыз — сервер датчиктардан өлшеуді жасайды, ол кабинетте пайда болады.",
-    startMeasurement: "Өлшеуді бастау",
-    measuring: "Өлшенуде...",
-    openDashboard: "Кабинетті ашу",
+    readyTitle: "Станция пациентпен байланыстырылды",
+    readyDesc:
+      "Пациент расталды. ESP32 көрсеткіш жібергенде, ол планшетте де, пациент кабинетінде де бірден көрінеді.",
     linkedPatient: "Пациент",
+    refreshSession: "Деректерді жаңарту",
+    refreshingSession: "Жаңартылуда...",
+    waitingMeasurements: "Датчик деректерін күтіп тұрмыз",
+    waitingMeasurementsDesc:
+      "ESP32 әлі жаңа өлшеу жібермеді. Деректер келген бойда осында автоматты түрде шығады.",
+    dashboardSyncHint:
+      "Сервер өлшеуді сақтағаннан кейін пациент сайтындағы тарих автоматты түрде жаңарады.",
+    latestMeasurement: "Соңғы өлшеу",
+    measuredAt: "Уақыты",
+    tempMetric: "Температура",
+    pulseMetric: "Пульс",
+    spo2Metric: "SpO₂",
+    pressureMetric: "Қысым",
+    directModeTitle: "Планшет тікелей кірді",
+    directModeDesc:
+      "Бұл пациентті қауіпсіз QR арқылы байланыстырмайтын қосалқы режим. Робот пен датчиктер үшін QR арқылы кіру дұрыс болады.",
+    openDashboard: "Кабинетті ашу",
     endSession: "Сеансты аяқтау",
-    measurementError:
-      "Өлшеуді жасай алмады. Backend пен VITE_API_BASE_URL тексеріп, қайтадан көріңіз.",
+    sessionError:
+      "Станцияның өзекті деректерін алу мүмкін болмады. Backend пен active device-session тексеріңіз.",
+    sessionEndError: "Сеансты аяқтау мүмкін болмады. Қайтадан көріңіз.",
   },
   en: {
     kicker: "QR → STATION",
@@ -92,6 +131,9 @@ const copy = {
     openPairLink: "Open link",
     signInTablet: "Sign in on tablet",
     pairingError: "Could not prepare the QR session. Try generating a new code.",
+    pairingUnavailable: "QR is temporarily unavailable",
+    pairingUnavailableDesc:
+      "A secure QR session could not be created right now. You can sign in directly on the tablet and continue without QR.",
     pairingPending: "Waiting for patient confirmation",
     pairingApproved: "Patient confirmed",
     pairingExpired: "QR code expired",
@@ -100,19 +142,34 @@ const copy = {
     pairLinkLabel: "Patient link",
     pairLinkHint:
       "The token is masked in the UI. The full link exists only inside the QR and open-link action.",
-    qrLifetime: "The QR stays valid for about 10 minutes.",
+    qrLifetime: "The QR is valid for 2 minutes, then the station creates a new one.",
     devLinkWarning:
       "This currently uses localhost. It will not work on a patient phone outside this computer. For a real test set VITE_PUBLIC_APP_URL or open the site from a domain.",
-    readyToMeasure: "Ready to Measure",
-    readyToMeasureDesc:
-      "Click the button - server will create measurement as from sensors, and it will appear in dashboard.",
-    startMeasurement: "Start Measurement",
-    measuring: "Measuring...",
-    openDashboard: "Open Dashboard",
+    readyTitle: "Station linked to patient",
+    readyDesc:
+      "The patient is confirmed. When ESP32 sends readings, they will appear on the tablet and in the patient dashboard.",
     linkedPatient: "Patient",
+    refreshSession: "Refresh data",
+    refreshingSession: "Refreshing...",
+    waitingMeasurements: "Waiting for sensor readings",
+    waitingMeasurementsDesc:
+      "ESP32 has not sent a new measurement yet. As soon as it arrives, it will appear here automatically.",
+    dashboardSyncHint:
+      "The patient website updates automatically after the server saves a measurement.",
+    latestMeasurement: "Latest measurement",
+    measuredAt: "Time",
+    tempMetric: "Temperature",
+    pulseMetric: "Pulse",
+    spo2Metric: "SpO₂",
+    pressureMetric: "Pressure",
+    directModeTitle: "Tablet signed in directly",
+    directModeDesc:
+      "This is a fallback mode without secure QR patient pairing. For the robot and sensors, QR flow from the patient phone is the better option.",
+    openDashboard: "Open Dashboard",
     endSession: "End Session",
-    measurementError:
-      "Failed to create measurement. Check the backend and VITE_API_BASE_URL, then try again.",
+    sessionError:
+      "Could not load current station data. Check the backend and active device session.",
+    sessionEndError: "Could not end the session. Try again.",
   },
 } as const;
 
@@ -122,6 +179,73 @@ function maskToken(token: string) {
   }
 
   return `${token.slice(0, 6)}...${token.slice(-4)}`;
+}
+
+function isLocalPairUrl(url: string) {
+  try {
+    const host = new URL(url).hostname;
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host.endsWith(".local")
+    );
+  } catch {
+    return isLocalPublicAppUrl();
+  }
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return "—";
+  }
+
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+}
+
+function formatMetric(value: number | null | undefined, suffix = "") {
+  if (value == null || Number.isNaN(value)) {
+    return "—";
+  }
+
+  return `${value}${suffix}`;
+}
+
+function formatPressure(item: DeviceMeasurement | null) {
+  if (!item) {
+    return "—";
+  }
+
+  if (item.systolic == null && item.diastolic == null) {
+    return "—";
+  }
+
+  return `${item.systolic ?? "—"} / ${item.diastolic ?? "—"}`;
+}
+
+function pairingToSessionSnapshot(pairing: DevicePairingSession): DeviceSessionState | null {
+  if (!pairing.sessionToken) {
+    return null;
+  }
+
+  return {
+    session: {
+      sessionToken: pairing.sessionToken,
+      deviceId: pairing.deviceId,
+      patientId: pairing.patientId ? String(pairing.patientId) : "",
+      status: pairing.status,
+      createdAt: pairing.createdAt,
+      claimedAt: pairing.claimedAt ?? pairing.approvedAt ?? null,
+      sessionExpiresAt: pairing.sessionExpiresAt ?? null,
+    },
+    patient: pairing.patient ?? pairing.user ?? null,
+    measurements: [],
+  };
 }
 
 export default function ScanDevice() {
@@ -139,27 +263,27 @@ export default function ScanDevice() {
 
   const [authed, setAuthed] = useState(() => hasSession());
   const [pairing, setPairing] = useState<DevicePairingSession | null>(null);
+  const [deviceSession, setDeviceSession] = useState<DeviceSessionState | null>(null);
   const [pairingLoading, setPairingLoading] = useState(true);
   const [pairingError, setPairingError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [sessionBusy, setSessionBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const stationLoginMode =
     new URLSearchParams(location.search).get("stationLogin") === "1";
   const stationLoginNext = `/scan/${deviceId}?stationLogin=1`;
-  const stationReady = authed && (stationLoginMode || pairing?.status === "approved");
+  const directMode = authed && stationLoginMode && !deviceSession;
+  const stationReady = Boolean(deviceSession) || directMode;
   const currentUser = useMemo(() => getCurrentUser(), [authed]);
   const patientLabel =
+    deviceSession?.patient?.name ||
+    deviceSession?.patient?.email ||
     pairing?.user?.name ||
     pairing?.user?.email ||
     currentUser?.name ||
     currentUser?.email ||
     "HealthAssist";
-  const pairUrl = pairing
-    ? buildPublicAppUrl(
-        `/pair/${encodeURIComponent(deviceId)}/${encodeURIComponent(pairing.pairingToken)}`
-      )
-    : "";
+  const pairUrl = pairing?.pairingUrl ?? "";
   const pairUrlDisplay = useMemo(() => {
     if (!pairUrl || !pairing?.pairingToken) {
       return "";
@@ -167,7 +291,8 @@ export default function ScanDevice() {
 
     return pairUrl.replace(pairing.pairingToken, maskToken(pairing.pairingToken));
   }, [pairUrl, pairing?.pairingToken]);
-  const usingLocalPublicUrl = isLocalPublicAppUrl();
+  const usingLocalPublicUrl = pairUrl ? isLocalPairUrl(pairUrl) : isLocalPublicAppUrl();
+  const latestMeasurement = deviceSession?.measurements[0] ?? null;
 
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);
@@ -189,18 +314,29 @@ export default function ScanDevice() {
   useEffect(() => {
     let cancelled = false;
 
-    async function load(forceNew = false) {
+    async function boot() {
       setPairingLoading(true);
       setPairingError(null);
+      setErr(null);
 
       try {
-        const next = await createDevicePairingSession(deviceId, { forceNew });
+        const activeSession = await fetchDeviceSession(deviceId);
+        if (cancelled) return;
+
+        if (activeSession) {
+          setDeviceSession(activeSession);
+          setPairing(null);
+          return;
+        }
+
+        const nextPairing = await createDevicePairingSession(deviceId);
         if (!cancelled) {
-          setPairing(next);
+          setPairing(nextPairing);
+          setDeviceSession(null);
         }
       } catch {
         if (!cancelled) {
-          setPairingError(t.pairingError);
+          setPairingError(copy[locale].pairingError);
         }
       } finally {
         if (!cancelled) {
@@ -209,26 +345,41 @@ export default function ScanDevice() {
       }
     }
 
-    void load(false);
+    void boot();
 
     return () => {
       cancelled = true;
     };
-  }, [deviceId, t.pairingError]);
+  }, [deviceId]);
 
   useEffect(() => {
-    if (!pairing?.pairingToken || pairing.status !== "waiting") {
+    if (!pairing?.pairingToken || pairing.status !== "pending") {
       return;
     }
 
     let cancelled = false;
 
     const timer = window.setInterval(() => {
-      void fetchDevicePairingSession(pairing.pairingToken)
+      void fetchDevicePairingSession(pairing.pairingToken, {
+        pollSecret: pairing.pollSecret,
+      })
         .then((next) => {
           if (cancelled) return;
+
           setPairing(next);
-          setAuthed(hasSession());
+
+          if (next.status === "approved") {
+            const snapshot = pairingToSessionSnapshot(next);
+            if (snapshot) {
+              setDeviceSession((current) => current ?? snapshot);
+              void fetchDeviceSession(deviceId)
+                .then((activeSession) => {
+                  if (cancelled || !activeSession) return;
+                  setDeviceSession(activeSession);
+                })
+                .catch(() => {});
+            }
+          }
         })
         .catch(() => {});
     }, 2000);
@@ -237,7 +388,94 @@ export default function ScanDevice() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [pairing?.pairingToken, pairing?.status]);
+  }, [deviceId, pairing?.pairingToken, pairing?.pollSecret, pairing?.status]);
+
+  useEffect(() => {
+    if (!deviceSession?.session.sessionToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const timer = window.setInterval(() => {
+      void fetchDeviceSession(deviceId)
+        .then((next) => {
+          if (cancelled) return;
+
+          if (!next) {
+            setDeviceSession(null);
+          } else {
+            setDeviceSession(next);
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [deviceId, deviceSession?.session.sessionToken]);
+
+  async function handleCreatePairing(forceNew = false) {
+    setPairingError(null);
+    setErr(null);
+    setPairingLoading(true);
+
+    try {
+      const next = await createDevicePairingSession(deviceId, { forceNew });
+      setPairing(next);
+      setDeviceSession(null);
+    } catch {
+      setPairingError(t.pairingError);
+    } finally {
+      setPairingLoading(false);
+    }
+  }
+
+  async function handleRefreshSession() {
+    setErr(null);
+    setSessionBusy(true);
+
+    try {
+      const next = await fetchDeviceSession(deviceId);
+      if (next) {
+        setDeviceSession(next);
+        return;
+      }
+
+      setDeviceSession(null);
+      await handleCreatePairing(true);
+    } catch {
+      setErr(t.sessionError);
+    } finally {
+      setSessionBusy(false);
+    }
+  }
+
+  async function handleEndSession() {
+    if (!deviceSession) {
+      logout();
+      setAuthed(false);
+      setErr(null);
+      nav(`/scan/${deviceId}`, { replace: true });
+      return;
+    }
+
+    setErr(null);
+    setSessionBusy(true);
+
+    try {
+      await closeDeviceSession(deviceId);
+      setDeviceSession(null);
+      setPairing(null);
+      await handleCreatePairing(true);
+    } catch {
+      setErr(t.sessionEndError);
+    } finally {
+      setSessionBusy(false);
+    }
+  }
 
   return (
     <div className="center station-screen min-h-screen relative">
@@ -267,21 +505,23 @@ export default function ScanDevice() {
             <p className="muted" style={{ margin: 0 }}>
               {t.device}: <b>{deviceId}</b>
             </p>
-            {pairing ? (
+            {deviceSession || pairing ? (
               <div
                 className={`badge ${
-                  pairing.status === "approved"
+                  deviceSession
                     ? "badge--ok"
-                    : pairing.status === "expired"
-                      ? "badge--danger"
-                      : "badge--warn"
+                    : pairing?.status === "approved"
+                      ? "badge--ok"
+                      : pairing?.status === "expired" || pairing?.status === "closed"
+                        ? "badge--danger"
+                        : "badge--warn"
                 }`}
                 style={{ marginTop: 12 }}
               >
                 <span className="badge__dot" />
-                {pairing.status === "approved"
+                {deviceSession || pairing?.status === "approved"
                   ? t.pairingApproved
-                  : pairing.status === "expired"
+                  : pairing?.status === "expired" || pairing?.status === "closed"
                     ? t.pairingExpired
                     : t.pairingPending}
               </div>
@@ -293,59 +533,143 @@ export default function ScanDevice() {
           {pairingLoading ? (
             <div className="muted">{t.pairingPending}...</div>
           ) : stationReady ? (
-            <div className="stack station-ready">
+            deviceSession ? (
+              <div className="stack station-ready">
+                <h2 className="h2" style={{ marginTop: 6 }}>
+                  {t.readyTitle}
+                </h2>
+                <p className="muted" style={{ marginTop: -6 }}>
+                  {t.readyDesc}
+                </p>
+
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                  }}
+                >
+                  {t.linkedPatient}: <b>{patientLabel}</b>
+                </div>
+
+                {latestMeasurement ? (
+                  <div className="stack">
+                    <div className="station-ready__section">
+                      <h3 className="h2">{t.latestMeasurement}</h3>
+                      <p className="muted" style={{ margin: "6px 0 0" }}>
+                        {t.measuredAt}: {formatDateTime(latestMeasurement.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="grid station-ready__metrics">
+                      <div className="metric">
+                        <div className="metric__label">{t.tempMetric}</div>
+                        <div className="metric__value">
+                          {formatMetric(latestMeasurement.tempC, " °C")}
+                        </div>
+                      </div>
+
+                      <div className="metric">
+                        <div className="metric__label">{t.pulseMetric}</div>
+                        <div className="metric__value">
+                          {formatMetric(latestMeasurement.hr, " bpm")}
+                        </div>
+                      </div>
+
+                      <div className="metric">
+                        <div className="metric__label">{t.spo2Metric}</div>
+                        <div className="metric__value">
+                          {formatMetric(latestMeasurement.spo2, " %")}
+                        </div>
+                      </div>
+
+                      <div className="metric">
+                        <div className="metric__label">{t.pressureMetric}</div>
+                        <div className="metric__value">{formatPressure(latestMeasurement)}</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="station-ready__empty">
+                    <h3 className="h2">{t.waitingMeasurements}</h3>
+                    <p className="muted" style={{ margin: "6px 0 0" }}>
+                      {t.waitingMeasurementsDesc}
+                    </p>
+                  </div>
+                )}
+
+                <p className="muted station-ready__hint">{t.dashboardSyncHint}</p>
+
+                {err ? <div className="alert">{err}</div> : null}
+
+                <div className="row station-ready__actions">
+                  <Button onClick={() => void handleRefreshSession()} disabled={sessionBusy}>
+                    {sessionBusy ? t.refreshingSession : t.refreshSession}
+                  </Button>
+
+                  <Button variant="danger" onClick={() => void handleEndSession()} disabled={sessionBusy}>
+                    {t.endSession}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="stack station-ready">
+                <h2 className="h2" style={{ marginTop: 6 }}>
+                  {t.directModeTitle}
+                </h2>
+                <p className="muted" style={{ marginTop: -6 }}>
+                  {t.directModeDesc}
+                </p>
+
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                  }}
+                >
+                  {t.linkedPatient}: <b>{patientLabel}</b>
+                </div>
+
+                {err ? <div className="alert">{err}</div> : null}
+
+                <div className="row station-ready__actions">
+                  <Button onClick={() => nav("/app")}>{t.openDashboard}</Button>
+
+                  <Button variant="danger" onClick={() => void handleEndSession()}>
+                    {t.endSession}
+                  </Button>
+                </div>
+              </div>
+            )
+          ) : pairingError && !pairing ? (
+            <div className="stack station-fallback">
               <h2 className="h2" style={{ marginTop: 6 }}>
-                {t.readyToMeasure}
+                {t.pairingUnavailable}
               </h2>
               <p className="muted" style={{ marginTop: -6 }}>
-                {t.readyToMeasureDesc}
+                {t.pairingUnavailableDesc}
               </p>
 
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                }}
-              >
-                {t.linkedPatient}: <b>{patientLabel}</b>
-              </div>
-
-              {err ? <div className="alert">{err}</div> : null}
-
-              <div className="row station-ready__actions">
+              <div className="station-actions">
                 <Button
-                  onClick={async () => {
-                    setErr(null);
-                    setLoading(true);
-                    try {
-                      await createMeasurement(deviceId);
-                      nav("/app");
-                    } catch {
-                      setErr(t.measurementError);
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
+                  className="station-actions__primary"
+                  onClick={() =>
+                    nav(`/login?next=${encodeURIComponent(stationLoginNext)}`)
+                  }
                 >
-                  {loading ? t.measuring : t.startMeasurement}
+                  {t.signInTablet}
                 </Button>
 
-                <Button variant="ghost" onClick={() => nav("/app")}>
-                  {t.openDashboard}
-                </Button>
-
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    logout();
-                    setAuthed(false);
-                    setErr(null);
-                    nav(`/scan/${deviceId}`, { replace: true });
-                  }}
-                >
-                  {t.endSession}
-                </Button>
+                <div className="station-actions__secondary">
+                  <Button
+                    variant="ghost"
+                    className="station-actions__button"
+                    onClick={() => void handleCreatePairing(true)}
+                  >
+                    {t.qrRefresh}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -369,9 +693,7 @@ export default function ScanDevice() {
                     <div className="muted station-link-card__label">
                       {t.pairLinkLabel}
                     </div>
-                    <div className="station-link-card__url">
-                      {pairUrlDisplay}
-                    </div>
+                    <div className="station-link-card__url">{pairUrlDisplay}</div>
                     <div className="muted station-link-card__hint">
                       {t.pairLinkHint}
                     </div>
@@ -401,20 +723,7 @@ export default function ScanDevice() {
                   <Button
                     variant="ghost"
                     className="station-actions__button"
-                    onClick={async () => {
-                      setPairingError(null);
-                      setPairingLoading(true);
-                      try {
-                        const next = await createDevicePairingSession(deviceId, {
-                          forceNew: true,
-                        });
-                        setPairing(next);
-                      } catch {
-                        setPairingError(t.pairingError);
-                      } finally {
-                        setPairingLoading(false);
-                      }
-                    }}
+                    onClick={() => void handleCreatePairing(true)}
                   >
                     {t.qrRefresh}
                   </Button>
@@ -432,9 +741,7 @@ export default function ScanDevice() {
                 </div>
               </div>
 
-              <p className="muted station-pairing__hint">
-                {t.directLoginHint}
-              </p>
+              <p className="muted station-pairing__hint">{t.directLoginHint}</p>
             </div>
           )}
         </div>

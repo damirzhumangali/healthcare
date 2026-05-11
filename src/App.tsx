@@ -941,6 +941,7 @@ export default function App() {
         <Route path="measurements/:id" element={<MeasurementDetails />} />
       </Route>
       <Route path="/scan/:deviceId" element={<ScanDevice />} />
+      <Route path="/pair" element={<DevicePairing />} />
       <Route path="/pair/:deviceId/:pairingToken" element={<DevicePairing />} />
     </Routes>
   );
