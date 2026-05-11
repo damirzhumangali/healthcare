@@ -5,6 +5,7 @@ import { exchangeGoogleCode } from "../lib/apiAuth";
 import { consumePostLoginRedirect } from "../lib/authRedirect";
 import { setSession } from "../lib/auth";
 import { isAdminAccount } from "../lib/adminAccess";
+import { approveDevicePairingSession } from "../lib/devicePairing";
 
 export default function AuthCallback() {
   const nav = useNavigate();
@@ -27,14 +28,22 @@ export default function AuthCallback() {
 
     exchangeGoogleCode(code)
       .then(({ token, user }) => {
-        setSession({
-          token,
-          user,
-          persistToken: true,
-        });
-        nav(consumePostLoginRedirect(isAdminAccount(user) ? "/admin" : "/app"), {
-          replace: true,
-        });
+        setSession({ token, user, persistToken: true });
+
+        const dest = consumePostLoginRedirect(isAdminAccount(user) ? "/admin" : "/app");
+
+        // If the stored redirect is a pairing URL, approve silently in the
+        // background and send the patient straight to their cabinet.
+        if (dest.startsWith("/pair?")) {
+          const pairingToken = new URLSearchParams(dest.slice("/pair?".length)).get("token");
+          if (pairingToken) {
+            void approveDevicePairingSession(pairingToken, user).catch(() => {});
+            nav("/app", { replace: true });
+            return;
+          }
+        }
+
+        nav(dest, { replace: true });
       })
       .catch(() => setMsg("Ошибка входа через Google. Попробуй снова."));
   }, [nav]);
