@@ -198,16 +198,17 @@ button, input{font:inherit}
 }
 .station-pairing__illustration{
   position:absolute;
-  top:34px;
-  right:-126px;
+  top:-58px;
+  right:-154px;
   left:auto;
   display:block;
-  width:min(780px, 138%);
+  width:min(920px, 152%);
   max-width:none;
   margin:0;
-  opacity:.96;
+  opacity:1;
   mix-blend-mode:screen;
   transform:none;
+  z-index:0;
   pointer-events:none;
   user-select:none;
 }
@@ -219,6 +220,7 @@ button, input{font:inherit}
   flex-direction:column;
   align-items:center;
   gap:10px;
+  z-index:1;
 }
 .station-pairing__timer{
   margin-top:2px;
@@ -745,10 +747,10 @@ button, input{font:inherit}
     min-height:320px;
   }
   .station-pairing__illustration{
-    top:44px;
-    right:-96px;
+    top:-18px;
+    right:-118px;
     left:auto;
-    width:156%;
+    width:168%;
   }
   .station-pairing__qr-overlay{
     top:8px;
@@ -839,10 +841,10 @@ button, input{font:inherit}
     align-self:start;
   }
   .station-pairing__illustration{
-    top:30px;
-    right:-198px;
+    top:-74px;
+    right:-232px;
     left:auto;
-    width:min(900px, 146%);
+    width:min(1040px, 158%);
   }
   .station-pairing__qr-overlay{
     top:-8px;
