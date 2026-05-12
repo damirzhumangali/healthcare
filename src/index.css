@@ -192,31 +192,32 @@ button, input{font:inherit}
 .station-pairing__scene{
   position:relative;
   width:100%;
-  min-height:340px;
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  overflow:visible;
+  min-height:380px;
+  display:block;
+  overflow:hidden;
 }
 .station-pairing__illustration{
+  position:absolute;
+  top:-6px;
+  left:-52px;
   display:block;
-  width:100%;
-  max-width:760px;
+  width:min(980px, 148%);
+  max-width:none;
   margin:0;
-  opacity:.92;
+  opacity:.96;
   mix-blend-mode:screen;
-  transform:translate(-12px, -12px);
+  transform:none;
   pointer-events:none;
   user-select:none;
 }
 .station-pairing__qr-overlay{
   position:absolute;
-  top:8px;
-  right:0;
+  top:0;
+  right:22px;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:12px;
+  gap:10px;
 }
 .station-pairing__timer{
   margin-top:2px;
@@ -740,17 +741,17 @@ button, input{font:inherit}
   .grid{grid-template-columns: 1fr}
   .station-board__grid{grid-template-columns:1fr}
   .station-pairing__scene{
-    min-height:270px;
-    justify-content:center;
+    min-height:290px;
   }
   .station-pairing__illustration{
-    max-width:520px;
-    transform:translate(-6px, 2px);
+    top:10px;
+    left:-42px;
+    width:150%;
   }
   .station-pairing__qr-overlay{
-    top:6px;
+    top:8px;
     right:50%;
-    transform:translateX(36%);
+    transform:translateX(42%);
   }
   .h1{font-size:24px}
   .auth-actions{grid-template-columns:1fr}
@@ -819,7 +820,7 @@ button, input{font:inherit}
     padding:24px;
   }
   .station-pairing{
-    grid-template-columns:minmax(0, .9fr) minmax(520px, 1.15fr);
+    grid-template-columns:minmax(0, .84fr) minmax(580px, 1.22fr);
     grid-template-areas:
       "copy scene"
       "actions scene";
@@ -828,11 +829,21 @@ button, input{font:inherit}
   }
   .station-pairing__copy{
     grid-area:copy;
+    max-width:500px;
   }
   .station-pairing__scene{
     grid-area:scene;
-    min-height:420px;
+    min-height:448px;
     align-self:start;
+  }
+  .station-pairing__illustration{
+    top:-20px;
+    left:-96px;
+    width:min(1120px, 166%);
+  }
+  .station-pairing__qr-overlay{
+    top:-8px;
+    right:34px;
   }
   .station-actions{
     grid-area:actions;

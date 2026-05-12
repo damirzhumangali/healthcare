@@ -214,18 +214,18 @@ function pairingToSessionSnapshot(pairing: DevicePairingSession): DeviceSessionS
 
 function getQrSize() {
   if (typeof window === "undefined") {
-    return 360;
+    return 404;
   }
 
   if (window.innerWidth < 640) {
-    return 240;
+    return 256;
   }
 
   if (window.innerWidth < 1024) {
-    return 300;
+    return 336;
   }
 
-  return 360;
+  return 404;
 }
 
 export default function ScanDevice() {
