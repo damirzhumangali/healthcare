@@ -435,7 +435,7 @@ function Landing() {
           <div className="flex items-center justify-between gap-1.5 md:gap-4">
             <a
               href="#top"
-              className="flex shrink-0 items-center"
+              className="flex shrink-0 items-center gap-2"
               onClick={() => setActiveMobileSection("features")}
             >
               <img
