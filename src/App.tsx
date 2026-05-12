@@ -8,12 +8,10 @@ import {
   LogOut,
   MapPinned,
   Moon,
-  ShieldCheck,
   Sun,
   Users,
 } from "lucide-react";
 import CinematicHero from "./components/CinematicHero";
-import { OverlayContent, ScrollAnimationSection } from "./components/ScrollAnimation";
 import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import BodyMap from "./pages/BodyMap";
 import AuthCallback from "./pages/AuthCallback";
@@ -42,13 +40,6 @@ type StoredUser = {
   role?: string;
 };
 
-const imageFrames = Object.values(
-  import.meta.glob("./images2/ezgif-frame-*.jpg", {
-    eager: true,
-    import: "default",
-  })
-).map((v) => String(v));
-imageFrames.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
 const text = {
   ru: {
@@ -87,9 +78,13 @@ const text = {
     f2d: "Запиши симптомы, время их появления, лекарства и вопросы - это ускорит диагностику.",
     f3: "Безопасная самопомощь дома",
     f3d: "Покой, вода, контроль температуры и давления, а при ухудшении состояния - обращение за помощью.",
-    story1: "Пользователь скроллит — таймлайн анимации управляется вручную.",
-    story2: "Sticky-canvas удерживает фокус на ключевом визуале.",
-    story3: "Батч-предзагрузка кадров даёт плавную работу даже на слабых устройствах.",
+    robotKicker: "AIMAR",
+    robotTitle: "Автономный медицинский ассистент",
+    robotSub: "Студенческий прототип медицинского робота для больниц Казахстана. AI-диагностика по QR, Bluetooth-навигация и защищённый отсек для медикаментов на базе Arduino Uno и ESP32.",
+    robotF1: "AI-диагностика симптомов через QR-код",
+    robotF2: "Bluetooth-навигация (HC-05 + Arduino Uno)",
+    robotF3: "RFID / Wi-Fi отсек для медикаментов",
+    robotF4: "Открытый прототип — Arduino Uno + ESP32",
     faqTitle: "Частые вопросы",
     q1: "Когда нужно срочно обратиться за медицинской помощью?",
     a1: "Срочно обращайтесь при боли в груди, затрудненном дыхании, внезапной слабости, потере сознания или очень высокой температуре, которая не снижается.",
@@ -160,9 +155,13 @@ const text = {
     f2d: "Белгілерді, басталу уақытын, қабылдап жүрген дәрілерді және сұрақтарыңызды алдын ала жазып алыңыз.",
     f3: "Үйдегі қауіпсіз алғашқы көмек",
     f3d: "Тынығу, су ішу, температура мен қысымды бақылау, жағдай нашарласа дереу көмекке жүгіну.",
-    story1: "Пайдаланушы скролл жасайды — анимация таймлайны қолмен басқарылады.",
-    story2: "Sticky-canvas негізгі визуалға назарды ұстап тұрады.",
-    story3: "Batch preload әлсіз құрылғыларда да тегіс жұмыс береді.",
+    robotKicker: "AIMAR",
+    robotTitle: "Автономды медициналық ассистент",
+    robotSub: "Қазақстан ауруханаларына арналған студенттік медициналық робот прототипі. QR арқылы AI-диагностика, Bluetooth навигация және RFID/Wi-Fi дәрі бөлімі — Arduino Uno мен ESP32 негізінде.",
+    robotF1: "QR код арқылы AI белгілерін диагностикалау",
+    robotF2: "Bluetooth навигация (HC-05 + Arduino Uno)",
+    robotF3: "RFID / Wi-Fi дәрі бөлімі",
+    robotF4: "Ашық прототип — Arduino Uno + ESP32",
     faqTitle: "Жиі сұрақтар",
     q1: "Қашан шұғыл медициналық көмекке жүгіну керек?",
     a1: "Кеуде тұсы ауырса, тыныс алу қиындаса, кенет әлсіздік болса, есінен танса немесе өте жоғары қызу түспесе, дереу дәрігерге көрініңіз.",
@@ -233,9 +232,13 @@ const text = {
     f2d: "Write down symptoms, when they started, current medications, and key questions for your doctor.",
     f3: "Safe self-care at home",
     f3d: "Rest, hydration, and monitoring temperature and blood pressure; seek help if symptoms worsen.",
-    story1: "User scroll directly controls the animation timeline.",
-    story2: "Sticky canvas keeps focus on the main visual narrative.",
-    story3: "Batch preloading keeps interaction smooth on slower devices.",
+    robotKicker: "AIMAR",
+    robotTitle: "Autonomous Medical Assistant",
+    robotSub: "A student-developed hospital robot prototype for Kazakhstan. QR-accessible AI symptom triage, Bluetooth navigation, and a secure RFID/Wi-Fi medication compartment — built on Arduino Uno and ESP32.",
+    robotF1: "AI symptom triage via QR code",
+    robotF2: "Bluetooth navigation (HC-05 + Arduino Uno)",
+    robotF3: "RFID / Wi-Fi medication compartment",
+    robotF4: "Open-source prototype — Arduino Uno + ESP32",
     faqTitle: "Frequently asked questions",
     q1: "When should I seek urgent medical care?",
     a1: "Seek urgent care for chest pain, breathing difficulty, sudden weakness, fainting, or very high fever that does not improve.",
@@ -614,44 +617,31 @@ function Landing() {
         </section>
 
         <section id="story" className="scroll-mt-28 pb-16">
-          <ScrollAnimationSection
-            frameUrls={imageFrames}
-            sectionHeightVh={400}
-            maxCanvasHeightVh={90}
-            maxCanvasWidthPx={1500}
-            className="relative"
-            theme={theme}
-          >
-            <OverlayContent start={0.08} end={0.25} position="left">
-              <div className="p-5">
-                <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-cyan-300">
-                  <HeartPulse className="h-3.5 w-3.5" />
-                  Story 01
-                </div>
-                <p className="mt-2 text-sm text-slate-100">{t.story1}</p>
+          <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="flex justify-center">
+                <img
+                  src="/images/robot-aimar.png"
+                  alt="AIMAR Robot"
+                  className="max-h-[480px] w-auto object-contain"
+                  style={{ filter: theme === "dark" ? "drop-shadow(0 24px 48px rgba(34,211,238,0.18))" : "drop-shadow(0 24px 48px rgba(0,0,0,0.12))" }}
+                />
               </div>
-            </OverlayContent>
-
-            <OverlayContent start={0.36} end={0.56} position="right">
-              <div className="p-5">
-                <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-emerald-300">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Story 02
-                </div>
-                <p className="mt-2 text-sm text-slate-100">{t.story2}</p>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 mb-3">{t.robotKicker}</p>
+                <h2 className={`text-3xl md:text-4xl font-bold mb-5 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>{t.robotTitle}</h2>
+                <p className={`text-base leading-relaxed mb-8 ${mutedClass}`}>{t.robotSub}</p>
+                <ul className="space-y-3">
+                  {[t.robotF1, t.robotF2, t.robotF3, t.robotF4].map((feature) => (
+                    <li key={feature} className="flex items-start gap-3">
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-cyan-400 to-emerald-400" />
+                      <span className={`text-sm ${mutedClass}`}>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </OverlayContent>
-
-            <OverlayContent start={0.74} end={0.95} position="center">
-              <div className="p-5 text-center">
-                <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-sky-200">
-                  <Activity className="h-3.5 w-3.5" />
-                  Story 03
-                </div>
-                <p className="mt-2 text-sm text-slate-100">{t.story3}</p>
-              </div>
-            </OverlayContent>
-          </ScrollAnimationSection>
+            </div>
+          </div>
         </section>
 
         <section id="faq" className="scroll-mt-28 max-w-5xl mx-auto px-4 pb-24">
