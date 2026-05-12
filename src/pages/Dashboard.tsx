@@ -277,182 +277,138 @@ export default function Dashboard() {
 
   return (
     <div className="container">
-      <div className="stack">
-        <div className="patient-hero">
-          <div>
-            <h1 className="h1" style={{ marginBottom: 4 }}>{t.title}</h1>
-            <p className="muted" style={{ margin: 0 }}>
-              {t.subtitle}
-            </p>
-            <div className="patient-account">
-              <span>{t.hello}</span>
-              <strong>{displayName}</strong>
+      <div className="dashboard-layout">
+
+        {/* Hero — full width */}
+        <div className="dashboard-hero">
+          <div className="patient-hero">
+            <div>
+              <h1 className="h1" style={{ marginBottom: 4 }}>{t.title}</h1>
+              <p className="muted" style={{ margin: 0 }}>{t.subtitle}</p>
+              <div className="patient-account">
+                <span>{t.hello}</span>
+                <strong>{displayName}</strong>
+              </div>
             </div>
           </div>
+          {err ? <div className="alert" style={{ marginTop: 12 }}>{err}</div> : null}
         </div>
 
-        <Card>
-          <div className="patient-actions">
-            <div>
-              <h2 className="h2" style={{ margin: 0 }}>{t.quickActions}</h2>
-              <p className="muted" style={{ margin: "6px 0 0" }}>{t.quickActionsHint}</p>
-            </div>
-
-            <div className="patient-actions__buttons">
-              {isAdmin ? (
-                <Button onClick={() => nav("/admin")}>
-                  {t.adminPanel}
+        {/* Sidebar — Quick Actions + Ticket */}
+        <div className="dashboard-sidebar">
+          <Card>
+            <div className="stack">
+              <div>
+                <h2 className="h2" style={{ margin: 0 }}>{t.quickActions}</h2>
+                <p className="muted" style={{ margin: "6px 0 0" }}>{t.quickActionsHint}</p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {isAdmin ? (
+                  <Button onClick={() => nav("/admin")}>{t.adminPanel}</Button>
+                ) : null}
+                <Button variant="ghost" onClick={() => nav("/appointments/new")}>
+                  {t.bookDoctor}
                 </Button>
-              ) : null}
-
-              <Button variant="ghost" onClick={() => nav("/appointments/new")}>
-                {t.bookDoctor}
-              </Button>
-
-              <Button
-                onClick={async () => {
-                  setErr(null);
-                  try {
-                    await createMeasurement("device-001");
-                    await load();
-                  } catch {
-                    setErr(t.createMeasurementError);
-                  }
-                }}
-              >
-                {t.newMeasurement}
-              </Button>
+                <Button
+                  onClick={async () => {
+                    setErr(null);
+                    try {
+                      await createMeasurement("device-001");
+                      await load();
+                    } catch {
+                      setErr(t.createMeasurementError);
+                    }
+                  }}
+                >
+                  {t.newMeasurement}
+                </Button>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {err ? <div className="alert">{err}</div> : null}
+          <Card>
+            <div className="stack">
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                <h2 className="h2" style={{ margin: 0 }}>{t.onlineTicket}</h2>
+                <Button variant="ghost" onClick={refreshTicket}>{t.refresh}</Button>
+              </div>
 
-        <Card>
-          <div className="stack">
-            <div>
+              {!ticket ? (
+                <div className="stack">
+                  <p className="muted" style={{ margin: 0 }}>{t.noTicket}</p>
+                  <Button onClick={() => { const c = createNewMyTicket(); setTicket(c); }}>
+                    {t.takeNewTicket}
+                  </Button>
+                </div>
+              ) : (
+                <div className="stack">
+                  <div className="grid">
+                    <div className="metric">
+                      <div className="metric__label">{t.yourNumber}</div>
+                      <div className="metric__value">A-{ticket.ticketNumber}</div>
+                    </div>
+                    <div className="metric">
+                      <div className="metric__label">{t.nowCalling}</div>
+                      <div className="metric__value">A-{ticket.servingNow}</div>
+                    </div>
+                    <div className="metric">
+                      <div className="metric__label">{t.ahead}</div>
+                      <div className="metric__value">{ticket.peopleAhead}</div>
+                    </div>
+                    <div className="metric">
+                      <div className="metric__label">{t.waiting}</div>
+                      <div className="metric__value">~{ticket.etaMinutes} {t.minutes}</div>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <Button onClick={() => { const n = createNewMyTicket(); setTicket(n); }}>
+                      {t.takeNewTicket}
+                    </Button>
+                    <span className={`badge ${ticket.status === "invited" ? "badge--ok" : ticket.status === "waiting" ? "badge--warn" : "badge--danger"}`}>
+                      <span className="badge__dot" />
+                      {ticket.status === "invited" ? t.invited : ticket.status === "waiting" ? t.waitForCall : t.ticketMissed}
+                    </span>
+                  </div>
+                  <span className="muted" style={{ fontSize: 12 }}>{t.issued}: {fmtDate(ticket.createdAt)}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* Main — History + Appointments */}
+        <div className="dashboard-main">
+          <Card>
+            <div className="stack">
               <div>
                 <h2 className="h2" style={{ margin: 0 }}>{t.myAppointments}</h2>
                 <p className="muted" style={{ margin: "6px 0 0" }}>{t.myAppointmentsHint}</p>
               </div>
-            </div>
-
-            {appointmentsLoading ? (
-              <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
-            ) : appointments.length === 0 ? (
-              <p className="muted" style={{ margin: 0 }}>{t.noAppointments}</p>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {appointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    style={{
-                      padding: 14,
-                      borderRadius: 8,
-                      border: "1px solid rgba(255,255,255,0.10)",
-                    }}
-                  >
-                    <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontWeight: 800 }}>
-                          {appointment.date} • {appointment.time}
+              {appointmentsLoading ? (
+                <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
+              ) : appointments.length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>{t.noAppointments}</p>
+              ) : (
+                <div style={{ display: "grid", gap: 10 }}>
+                  {appointments.map((appointment) => (
+                    <div key={appointment.id} style={{ padding: 14, borderRadius: 8, border: "1px solid rgba(255,255,255,0.10)" }}>
+                      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontWeight: 800 }}>{appointment.date} • {appointment.time}</div>
+                          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t.doctor}: {doctorLabel(appointment)}</div>
+                          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t.reason}: {appointment.reason || "Прием"}</div>
                         </div>
-                        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                          {t.doctor}: {doctorLabel(appointment)}
-                        </div>
-                        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                          {t.reason}: {appointment.reason || "Прием"}
-                        </div>
+                        <span className={`badge ${appointmentStatusClass(appointment.status)}`}>
+                          <span className="badge__dot" />
+                          {appointmentStatusLabel(appointment.status)}
+                        </span>
                       </div>
-                      <span className={`badge ${appointmentStatusClass(appointment.status)}`}>
-                        <span className="badge__dot" />
-                        {appointmentStatusLabel(appointment.status)}
-                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <div className="stack">
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className="h2" style={{ margin: 0 }}>{t.onlineTicket}</h2>
-              <Button variant="ghost" onClick={refreshTicket}>
-                {t.refresh}
-              </Button>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {!ticket ? (
-              <div className="stack">
-                <p className="muted" style={{ margin: 0 }}>
-                  {t.noTicket}
-                </p>
-                <div className="row">
-                  <Button
-                    onClick={() => {
-                      const created = createNewMyTicket();
-                      setTicket(created);
-                    }}
-                  >
-                    {t.takeNewTicket}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="stack">
-                <div className="grid">
-                  <div className="metric">
-                    <div className="metric__label">{t.yourNumber}</div>
-                    <div className="metric__value">A-{ticket.ticketNumber}</div>
-                  </div>
-                  <div className="metric">
-                    <div className="metric__label">{t.nowCalling}</div>
-                    <div className="metric__value">A-{ticket.servingNow}</div>
-                  </div>
-                  <div className="metric">
-                    <div className="metric__label">{t.ahead}</div>
-                    <div className="metric__value">{ticket.peopleAhead}</div>
-                  </div>
-                  <div className="metric">
-                    <div className="metric__label">{t.waiting}</div>
-                    <div className="metric__value">~{ticket.etaMinutes} {t.minutes}</div>
-                  </div>
-                </div>
-
-                <div className="row">
-                  <Button
-                    onClick={() => {
-                      const next = createNewMyTicket();
-                      setTicket(next);
-                    }}
-                  >
-                    {t.takeNewTicket}
-                  </Button>
-                  <span className={`badge ${
-                    ticket.status === "invited"
-                      ? "badge--ok"
-                      : ticket.status === "waiting"
-                        ? "badge--warn"
-                        : "badge--danger"
-                  }`}>
-                    <span className="badge__dot" />
-                    {ticket.status === "invited"
-                      ? t.invited
-                      : ticket.status === "waiting"
-                        ? t.waitForCall
-                        : t.ticketMissed}
-                  </span>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    {t.issued}: {fmtDate(ticket.createdAt)}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
+          </Card>
 
         <Card>
           <div className="stack">
