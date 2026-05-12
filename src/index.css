@@ -333,7 +333,7 @@ button, input{font:inherit}
   }
   .station-pairing {
     grid-template-columns: 1fr auto;
-    align-items: center;
+    align-items: start;
     gap: 48px;
   }
 }
