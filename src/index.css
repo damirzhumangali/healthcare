@@ -188,6 +188,16 @@ button, input{font:inherit}
   margin-top:-8px;
   margin-bottom:0;
 }
+.station-pairing__illustration{
+  display:block;
+  width:100%;
+  max-width:260px;
+  margin-top:8px;
+  border-radius:12px;
+  filter:invert(1) brightness(0.75) opacity(0.55);
+  pointer-events:none;
+  user-select:none;
+}
 .station-pairing__qr{
   display:flex;
   flex-direction:column;
@@ -343,6 +353,12 @@ button, input{font:inherit}
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: 48px;
+  }
+  .station-pairing__copy {
+    align-self: center;
+  }
+  .station-pairing__qr {
+    align-self: center;
   }
 }
 @media (min-width: 720px) {

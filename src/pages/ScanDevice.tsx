@@ -757,6 +757,12 @@ export default function ScanDevice() {
                 <p className="muted station-pairing__auto">
                   {t.pairingAutoUpdate}
                 </p>
+                <img
+                  src="/images/scan-phone.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="station-pairing__illustration"
+                />
               </div>
 
               {pairing ? (
