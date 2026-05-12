@@ -747,6 +747,19 @@ export default function ScanDevice() {
           ) : (
             <div className="station-pairing">
               <div className="station-pairing__copy">
+                <div>
+                  <div className="kicker">{t.kicker}</div>
+                  <h1 className="h1">{t.title}</h1>
+                  <p className="muted" style={{ margin: "4px 0 0" }}>
+                    {t.device}: <b>{deviceId}</b>
+                  </p>
+                  {pairing ? (
+                    <div className="badge badge--warn" style={{ marginTop: 12 }}>
+                      <span className="badge__dot" />
+                      {t.pairingPending}
+                    </div>
+                  ) : null}
+                </div>
                 <h2 className="h2" style={{ marginTop: 6 }}>
                   {t.waitingPair}
                 </h2>
