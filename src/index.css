@@ -200,46 +200,28 @@ button, input{font:inherit}
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:10px;
+  gap:2px;
 }
-/* wrapper keeps illustration + qr-overlay in the same coordinate space */
-.station-pairing__visual{
-  position:relative;
-  width:100%;
-  max-width:340px;
-  margin:0 auto;
+/* Phone-only crop: show bottom 44% of the 1024×1024 image (hand + phone).
+   At width=220px image renders 220×220px; phone starts at 56%×220=123px.
+   margin-top:-118px scrolls to phone; height:102px shows the phone area. */
+.station-pairing__phone-wrap{
+  width:220px;
+  height:102px;
+  overflow:hidden;
 }
 .station-pairing__illustration{
   display:block;
-  width:100%;
+  width:220px;
   height:auto;
-  filter:invert(1) opacity(0.75);
+  margin-top:-118px;
+  filter:invert(1) opacity(0.88);
   mix-blend-mode:screen;
   pointer-events:none;
   user-select:none;
 }
-/* QR overlaid in bracket frame: top≈5%, centered, width≈58% */
-.station-pairing__qr-overlay{
-  position:absolute;
-  top:5%;
-  left:50%;
-  transform:translateX(-50%);
-  width:58%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-}
-.station-pairing__qr-overlay img{
-  width:100% !important;
-  height:auto !important;
-  border-radius:10px !important;
-  padding:6px !important;
-  background:rgba(248,250,252,0.97) !important;
-  border:none !important;
-  box-shadow:0 6px 28px rgba(0,0,0,.4) !important;
-}
 .station-pairing__timer{
-  margin-top:2px;
+  margin-top:4px;
   text-align:center;
   font-size:13px;
   font-weight:600;
