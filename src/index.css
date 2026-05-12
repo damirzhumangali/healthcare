@@ -206,31 +206,40 @@ button, input{font:inherit}
 .station-pairing__visual{
   position:relative;
   width:100%;
-  max-width:400px;
+  max-width:480px;
 }
+/* invert() flips white bg → dark (blends with page), lines → bright.
+   mix-blend-mode:screen makes the dark bg invisible, only the light lines show. */
 .station-pairing__illustration{
   display:block;
   width:100%;
   height:auto;
-  filter:brightness(0) invert(1) opacity(0.45);
+  filter:invert(1) opacity(0.7);
+  mix-blend-mode:screen;
   pointer-events:none;
   user-select:none;
 }
-/* QR sits inside the scan-frame brackets: top≈8%, left≈12%, width≈76% */
+/* Bracket frame in the 1024×1024 image: top≈7%, centered, height≈44%
+   → square QR width = 44%, centered: left = (100-44)/2 = 28% */
 .station-pairing__qr-overlay{
   position:absolute;
-  top:8%;
-  left:12%;
-  width:76%;
+  top:7%;
+  left:50%;
+  transform:translateX(-50%);
+  width:44%;
   display:flex;
   flex-direction:column;
   align-items:center;
 }
-.station-pairing__qr-overlay canvas,
-.station-pairing__qr-overlay svg{
+/* Override QrCode component inline styles so it scales to fit the frame */
+.station-pairing__qr-overlay img{
   width:100% !important;
   height:auto !important;
-  border-radius:6px;
+  border-radius:10px !important;
+  padding:8px !important;
+  background:rgba(248,250,252,0.96) !important;
+  border:none !important;
+  box-shadow:0 4px 24px rgba(0,0,0,.35) !important;
 }
 .station-pairing__timer{
   margin-top:2px;
