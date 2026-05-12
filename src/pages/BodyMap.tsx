@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Brain, Globe, Moon, Sparkles, Sun } from "lucide-react";
+import { ArrowLeft, Brain, Moon, PersonStanding, Sparkles, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
 import Body3D from "../components/Body3D";
 import { API_URL } from "../lib/apiBase";
@@ -305,9 +305,9 @@ export default function BodyMap() {
 
       <header className="pt-8 pb-6">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-sky-400">
-            <Globe className="h-3.5 w-3.5" />
-            Body Map
+          <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-sky-400">
+            <PersonStanding className="h-3.5 w-3.5" />
+            3D Body
           </div>
           <h1 className="mt-3 text-3xl md:text-5xl font-semibold">{title}</h1>
           <p className={`mt-3 ${muted} max-w-2xl`}>{t.subtitle}</p>
