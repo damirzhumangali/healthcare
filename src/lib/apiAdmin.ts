@@ -274,3 +274,29 @@ export async function updateDoctor(
     return { item: next.find((doctor) => doctor.id === id) ?? null };
   }
 }
+
+export type ServoDeviceState = {
+  isOpen: boolean;
+  angle: number;
+  updatedAt: string;
+};
+
+export async function fetchServoState(): Promise<Record<string, ServoDeviceState>> {
+  const res = await fetch(`${API_URL}/api/servo-control/state`, {
+    headers: authHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("fetch servo state failed");
+  const data = await res.json();
+  return data.states ?? {};
+}
+
+export async function sendServoCommand(deviceId: string, command: "open" | "close"): Promise<void> {
+  const res = await fetch(`${API_URL}/api/servo-control/command`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ deviceId, command }),
+  });
+  if (!res.ok) throw new Error("send servo command failed");
+}

@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CalendarClock,
   ClipboardList,
+  Cpu,
   House,
   LayoutDashboard,
   LoaderCircle,
@@ -26,9 +27,12 @@ import {
   fetchAdminSummary,
   acceptAdminTelegramConsultation,
   fetchAdminTelegramConsultations,
+  fetchServoState,
+  sendServoCommand,
   type AdminPatient,
   type AdminSummary,
   type AdminTelegramConsultation,
+  type ServoDeviceState,
   type TelegramConsultationStatus,
   updateAdminTelegramConsultationStatus,
 } from "../lib/apiAdmin";
@@ -58,6 +62,15 @@ const adminText = {
     navPatients: "Пациенты",
     navTelegram: "Telegram",
     navSettings: "Настроить BMO",
+    navAimar: "Настроить Aimar",
+    aimarSubtitle: "Управление замком двери",
+    aimarStatus: "Статус",
+    aimarOpen: "Открыть",
+    aimarClose: "Закрыть",
+    aimarIsOpen: "Открыто",
+    aimarIsClosed: "Закрыто",
+    aimarNoData: "Нет данных",
+    aimarUpdated: "Обновлено",
     home: "На главную",
     overview: "Обзор",
     loading: "Обновляем данные...",
@@ -133,6 +146,15 @@ const adminText = {
     navPatients: "Пациенттер",
     navTelegram: "Telegram",
     navSettings: "BMO баптау",
+    navAimar: "Aimar баптау",
+    aimarSubtitle: "Есік құлпын басқару",
+    aimarStatus: "Мәртебе",
+    aimarOpen: "Ашу",
+    aimarClose: "Жабу",
+    aimarIsOpen: "Ашық",
+    aimarIsClosed: "Жабық",
+    aimarNoData: "Деректер жоқ",
+    aimarUpdated: "Жаңартылды",
     home: "Басты бетке",
     overview: "Шолу",
     loading: "Деректер жаңартылуда...",
@@ -208,6 +230,15 @@ const adminText = {
     navPatients: "Patients",
     navTelegram: "Telegram",
     navSettings: "Configure BMO",
+    navAimar: "Configure Aimar",
+    aimarSubtitle: "Door lock control",
+    aimarStatus: "Status",
+    aimarOpen: "Open",
+    aimarClose: "Close",
+    aimarIsOpen: "Open",
+    aimarIsClosed: "Closed",
+    aimarNoData: "No data",
+    aimarUpdated: "Updated",
     home: "Home",
     overview: "Overview",
     loading: "Refreshing data...",
@@ -425,6 +456,8 @@ export default function AdminDashboard() {
   const [acceptForm, setAcceptForm] = useState<{ id: string; value: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
+  const [aimarState, setAimarState] = useState<ServoDeviceState | null>(null);
+  const [aimarSending, setAimarSending] = useState(false);
 
   const t = adminText[locale];
   const displayName = user?.name || user?.email || t.defaultAdminName;
@@ -434,6 +467,7 @@ export default function AdminDashboard() {
     { id: "appointments", label: t.navAppointments, icon: ClipboardList },
     { id: "patients", label: t.navPatients, icon: Users },
     { id: "telegram", label: t.navTelegram, icon: MessageSquare },
+    { id: "aimar", label: t.navAimar, icon: Cpu },
   ] as const;
 
   const load = useCallback(async () => {
@@ -572,6 +606,16 @@ export default function AdminDashboard() {
     }
   }
 
+  async function sendAimarCommand(command: "open" | "close") {
+    if (aimarSending) return;
+    setAimarSending(true);
+    try {
+      await sendServoCommand("aimar", command);
+    } finally {
+      setAimarSending(false);
+    }
+  }
+
   function changeLocale(nextLocale: Locale) {
     setLocale(nextLocale);
     writeStoredLocale(nextLocale);
@@ -580,6 +624,18 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (allowed) void load();
   }, [allowed, load]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    const poll = () => {
+      fetchServoState()
+        .then((states) => setAimarState(states["aimar"] ?? null))
+        .catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, [allowed]);
 
   useEffect(() => {
     const syncActiveSection = () => {
@@ -1083,6 +1139,60 @@ export default function AdminDashboard() {
                 );
               })
             )}
+          </div>
+        </section>
+
+        <section className="doctor-admin__panel" id="aimar">
+          <div className="doctor-admin__panel-head">
+            <div>
+              <h2>Aimar</h2>
+              <p className="doctor-admin__panel-subtitle">{t.aimarSubtitle}</p>
+            </div>
+            <span
+              style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: aimarState ? (aimarState.isOpen ? "#10b981" : "#6b7280") : "#374151",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0 }}>
+                {t.aimarStatus}:{" "}
+                <strong>
+                  {aimarState
+                    ? aimarState.isOpen
+                      ? t.aimarIsOpen
+                      : t.aimarIsClosed
+                    : t.aimarNoData}
+                </strong>
+              </p>
+              {aimarState?.updatedAt ? (
+                <p style={{ margin: "4px 0 0", fontSize: 13, opacity: 0.6 }}>
+                  {t.aimarUpdated}: {formatDateTime(aimarState.updatedAt, locale)}
+                </p>
+              ) : null}
+            </div>
+            <button
+              className="doctor-admin__status doctor-admin__status--green"
+              type="button"
+              disabled={aimarSending}
+              onClick={() => void sendAimarCommand("open")}
+            >
+              {t.aimarOpen}
+            </button>
+            <button
+              className="doctor-admin__status doctor-admin__status--dark"
+              type="button"
+              disabled={aimarSending}
+              onClick={() => void sendAimarCommand("close")}
+            >
+              {t.aimarClose}
+            </button>
           </div>
         </section>
 
