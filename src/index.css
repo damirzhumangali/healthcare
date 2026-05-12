@@ -212,6 +212,7 @@ button, input{font:inherit}
   width:min(430px, 92vw);
   max-width:100%;
   aspect-ratio:1 / 0.54;
+  margin-top:-20px;
   overflow:hidden;
   isolation:isolate;
 }
@@ -996,6 +997,7 @@ button, input{font:inherit}
   }
   .station-pairing__phone-wrap{
     width:min(470px, 82%);
+    margin-top:-34px;
   }
   .station-pairing__illustration{
     top:auto;
