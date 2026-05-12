@@ -26,7 +26,7 @@ const copy = {
     lang: "Язык",
     theme: "Тема",
     rotateHint: "Вращайте 3D модель",
-    aiTitle: "AI‑подсказка (демо)",
+    aiTitle: "AI‑подсказка",
     aiHint:
       "Это не диагноз. При серьёзных симптомах вызывайте скорую или обратитесь к врачу.",
     selectPart: "Выберите часть тела",
@@ -54,7 +54,7 @@ const copy = {
     lang: "Тіл",
     theme: "Тақырып",
     rotateHint: "3D модельді айналдырыңыз",
-    aiTitle: "AI‑кеңес (демо)",
+    aiTitle: "AI‑кеңес",
     aiHint:
       "Бұл диагноз емес. Қауіпті белгілер болса — жедел жәрдем шақырыңыз немесе дәрігерге көрініңіз.",
     selectPart: "Дене бөлігін таңдаңыз",
@@ -82,7 +82,7 @@ const copy = {
     lang: "Language",
     theme: "Theme",
     rotateHint: "Rotate the 3D model",
-    aiTitle: "AI guidance (demo)",
+    aiTitle: "AI guidance",
     aiHint:
       "Not a diagnosis. If symptoms are severe, seek urgent medical care.",
     selectPart: "Select a body part",
