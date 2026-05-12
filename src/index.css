@@ -199,7 +199,7 @@ button, input{font:inherit}
 .station-pairing__illustration{
   position:absolute;
   top:-6px;
-  left:-52px;
+  left:-104px;
   display:block;
   width:min(980px, 148%);
   max-width:none;
@@ -213,7 +213,7 @@ button, input{font:inherit}
 .station-pairing__qr-overlay{
   position:absolute;
   top:0;
-  right:46px;
+  right:22px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -745,7 +745,7 @@ button, input{font:inherit}
   }
   .station-pairing__illustration{
     top:10px;
-    left:-42px;
+    left:-72px;
     width:150%;
   }
   .station-pairing__qr-overlay{
@@ -838,12 +838,12 @@ button, input{font:inherit}
   }
   .station-pairing__illustration{
     top:-20px;
-    left:-96px;
+    left:-178px;
     width:min(1120px, 166%);
   }
   .station-pairing__qr-overlay{
     top:-8px;
-    right:76px;
+    right:34px;
   }
   .station-actions{
     grid-area:actions;
