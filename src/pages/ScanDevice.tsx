@@ -773,30 +773,31 @@ export default function ScanDevice() {
 
               {pairing ? (
                 <div className="station-pairing__scene">
-                  <div className="station-pairing__qr-overlay">
-                    <QrCode value={pairUrl} size={qrSize} />
-                    {qrSecondsLeft !== null && (
-                      <div
-                        className="station-pairing__timer"
-                        style={{
-                          color:
-                            qrSecondsLeft <= 30 ? "#f87171" : "rgba(255,255,255,0.52)",
-                        }}
-                      >
+                  <div className="station-pairing__visual">
+                    <img
+                      src="/images/scan-phone-qr-frame.png"
+                      alt=""
+                      aria-hidden="true"
+                      className="station-pairing__illustration"
+                    />
+                    <div className="station-pairing__qr-overlay">
+                      <QrCode value={pairUrl} size={qrSize} />
+                    </div>
+                  </div>
+                  {qrSecondsLeft !== null && (
+                    <div
+                      className="station-pairing__timer"
+                      style={{
+                        color: qrSecondsLeft <= 30 ? "#f87171" : "rgba(255,255,255,0.52)",
+                      }}
+                    >
                       {locale === "kk"
                         ? `QR ${qrSecondsLeft}с кейін жаңарады`
                         : locale === "en"
                           ? `QR refreshes in ${qrSecondsLeft}s`
                           : `QR обновится через ${qrSecondsLeft}с`}
-                      </div>
-                    )}
-                  </div>
-                  <img
-                    src="/images/scan-phone-qr-frame.png"
-                    alt=""
-                    aria-hidden="true"
-                    className="station-pairing__illustration"
-                  />
+                    </div>
+                  )}
                 </div>
               ) : null}
 
