@@ -521,26 +521,20 @@ export default function ScanDevice() {
   }
 
   async function handleEndSession() {
-    if (!deviceSession) {
-      logout();
-      setAuthed(false);
-      setErr(null);
-      nav(`/scan/${deviceId}`, { replace: true });
-      return;
-    }
-
     setErr(null);
     setSessionBusy(true);
 
     try {
-      await closeDeviceSession(deviceId);
-      setDeviceSession(null);
-      setPairing(null);
-      await handleCreatePairing(true);
+      if (deviceSession) {
+        await closeDeviceSession(deviceId);
+      } else {
+        logout();
+      }
     } catch {
-      setErr(t.sessionEndError);
+      // ignore — still reload to reset state
     } finally {
-      setSessionBusy(false);
+      // Full reload: re-runs boot() which auto-creates a fresh QR
+      window.location.reload();
     }
   }
 
