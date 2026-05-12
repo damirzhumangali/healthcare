@@ -489,6 +489,12 @@ button, input{font:inherit}
   flex-direction:column;
   gap:16px;
 }
+.dashboard-sidebar,
+.dashboard-main{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
 @media (min-width: 720px){
   .dashboard-layout{
     display:grid;
