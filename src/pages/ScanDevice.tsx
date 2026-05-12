@@ -763,7 +763,7 @@ export default function ScanDevice() {
               {pairing ? (
                 <div className="station-pairing__scene">
                   <img
-                    src="/images/scan-phone.png"
+                    src="/images/scan-phone-qr-frame.png"
                     alt=""
                     aria-hidden="true"
                     className="station-pairing__illustration"

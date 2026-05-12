@@ -192,16 +192,17 @@ button, input{font:inherit}
 .station-pairing__scene{
   position:relative;
   width:100%;
-  min-height:380px;
+  min-height:400px;
   display:block;
   overflow:hidden;
 }
 .station-pairing__illustration{
   position:absolute;
-  top:-6px;
-  left:-104px;
+  top:34px;
+  right:-126px;
+  left:auto;
   display:block;
-  width:min(980px, 148%);
+  width:min(780px, 138%);
   max-width:none;
   margin:0;
   opacity:.96;
@@ -741,12 +742,13 @@ button, input{font:inherit}
   .grid{grid-template-columns: 1fr}
   .station-board__grid{grid-template-columns:1fr}
   .station-pairing__scene{
-    min-height:290px;
+    min-height:320px;
   }
   .station-pairing__illustration{
-    top:10px;
-    left:-72px;
-    width:150%;
+    top:44px;
+    right:-96px;
+    left:auto;
+    width:156%;
   }
   .station-pairing__qr-overlay{
     top:8px;
@@ -833,13 +835,14 @@ button, input{font:inherit}
   }
   .station-pairing__scene{
     grid-area:scene;
-    min-height:448px;
+    min-height:472px;
     align-self:start;
   }
   .station-pairing__illustration{
-    top:-20px;
-    left:-178px;
-    width:min(1120px, 166%);
+    top:30px;
+    right:-198px;
+    left:auto;
+    width:min(900px, 146%);
   }
   .station-pairing__qr-overlay{
     top:-8px;
