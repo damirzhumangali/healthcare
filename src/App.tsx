@@ -4,6 +4,7 @@ import {
   ChevronDown,
   CircleHelp,
   Globe,
+  PersonStanding,
   HeartPulse,
   LogOut,
   MapPinned,
@@ -303,7 +304,7 @@ function Landing() {
     { id: "story", label: t.navStoryMobile, href: "#story", icon: HeartPulse },
     { id: "faq", label: t.navFaq, href: "#faq", icon: CircleHelp },
     { id: "map", label: t.navMap, href: "#map", icon: MapPinned },
-    { id: "body", label: t.navBody, to: "/body", icon: Globe },
+    { id: "body", label: t.navBody, to: "/body", icon: PersonStanding },
   ] as const;
 
   function handleLocaleChange(nextLocale: Locale) {
@@ -452,7 +453,7 @@ function Landing() {
               <a href="#faq">{t.navFaq}</a>
               <a href="#map">{t.navMap}</a>
               <Link to="/body" className="inline-flex items-center gap-2">
-                <Globe className="h-4 w-4" />
+                <PersonStanding className="h-4 w-4" />
                 {t.navBody}
               </Link>
             </nav>
