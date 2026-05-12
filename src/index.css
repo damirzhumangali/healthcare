@@ -206,40 +206,37 @@ button, input{font:inherit}
 .station-pairing__visual{
   position:relative;
   width:100%;
-  max-width:480px;
+  max-width:340px;
+  margin:0 auto;
 }
-/* invert() flips white bg → dark (blends with page), lines → bright.
-   mix-blend-mode:screen makes the dark bg invisible, only the light lines show. */
 .station-pairing__illustration{
   display:block;
   width:100%;
   height:auto;
-  filter:invert(1) opacity(0.7);
+  filter:invert(1) opacity(0.75);
   mix-blend-mode:screen;
   pointer-events:none;
   user-select:none;
 }
-/* Bracket frame in the 1024×1024 image: top≈7%, centered, height≈44%
-   → square QR width = 44%, centered: left = (100-44)/2 = 28% */
+/* QR overlaid in bracket frame: top≈5%, centered, width≈58% */
 .station-pairing__qr-overlay{
   position:absolute;
-  top:7%;
+  top:5%;
   left:50%;
   transform:translateX(-50%);
-  width:44%;
+  width:58%;
   display:flex;
   flex-direction:column;
   align-items:center;
 }
-/* Override QrCode component inline styles so it scales to fit the frame */
 .station-pairing__qr-overlay img{
   width:100% !important;
   height:auto !important;
   border-radius:10px !important;
-  padding:8px !important;
-  background:rgba(248,250,252,0.96) !important;
+  padding:6px !important;
+  background:rgba(248,250,252,0.97) !important;
   border:none !important;
-  box-shadow:0 4px 24px rgba(0,0,0,.35) !important;
+  box-shadow:0 6px 28px rgba(0,0,0,.4) !important;
 }
 .station-pairing__timer{
   margin-top:2px;
@@ -397,7 +394,7 @@ button, input{font:inherit}
   }
   .station-pairing {
     grid-template-columns: 1fr auto;
-    align-items: start;
+    align-items: center;
     gap: 48px;
   }
 }
