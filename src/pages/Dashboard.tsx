@@ -328,15 +328,7 @@ export default function Dashboard() {
 
           <Card>
             <div className="stack">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
-                <h2 className="h2" style={{ margin: 0, minWidth: 0 }}>{t.onlineTicket}</h2>
-                <button
-                  onClick={refreshTicket}
-                  style={{ fontSize: 12, fontWeight: 700, color: "var(--primary)", background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
-                >
-                  {t.refresh}
-                </button>
-              </div>
+              <h2 className="h2" style={{ margin: 0 }}>{t.onlineTicket}</h2>
 
               {!ticket ? (
                 <div className="stack">
