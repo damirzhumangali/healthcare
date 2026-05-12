@@ -487,7 +487,7 @@ button, input{font:inherit}
 .dashboard-layout{
   display:flex;
   flex-direction:column;
-  gap:14px;
+  gap:10px;
 }
 @media (min-width: 720px){
   .dashboard-layout{
@@ -746,20 +746,7 @@ button, input{font:inherit}
 @media (max-width: 640px){
   .grid{grid-template-columns: 1fr}
   .station-board__grid{grid-template-columns:1fr}
-  .station-pairing__scene{
-    min-height:320px;
-  }
-  .station-pairing__illustration{
-    top:-18px;
-    right:-118px;
-    left:auto;
-    width:168%;
-  }
-  .station-pairing__qr-overlay{
-    top:8px;
-    right:50%;
-    transform:translateX(42%);
-  }
+
   .h1{font-size:24px}
   .auth-actions{grid-template-columns:1fr}
   .patient-hero,
