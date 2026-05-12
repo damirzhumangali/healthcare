@@ -209,7 +209,7 @@ button, input{font:inherit}
    aspect-ratio 1/0.44 = show exactly the phone portion height. */
 .station-pairing__phone-wrap{
   position:relative;
-  width:min(360px, 88vw);
+  width:min(430px, 92vw);
   max-width:100%;
   aspect-ratio:1 / 0.54;
   overflow:hidden;
@@ -995,7 +995,7 @@ button, input{font:inherit}
     align-self:start;
   }
   .station-pairing__phone-wrap{
-    width:min(390px, 74%);
+    width:min(470px, 82%);
   }
   .station-pairing__illustration{
     top:auto;
