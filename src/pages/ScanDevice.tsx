@@ -633,30 +633,12 @@ export default function ScanDevice() {
                       </p>
                     </div>
 
-                    <div className="station-board__tile">
-                      <div className="station-board__label">{t.spo2Metric}</div>
-                      <div className={`station-board__value${latestMeasurement?.spo2 != null ? " station-board__value--small" : " station-board__value--waiting"}`}>
-                        {latestMeasurement?.spo2 != null ? formatMetric(latestMeasurement.spo2, " %") : null}
-                      </div>
-                      <p className="muted station-board__hint">{t.spo2Hint}</p>
-                    </div>
-
-                    <div className="station-board__tile">
-                      <div className="station-board__label">{t.pressureMetric}</div>
-                      <div className={`station-board__value${latestMeasurement && (latestMeasurement.systolic != null || latestMeasurement.diastolic != null) ? " station-board__value--small" : " station-board__value--waiting"}`}>
-                        {latestMeasurement && (latestMeasurement.systolic != null || latestMeasurement.diastolic != null) ? formatPressure(latestMeasurement) : null}
-                      </div>
-                      <p className="muted station-board__hint">{t.pressureHint}</p>
-                    </div>
-
                   </div>
 
-                  {latestMeasurement ? (
+                  {latestMeasurement && (
                     <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
                       {t.measuredAt}: {formatDateTime(latestMeasurement.createdAt)}
                     </p>
-                  ) : (
-                    <p className="muted station-board__waiting-hint">{t.waitingMeasurementsDesc}</p>
                   )}
                 </div>
 
