@@ -45,7 +45,7 @@ const text = {
   ru: {
     navFeatures: "Пациентам",
     navStory: "Симптомы",
-    navStoryMobile: "BMO",
+    navStoryMobile: "AIMAR",
     navFaq: "Вопросы",
     navMap: "Клиники",
     navBody: "3D тело",
@@ -122,7 +122,7 @@ const text = {
   kk: {
     navFeatures: "Пациенттерге",
     navStory: "Белгілер",
-    navStoryMobile: "BMO",
+    navStoryMobile: "AIMAR",
     navFaq: "Сұрақтар",
     navMap: "Емханалар",
     navBody: "3D дене",
@@ -199,7 +199,7 @@ const text = {
   en: {
     navFeatures: "For Patients",
     navStory: "Symptoms",
-    navStoryMobile: "BMO",
+    navStoryMobile: "AIMAR",
     navFaq: "Questions",
     navMap: "Clinics",
     navBody: "3D Body",
