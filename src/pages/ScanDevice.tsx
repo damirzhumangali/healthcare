@@ -796,7 +796,7 @@ export default function ScanDevice() {
 
               {pairing ? (
                 <div className="station-pairing__qr">
-                  <QrCode value={pairUrl} />
+                  <QrCode value={pairUrl} size={340} />
                   {qrSecondsLeft !== null && (
                     <div style={{
                       marginTop: 10,
