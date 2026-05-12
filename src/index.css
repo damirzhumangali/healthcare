@@ -211,7 +211,7 @@ button, input{font:inherit}
   position:relative;
   width:min(430px, 92vw);
   max-width:100%;
-  aspect-ratio:1 / 0.54;
+  aspect-ratio:1 / 0.5;
   margin-top:-20px;
   overflow:hidden;
   isolation:isolate;
@@ -238,7 +238,7 @@ button, input{font:inherit}
   display:block;
   width:100%;
   height:auto;
-  margin-top:-42%;
+  margin-top:-50%;
   filter:
     invert(1)
     brightness(1.08)
@@ -1004,7 +1004,7 @@ button, input{font:inherit}
     right:auto;
     left:auto;
     width:100%;
-    margin-top:-42%;
+    margin-top:-50%;
   }
   .station-actions{
     grid-area:actions;
