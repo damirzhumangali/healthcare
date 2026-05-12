@@ -305,6 +305,7 @@ button, input{font:inherit}
 }
 .station-ready__actions .btn{
   min-height:52px;
+  flex:1;
 }
 
 /* ── skeleton shimmer ──────────────────────────────────── */
@@ -339,11 +340,12 @@ button, input{font:inherit}
 }
 @media (min-width: 720px) {
   .station-board__grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
   }
   .station-board__tile,
   .station-board__tile--primary {
-    min-height: 148px;
+    min-height: 180px;
   }
 }
 

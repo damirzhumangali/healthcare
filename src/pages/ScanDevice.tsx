@@ -602,13 +602,6 @@ export default function ScanDevice() {
           ) : stationReady ? (
             deviceSession ? (
               <div className="stack station-ready">
-                <h2 className="h2" style={{ marginTop: 6 }}>
-                  {t.readyTitle}
-                </h2>
-                <p className="muted" style={{ marginTop: -6 }}>
-                  {t.readyDesc}
-                </p>
-
                 <div
                   style={{
                     padding: 12,
@@ -644,12 +637,9 @@ export default function ScanDevice() {
                   </div>
 
                   {latestMeasurement ? (
-                    <div className="station-ready__section">
-                      <h3 className="h2">{t.latestMeasurement}</h3>
-                      <p className="muted" style={{ margin: "6px 0 0" }}>
-                        {t.measuredAt}: {formatDateTime(latestMeasurement.createdAt)}
-                      </p>
-                    </div>
+                    <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                      {t.measuredAt}: {formatDateTime(latestMeasurement.createdAt)}
+                    </p>
                   ) : (
                     <p className="muted station-board__waiting-hint">{t.waitingMeasurementsDesc}</p>
                   )}
