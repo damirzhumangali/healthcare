@@ -209,23 +209,24 @@ button, input{font:inherit}
    aspect-ratio 1/0.44 = show exactly the phone portion height. */
 .station-pairing__phone-wrap{
   position:relative;
-  width:100%;
-  aspect-ratio:1 / 0.44;
+  width:min(360px, 88vw);
+  max-width:100%;
+  aspect-ratio:1 / 0.54;
   overflow:hidden;
   isolation:isolate;
 }
 .station-pairing__phone-wrap::before{
   content:"";
   position:absolute;
-  inset:30% 22% 2%;
+  inset:26% 16% 4%;
   border-radius:999px;
   background:
-    radial-gradient(circle at 50% 34%, rgba(255,255,255,0.34), transparent 18%),
-    radial-gradient(circle at 50% 40%, rgba(34,211,238,0.2), transparent 34%),
-    radial-gradient(circle at 50% 46%, rgba(16,185,129,0.28), transparent 48%);
-  filter:blur(28px);
+    radial-gradient(circle at 50% 34%, rgba(255,255,255,0.28), transparent 18%),
+    radial-gradient(circle at 50% 42%, rgba(34,211,238,0.18), transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(16,185,129,0.24), transparent 48%);
+  filter:blur(24px);
   opacity:0.95;
-  transform:translateY(10px);
+  transform:translateY(4px);
   animation:station-qr-phone-aura 3.2s ease-in-out infinite;
   pointer-events:none;
   z-index:0;
@@ -236,7 +237,7 @@ button, input{font:inherit}
   display:block;
   width:100%;
   height:auto;
-  margin-top:-56%;
+  margin-top:-42%;
   filter:
     invert(1)
     brightness(1.08)
@@ -993,15 +994,15 @@ button, input{font:inherit}
     min-height:472px;
     align-self:start;
   }
-  .station-pairing__illustration{
-    top:-74px;
-    right:-232px;
-    left:auto;
-    width:min(1040px, 158%);
+  .station-pairing__phone-wrap{
+    width:min(390px, 74%);
   }
-  .station-pairing__qr-overlay{
-    top:-8px;
-    right:34px;
+  .station-pairing__illustration{
+    top:auto;
+    right:auto;
+    left:auto;
+    width:100%;
+    margin-top:-42%;
   }
   .station-actions{
     grid-area:actions;
