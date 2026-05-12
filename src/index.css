@@ -766,7 +766,7 @@ button, input{font:inherit}
     border-radius: 10px;
   }
   .dashboard-layout{
-    gap: 8px;
+    gap: 12px;
   }
   .auth-actions{grid-template-columns:1fr}
   .patient-hero,
