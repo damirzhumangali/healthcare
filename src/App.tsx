@@ -24,6 +24,7 @@ import MeasurementDetails from "./pages/MeasurementDetails";
 import AppointmentForm from "./pages/AppointmentForm";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AimarControl from "./pages/AimarControl";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import VkAuthCallback from "./pages/VkAuthCallback";
 import AppLayout from "./layouts/AppLayout";
@@ -897,6 +898,14 @@ export default function App() {
         element={
           <RequireAuth>
             <AdminDashboard />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/aimar"
+        element={
+          <RequireAuth>
+            <AimarControl />
           </RequireAuth>
         }
       />

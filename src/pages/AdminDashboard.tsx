@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CalendarClock,
@@ -27,12 +27,9 @@ import {
   fetchAdminSummary,
   acceptAdminTelegramConsultation,
   fetchAdminTelegramConsultations,
-  fetchServoState,
-  sendServoCommand,
   type AdminPatient,
   type AdminSummary,
   type AdminTelegramConsultation,
-  type ServoDeviceState,
   type TelegramConsultationStatus,
   updateAdminTelegramConsultationStatus,
 } from "../lib/apiAdmin";
@@ -439,6 +436,7 @@ function appointmentCountLabel(locale: Locale, count: number) {
 }
 
 export default function AdminDashboard() {
+  const nav = useNavigate();
   const user = useMemo(() => readCurrentUser(), []);
   const allowed = isAdminAccount(user) || isLocalDemoHost();
   const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
@@ -456,8 +454,6 @@ export default function AdminDashboard() {
   const [acceptForm, setAcceptForm] = useState<{ id: string; value: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
-  const [aimarState, setAimarState] = useState<ServoDeviceState | null>(null);
-  const [aimarSending, setAimarSending] = useState(false);
 
   const t = adminText[locale];
   const displayName = user?.name || user?.email || t.defaultAdminName;
@@ -467,8 +463,9 @@ export default function AdminDashboard() {
     { id: "appointments", label: t.navAppointments, icon: ClipboardList },
     { id: "patients", label: t.navPatients, icon: Users },
     { id: "telegram", label: t.navTelegram, icon: MessageSquare },
-    { id: "aimar", label: t.navAimar, icon: Cpu },
   ] as const;
+
+  const aimarNavItem = { id: "aimar", label: t.navAimar, icon: Cpu };
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -606,16 +603,6 @@ export default function AdminDashboard() {
     }
   }
 
-  async function sendAimarCommand(command: "open" | "close") {
-    if (aimarSending) return;
-    setAimarSending(true);
-    try {
-      await sendServoCommand("aimar", command);
-    } finally {
-      setAimarSending(false);
-    }
-  }
-
   function changeLocale(nextLocale: Locale) {
     setLocale(nextLocale);
     writeStoredLocale(nextLocale);
@@ -625,17 +612,6 @@ export default function AdminDashboard() {
     if (allowed) void load();
   }, [allowed, load]);
 
-  useEffect(() => {
-    if (!allowed) return;
-    const poll = () => {
-      fetchServoState()
-        .then((states) => setAimarState(states["aimar"] ?? null))
-        .catch(() => {});
-    };
-    poll();
-    const id = setInterval(poll, 3000);
-    return () => clearInterval(id);
-  }, [allowed]);
 
   useEffect(() => {
     const syncActiveSection = () => {
@@ -740,6 +716,14 @@ export default function AdminDashboard() {
               </a>
             );
           })}
+          <button
+            className="doctor-admin__nav-item"
+            type="button"
+            onClick={() => nav("/admin/aimar")}
+          >
+            <Cpu size={18} />
+            {aimarNavItem.label}
+          </button>
           {BMO_SETTINGS_URL ? (
             <a
               className="doctor-admin__nav-item"
@@ -1142,60 +1126,6 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        <section className="doctor-admin__panel" id="aimar">
-          <div className="doctor-admin__panel-head">
-            <div>
-              <h2>Aimar</h2>
-              <p className="doctor-admin__panel-subtitle">{t.aimarSubtitle}</p>
-            </div>
-            <span
-              style={{
-                display: "inline-block",
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                background: aimarState ? (aimarState.isOpen ? "#10b981" : "#6b7280") : "#374151",
-              }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0" }}>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0 }}>
-                {t.aimarStatus}:{" "}
-                <strong>
-                  {aimarState
-                    ? aimarState.isOpen
-                      ? t.aimarIsOpen
-                      : t.aimarIsClosed
-                    : t.aimarNoData}
-                </strong>
-              </p>
-              {aimarState?.updatedAt ? (
-                <p style={{ margin: "4px 0 0", fontSize: 13, opacity: 0.6 }}>
-                  {t.aimarUpdated}: {formatDateTime(aimarState.updatedAt, locale)}
-                </p>
-              ) : null}
-            </div>
-            <button
-              className="doctor-admin__status doctor-admin__status--green"
-              type="button"
-              disabled={aimarSending}
-              onClick={() => void sendAimarCommand("open")}
-            >
-              {t.aimarOpen}
-            </button>
-            <button
-              className="doctor-admin__status doctor-admin__status--dark"
-              type="button"
-              disabled={aimarSending}
-              onClick={() => void sendAimarCommand("close")}
-            >
-              {t.aimarClose}
-            </button>
-          </div>
-        </section>
-
         <section className="doctor-admin__panel doctor-admin__records" id="appointments">
           <div className="doctor-admin__panel-head">
             <div>
@@ -1294,6 +1224,14 @@ export default function AdminDashboard() {
             </a>
           );
         })}
+        <button
+          className="doctor-admin__mobile-nav-item"
+          type="button"
+          onClick={() => nav("/admin/aimar")}
+        >
+          <Cpu size={18} />
+          <span>{aimarNavItem.label}</span>
+        </button>
       </nav>
     </div>
   );
