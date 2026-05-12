@@ -452,7 +452,7 @@ function Landing() {
               <a href="#story">{t.navStory}</a>
               <a href="#faq">{t.navFaq}</a>
               <a href="#map">{t.navMap}</a>
-              <Link to="/body" className="inline-flex items-center gap-2">
+              <Link to="/body" className="inline-flex items-center gap-1">
                 <PersonStanding className="h-4 w-4" />
                 {t.navBody}
               </Link>
