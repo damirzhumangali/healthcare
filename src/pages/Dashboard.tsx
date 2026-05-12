@@ -72,6 +72,8 @@ const copy = {
     device: "устройство",
     measurementError: "Не удалось загрузить измерения. Попробуйте обновить страницу.",
     createMeasurementError: "Не получилось создать измерение. Попробуйте еще раз.",
+    showAll: "Показать все",
+    showLess: "Свернуть",
   },
   kk: {
     title: "Науқас кабинеты",
@@ -114,6 +116,8 @@ const copy = {
     device: "құрылғы",
     measurementError: "Өлшеулерді жүктеу мүмкін болмады. Бетті жаңартып көріңіз.",
     createMeasurementError: "Өлшеуді қосу мүмкін болмады. Қайта көріңіз.",
+    showAll: "Барлығын көрсету",
+    showLess: "Жию",
   },
   en: {
     title: "Patient Dashboard",
@@ -156,6 +160,8 @@ const copy = {
     device: "device",
     measurementError: "Failed to load measurements. Try refreshing the page.",
     createMeasurementError: "Failed to add measurement. Try again.",
+    showAll: "Show all",
+    showLess: "Show less",
   },
 } as const;
 
@@ -213,6 +219,7 @@ export default function Dashboard() {
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
+  const [showAllMeasurements, setShowAllMeasurements] = useState(false);
 
   const refreshTicket = useCallback(() => {
     const currentTicket = getMyTicket();
@@ -449,7 +456,17 @@ export default function Dashboard() {
 
         <Card>
           <div className="stack">
-            <h2 className="h2" style={{ margin: 0 }}>{t.history}</h2>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <h2 className="h2" style={{ margin: 0 }}>{t.history}</h2>
+              {items.length > 3 && (
+                <button
+                  onClick={() => setShowAllMeasurements((p) => !p)}
+                  style={{ fontSize: 13, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  {showAllMeasurements ? t.showLess : t.showAll} ({items.length})
+                </button>
+              )}
+            </div>
 
             {loading ? (
               <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
@@ -459,7 +476,7 @@ export default function Dashboard() {
               </p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
-                {items.map((m) => (
+                {(showAllMeasurements ? items : items.slice(0, 3)).map((m) => (
                   <Link
                     key={m.id}
                     to={`/app/measurements/${m.id}`}
