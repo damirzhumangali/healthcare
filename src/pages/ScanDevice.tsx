@@ -606,6 +606,12 @@ export default function ScanDevice() {
                 </div>
 
                 <div className="station-board">
+                  <img
+                    src="/images/device-tap.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="station-board__device-illustration"
+                  />
                   <div className="station-board__grid">
                     <div className="station-board__tile station-board__tile--primary">
                       <div className="station-board__label">{t.tempMetric}</div>
