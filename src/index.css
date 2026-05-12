@@ -169,6 +169,10 @@ button, input{font:inherit}
 .station-screen{
   padding-block:24px;
 }
+.station-screen__content{
+  width:min(1080px, 100%);
+  padding:18px;
+}
 .station-screen .card{
   max-width:min(1080px, 100%);
 }
@@ -367,6 +371,9 @@ button, input{font:inherit}
 
 /* ── tablet layout ─────────────────────────────────────── */
 @media (min-width: 640px) {
+  .station-screen__content{
+    padding:28px 32px;
+  }
   .station-screen .card {
     padding: 28px 32px;
   }
@@ -818,6 +825,9 @@ button, input{font:inherit}
 @media (min-width: 900px) and (orientation: landscape), (min-width: 1080px){
   .station-screen{
     padding-inline:24px;
+  }
+  .station-screen__content{
+    padding:24px;
   }
   .station-screen .card{
     border-radius:24px;

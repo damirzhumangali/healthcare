@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
-import Card from "../components/Card";
 import QrCode from "../components/QrCode";
 import {
   closeDeviceSession,
@@ -565,8 +564,7 @@ export default function ScanDevice() {
         </div>
       </div>
 
-      <Card>
-        <div className="stack station-shell">
+      <div className="stack station-shell station-screen__content">
           <div>
             <div className="kicker">{t.kicker}</div>
             <h1 className="h1">{t.title}</h1>
@@ -793,7 +791,6 @@ export default function ScanDevice() {
             </div>
           )}
         </div>
-      </Card>
     </div>
   );
 }
