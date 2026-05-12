@@ -762,16 +762,16 @@ export default function ScanDevice() {
 
               {pairing ? (
                 <div className="station-pairing__scene">
-                  <div className="station-pairing__qr-stack">
-                    <QrCode value={pairUrl} size={qrSize} />
-                    <div className="station-pairing__phone-wrap">
-                      <img
-                        src="/images/scan-phone-qr-frame.png"
-                        alt=""
-                        aria-hidden="true"
-                        className="station-pairing__illustration"
-                      />
-                    </div>
+                  {/* QR card */}
+                  <QrCode value={pairUrl} size={qrSize} />
+                  {/* Phone illustration — cropped to show only hand+phone portion */}
+                  <div className="station-pairing__phone-wrap">
+                    <img
+                      src="/images/scan-phone-qr-frame.png"
+                      alt=""
+                      aria-hidden="true"
+                      className="station-pairing__illustration"
+                    />
                   </div>
                   {qrSecondsLeft !== null && (
                     <div
