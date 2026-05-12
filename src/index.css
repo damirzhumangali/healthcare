@@ -376,7 +376,7 @@ button, input{font:inherit}
 }
 .station-board__device-illustration {
   display: block;
-  width: 286px;
+  width: min(360px, 100%);
   height: auto;
   object-fit: contain;
   filter:
