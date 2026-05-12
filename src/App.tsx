@@ -822,26 +822,6 @@ function Landing() {
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
-                {t.footerContactsTitle}
-              </h2>
-              <div className={`mt-4 flex flex-col gap-3 text-sm ${mutedClass}`}>
-                <a href={`tel:${t.footerPhoneValue.replace(/[^+\d]/g, "")}`} className="transition-colors hover:text-cyan-300">
-                  <span className={`font-medium ${footerLabelClass}`}>{t.footerPhoneLabel}</span>
-                  <span className="ml-2">{t.footerPhoneValue}</span>
-                </a>
-                <a href={`mailto:${t.footerEmailValue}`} className="transition-colors hover:text-cyan-300">
-                  <span className={`font-medium ${footerLabelClass}`}>{t.footerEmailLabel}</span>
-                  <span className="ml-2">{t.footerEmailValue}</span>
-                </a>
-                <div>
-                  <span className={`font-medium ${footerLabelClass}`}>{t.footerCityLabel}</span>
-                  <span className="ml-2">{t.footerCityValue}</span>
-                </div>
-              </div>
-            </div>
-
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 {t.footerSocialTitle}
