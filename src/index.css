@@ -183,25 +183,46 @@ button, input{font:inherit}
   display:flex;
   flex-direction:column;
   gap:12px;
+  max-width:560px;
 }
 .station-pairing__auto{
   margin-top:-8px;
   margin-bottom:0;
 }
+.station-pairing__scene{
+  position:relative;
+  width:100%;
+  min-height:340px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  overflow:visible;
+}
 .station-pairing__illustration{
   display:block;
   width:100%;
-  max-width:340px;
-  margin-top:20px;
-  filter:brightness(0) invert(1) opacity(0.35);
+  max-width:760px;
+  margin:0;
+  opacity:.92;
+  mix-blend-mode:screen;
+  transform:translate(-12px, -12px);
   pointer-events:none;
   user-select:none;
 }
-.station-pairing__qr{
+.station-pairing__qr-overlay{
+  position:absolute;
+  top:8px;
+  right:0;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:14px;
+  gap:12px;
+}
+.station-pairing__timer{
+  margin-top:2px;
+  text-align:center;
+  font-size:13px;
+  font-weight:600;
 }
 .station-link-card{
   width:100%;
@@ -718,6 +739,19 @@ button, input{font:inherit}
 @media (max-width: 640px){
   .grid{grid-template-columns: 1fr}
   .station-board__grid{grid-template-columns:1fr}
+  .station-pairing__scene{
+    min-height:270px;
+    justify-content:center;
+  }
+  .station-pairing__illustration{
+    max-width:520px;
+    transform:translate(-6px, 2px);
+  }
+  .station-pairing__qr-overlay{
+    top:6px;
+    right:50%;
+    transform:translateX(36%);
+  }
   .h1{font-size:24px}
   .auth-actions{grid-template-columns:1fr}
   .patient-hero,
@@ -785,28 +819,24 @@ button, input{font:inherit}
     padding:24px;
   }
   .station-pairing{
-    grid-template-columns:minmax(0, 1.05fr) minmax(320px, 400px);
+    grid-template-columns:minmax(0, .9fr) minmax(520px, 1.15fr);
     grid-template-areas:
-      "copy qr"
-      "actions qr"
-      "hint qr";
+      "copy scene"
+      "actions scene";
     align-items:start;
     gap:22px 26px;
   }
   .station-pairing__copy{
     grid-area:copy;
   }
-  .station-pairing__qr{
-    grid-area:qr;
-    align-self:stretch;
+  .station-pairing__scene{
+    grid-area:scene;
+    min-height:420px;
+    align-self:start;
   }
   .station-actions{
     grid-area:actions;
-    max-width:520px;
-  }
-  .station-pairing__hint{
-    grid-area:hint;
-    max-width:520px;
+    max-width:260px;
   }
   .station-ready__actions .btn{
     width:100%;

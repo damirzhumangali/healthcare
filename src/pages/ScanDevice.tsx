@@ -160,29 +160,6 @@ const copy = {
   },
 } as const;
 
-function maskToken(token: string) {
-  if (token.length <= 12) {
-    return token;
-  }
-
-  return `${token.slice(0, 6)}...${token.slice(-4)}`;
-}
-
-function isLocalPairUrl(url: string) {
-  try {
-    const host = new URL(url).hostname;
-    return (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "0.0.0.0" ||
-      host === "::1" ||
-      host.endsWith(".local")
-    );
-  } catch {
-    return isLocalPublicAppUrl();
-  }
-}
-
 function formatDateTime(value?: string | null) {
   if (!value) {
     return "—";
@@ -235,6 +212,22 @@ function pairingToSessionSnapshot(pairing: DevicePairingSession): DeviceSessionS
   };
 }
 
+function getQrSize() {
+  if (typeof window === "undefined") {
+    return 360;
+  }
+
+  if (window.innerWidth < 640) {
+    return 240;
+  }
+
+  if (window.innerWidth < 1024) {
+    return 300;
+  }
+
+  return 360;
+}
+
 export default function ScanDevice() {
   const nav = useNavigate();
   const location = useLocation();
@@ -256,6 +249,7 @@ export default function ScanDevice() {
   const [sessionBusy, setSessionBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [qrSecondsLeft, setQrSecondsLeft] = useState<number | null>(null);
+  const [qrSize, setQrSize] = useState(getQrSize);
 
   const stationLoginMode =
     new URLSearchParams(location.search).get("stationLogin") === "1";
@@ -277,6 +271,13 @@ export default function ScanDevice() {
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);
   }, [locale]);
+
+  useEffect(() => {
+    const onResize = () => setQrSize(getQrSize());
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     const sync = () => setAuthed(hasSession());
@@ -757,31 +758,35 @@ export default function ScanDevice() {
                 <p className="muted station-pairing__auto">
                   {t.pairingAutoUpdate}
                 </p>
-                <img
-                  src="/images/scan-phone.png"
-                  alt=""
-                  aria-hidden="true"
-                  className="station-pairing__illustration"
-                />
               </div>
 
               {pairing ? (
-                <div className="station-pairing__qr">
-                  <QrCode value={pairUrl} size={340} />
-                  {qrSecondsLeft !== null && (
-                    <div style={{
-                      marginTop: 10,
-                      textAlign: "center",
-                      fontSize: 13,
-                      color: qrSecondsLeft <= 30 ? "#f87171" : "rgba(255,255,255,0.45)",
-                    }}>
+                <div className="station-pairing__scene">
+                  <img
+                    src="/images/scan-phone.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="station-pairing__illustration"
+                  />
+
+                  <div className="station-pairing__qr-overlay">
+                    <QrCode value={pairUrl} size={qrSize} />
+                    {qrSecondsLeft !== null && (
+                      <div
+                        className="station-pairing__timer"
+                        style={{
+                          color:
+                            qrSecondsLeft <= 30 ? "#f87171" : "rgba(255,255,255,0.52)",
+                        }}
+                      >
                       {locale === "kk"
                         ? `QR ${qrSecondsLeft}с кейін жаңарады`
                         : locale === "en"
                           ? `QR refreshes in ${qrSecondsLeft}s`
                           : `QR обновится через ${qrSecondsLeft}с`}
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : null}
 
