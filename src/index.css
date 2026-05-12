@@ -168,7 +168,6 @@ button, input{font:inherit}
 
 .station-screen{
   padding-block:24px;
-  place-items: start center;
 }
 .station-screen .card{
   max-width:min(1080px, 100%);
@@ -334,7 +333,7 @@ button, input{font:inherit}
   }
   .station-pairing {
     grid-template-columns: 1fr auto;
-    align-items: start;
+    align-items: center;
     gap: 48px;
   }
 }
