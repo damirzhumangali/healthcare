@@ -38,7 +38,8 @@ const copy = {
     linkedPatient: "Пациент",
     refreshSession: "Обновить данные",
     refreshingSession: "Обновляю...",
-    waitingMeasurements: "Ожидаем данные от датчиков",
+    waitingMeasurements: "Приложите палец к датчику",
+    measureHint: "Данные появятся автоматически после измерения.",
     waitingMeasurementsDesc:
       "ESP32 пока не отправил новое измерение. Как только данные придут, они появятся здесь автоматически.",
     dashboardSyncHint:
@@ -85,7 +86,8 @@ const copy = {
     linkedPatient: "Пациент",
     refreshSession: "Деректерді жаңарту",
     refreshingSession: "Жаңартылуда...",
-    waitingMeasurements: "Датчик деректерін күтіп тұрмыз",
+    waitingMeasurements: "Саусақты датчикке тигізіңіз",
+    measureHint: "Өлшеуден кейін деректер автоматты түрде шығады.",
     waitingMeasurementsDesc:
       "ESP32 әлі жаңа өлшеу жібермеді. Деректер келген бойда осында автоматты түрде шығады.",
     dashboardSyncHint:
@@ -132,7 +134,8 @@ const copy = {
     linkedPatient: "Patient",
     refreshSession: "Refresh data",
     refreshingSession: "Refreshing...",
-    waitingMeasurements: "Waiting for sensor readings",
+    waitingMeasurements: "Place your finger on the sensor",
+    measureHint: "Readings will appear automatically after measurement.",
     waitingMeasurementsDesc:
       "ESP32 has not sent a new measurement yet. As soon as it arrives, it will appear here automatically.",
     dashboardSyncHint:
@@ -613,7 +616,8 @@ export default function ScanDevice() {
                       aria-hidden="true"
                       className="station-board__device-illustration"
                     />
-                    <span className="muted">{t.waitingMeasurements}</span>
+                    <p className="station-board__instruction-title">{t.waitingMeasurements}</p>
+                    <p className="station-board__instruction-hint">{t.measureHint}</p>
                   </div>
                   <div className="station-board__grid">
                     <div className="station-board__tile station-board__tile--primary">
