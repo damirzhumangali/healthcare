@@ -283,8 +283,9 @@ export default function Dashboard() {
         <div className="dashboard-hero">
           <div className="patient-hero">
             <div>
-              <h1 className="h1" style={{ marginBottom: 4 }}>{t.title}</h1>
-              <p className="muted" style={{ margin: 0 }}>{t.subtitle}</p>
+              <div className="kicker" style={{ marginBottom: 10 }}>HealthAssist</div>
+              <h1 className="h1" style={{ marginBottom: 6 }}>{t.title}</h1>
+              <p className="muted" style={{ margin: 0, maxWidth: 560 }}>{t.subtitle}</p>
               <div className="patient-account">
                 <span>{t.hello}</span>
                 <strong>{displayName}</strong>
@@ -388,12 +389,12 @@ export default function Dashboard() {
               ) : (
                 <div style={{ display: "grid", gap: 10 }}>
                   {appointments.map((appointment) => (
-                    <div key={appointment.id} style={{ padding: 14, borderRadius: 8, border: "1px solid rgba(255,255,255,0.10)" }}>
+                    <div key={appointment.id} className="dashboard-list-item">
                       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
                         <div>
-                          <div style={{ fontWeight: 800 }}>{appointment.date} • {appointment.time}</div>
-                          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t.doctor}: {doctorLabel(appointment)}</div>
-                          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t.reason}: {appointment.reason || "Прием"}</div>
+                          <div style={{ fontWeight: 800, fontSize: 15 }}>{appointment.date} • {appointment.time}</div>
+                          <div className="muted" style={{ fontSize: 13, marginTop: 5 }}>{t.doctor}: {doctorLabel(appointment)}</div>
+                          <div className="muted" style={{ fontSize: 13, marginTop: 3 }}>{t.reason}: {appointment.reason || "—"}</div>
                         </div>
                         <span className={`badge ${appointmentStatusClass(appointment.status)}`}>
                           <span className="badge__dot" />
@@ -430,30 +431,16 @@ export default function Dashboard() {
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
                 {(showAllMeasurements ? items : items.slice(0, 3)).map((m) => (
-                  <Link
-                    key={m.id}
-                    to={`/app/measurements/${m.id}`}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <div
-                      style={{
-                        padding: 12,
-                        borderRadius: 14,
-                        border: "1px solid rgba(255,255,255,0.10)",
-                      }}
-                    >
-                      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div className="muted" style={{ fontSize: 13 }}>
-                            {fmtDate(m.createdAt)} • {t.device}: {m.deviceId}
-                          </div>
-                          <div style={{ fontWeight: 700, marginTop: 2 }}>
-                            {t.pressure}: {m.systolic}/{m.diastolic} • {t.temp}: {m.tempC}°C
-                          </div>
-                        </div>
-                        <div className="muted" style={{ fontSize: 13 }}>
-                          {t.pulse} {m.hr} • {t.spo2} {m.spo2}%
-                        </div>
+                  <Link key={m.id} to={`/app/measurements/${m.id}`} style={{ textDecoration: "none" }}>
+                    <div className="dashboard-list-item dashboard-list-item--measure">
+                      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                        {fmtDate(m.createdAt)} · {t.device}: {m.deviceId}
+                      </div>
+                      <div className="dashboard-measure-row">
+                        <span><b>{m.tempC}°C</b> <span className="muted">{t.temp}</span></span>
+                        <span><b>{m.hr}</b> <span className="muted">{t.pulse}</span></span>
+                        <span><b>{m.systolic}/{m.diastolic}</b> <span className="muted">{t.pressure}</span></span>
+                        <span><b>{m.spo2}%</b> <span className="muted">{t.spo2}</span></span>
                       </div>
                     </div>
                   </Link>

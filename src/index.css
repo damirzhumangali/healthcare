@@ -58,9 +58,9 @@ button, input{font:inherit}
 ::selection{background: rgba(79,140,255,.35)}
 
 .container{
-  max-width: 1020px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 22px 16px 46px;
+  padding: 28px 24px 60px;
 }
 
 .topbar{
@@ -612,14 +612,14 @@ button, input{font:inherit}
 }
 .metric{
   border: 1px solid var(--border);
-  background: rgba(0,0,0,.12);
-  border-radius: 14px;
-  padding: 12px;
+  background: rgba(255,255,255,.04);
+  border-radius: 16px;
+  padding: 14px 16px;
 }
-.metric__label{color:var(--muted); font-size:12px}
-.metric__value{font-size:18px; font-weight:900; margin-top:4px}
+.metric__label{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.12em}
+.metric__value{font-size:22px; font-weight:900; margin-top:6px}
 
-/* ── dashboard tablet layout ───────────────────────────── */
+/* ── dashboard layout ──────────────────────────────────── */
 .dashboard-layout{
   display:flex;
   flex-direction:column;
@@ -631,46 +631,55 @@ button, input{font:inherit}
   flex-direction:column;
   gap:16px;
 }
+
+/* Tablet: 720–1179px — sidebar becomes a 2-col grid */
 @media (min-width: 720px) and (max-width: 1179px){
-  .dashboard-layout{
-    gap:18px;
-  }
+  .dashboard-layout{ gap:18px }
   .dashboard-sidebar{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:16px;
     align-items:start;
   }
-  .dashboard-main{
-    gap:16px;
-  }
-  .patient-hero{
-    padding-top:10px;
-  }
+  .dashboard-main{ gap:16px }
+  .patient-hero{ padding-top:10px }
 }
+
+/* Desktop: 1180px+ */
 @media (min-width: 1180px){
   .dashboard-layout{
     display:grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    grid-template-rows: auto;
+    grid-template-columns: 400px minmax(0, 1fr);
     align-items: start;
-    gap:14px;
+    gap:22px;
   }
   .dashboard-hero{
     grid-column: 1 / -1;
   }
-  .dashboard-main{
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-  }
   .dashboard-sidebar{
     display:flex;
     flex-direction:column;
-    gap:14px;
-    position: sticky;
-    top: 80px;
+    gap:18px;
+    position:sticky;
+    top:80px;
   }
+  .dashboard-main{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .card{
+    padding:26px;
+    border-radius:22px;
+  }
+  .patient-hero{
+    padding: 32px 36px;
+    background:
+      linear-gradient(135deg, rgba(79,140,255,.10), rgba(96,220,165,.07));
+    border: 1px solid rgba(79,140,255,.18);
+    border-radius:24px;
+  }
+  .metric__value{ font-size:26px }
 }
 
 .patient-hero{
@@ -697,6 +706,32 @@ button, input{font:inherit}
   font-weight:800;
   overflow-wrap:anywhere;
 }
+
+.dashboard-list-item{
+  padding:16px 18px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.09);
+  background:rgba(255,255,255,.03);
+  transition: background 0.15s, border-color 0.15s;
+}
+.dashboard-list-item:hover{
+  background:rgba(255,255,255,.06);
+  border-color:rgba(255,255,255,.15);
+}
+.dashboard-measure-row{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+  font-size:15px;
+  font-weight:600;
+  margin-top:4px;
+}
+.dashboard-measure-row .muted{
+  font-size:12px;
+  font-weight:400;
+  margin-left:2px;
+}
+
 .language-switcher{
   display:flex;
   border:1px solid var(--border);
