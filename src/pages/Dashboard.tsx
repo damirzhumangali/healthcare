@@ -239,8 +239,6 @@ export default function Dashboard() {
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
 
   const t = copy[locale];
-  const latestMeasurement = items[0] ?? null;
-  const nextAppointment = appointments[0] ?? null;
 
   const [items, setItems] = useState<MeasurementItem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -249,6 +247,8 @@ export default function Dashboard() {
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
   const [showAllMeasurements, setShowAllMeasurements] = useState(false);
+  const latestMeasurement = items[0] ?? null;
+  const nextAppointment = appointments[0] ?? null;
 
   const refreshTicket = useCallback(() => {
     const currentTicket = getMyTicket();
