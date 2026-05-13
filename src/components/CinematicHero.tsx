@@ -44,11 +44,6 @@ export default function CinematicHero({
               fetchPriority="high"
               loading="eager"
               decoding="async"
-              style={{
-                objectPosition: theme === "light" ? "5% 85%" : "18% 34%",
-                transform: theme === "light" ? "translateY(10%) scale(1.05)" : "translateY(-3.8%) scale(1.05)",
-                filter: theme === "light" ? "none" : "contrast(1.04) saturate(0.92) brightness(0.98)"
-              }}
             />
           </div>
         </figure>

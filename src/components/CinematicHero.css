@@ -112,13 +112,15 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 18% 34%;
-  filter: contrast(1.04) saturate(0.92) brightness(0.98);
-  transform: translateY(-3.8%) scale(1.05);
   transform-origin: center top;
 }
 
-/* Light theme image positioning - no effects */
+.cinematic-hero[data-theme="dark"] .cinematic-hero__image {
+  object-position: 18% 34%;
+  transform: translateY(-3.8%) scale(1.05);
+  filter: contrast(1.04) saturate(0.92) brightness(0.98);
+}
+
 .cinematic-hero[data-theme="light"] .cinematic-hero__image {
   object-position: 5% 85%;
   transform: translateY(10%) scale(1.05);
@@ -312,6 +314,76 @@
 
   .cinematic-hero__title {
     font-size: clamp(2.8rem, 4.7vw, 4.5rem);
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1180px) and (orientation: portrait) {
+  .cinematic-hero {
+    min-height: auto;
+  }
+
+  .cinematic-hero__inner {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-bottom: 6.75rem;
+  }
+
+  .cinematic-hero__media {
+    order: 1;
+    height: clamp(560px, 56vh, 760px);
+  }
+
+  .cinematic-hero__media-frame::after {
+    background:
+      linear-gradient(180deg, rgba(2, 4, 7, 0) 0%, rgba(2, 4, 7, 0) 56%, rgba(2, 4, 7, 0.94) 100%),
+      linear-gradient(90deg, rgba(2, 4, 7, 0.08) 0%, rgba(2, 4, 7, 0) 34%, rgba(2, 4, 7, 0.26) 100%);
+  }
+
+  .cinematic-hero[data-theme="light"] .cinematic-hero__media-frame::after {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, 0.96) 100%);
+  }
+
+  .cinematic-hero[data-theme="dark"] .cinematic-hero__image {
+    object-position: 28% 18%;
+    transform: translateY(-1.5%) scale(1.06);
+  }
+
+  .cinematic-hero[data-theme="light"] .cinematic-hero__image {
+    object-position: 20% 18%;
+    transform: translateY(0) scale(1.03);
+  }
+
+  .cinematic-hero__content {
+    order: 2;
+    justify-self: center;
+    align-items: center;
+    text-align: center;
+    width: min(100%, 42rem);
+    padding: 1.75rem 2.5rem 0;
+    transform: translateY(-1.4rem);
+  }
+
+  .cinematic-hero__title {
+    align-items: center;
+    font-size: clamp(3.2rem, 6vw, 4.9rem);
+  }
+
+  .cinematic-hero__subtitle {
+    max-width: 34rem;
+    font-size: 1.04rem;
+    line-height: 1.62;
+  }
+
+  .cinematic-hero__cta {
+    align-self: center;
+  }
+
+  .cinematic-hero__labels {
+    justify-content: center;
+    max-width: 36rem;
+    margin-top: 2.35rem;
   }
 }
 
