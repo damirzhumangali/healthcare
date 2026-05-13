@@ -21,6 +21,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/auth/vk/callback",
+      "destination": "/index.html"
+    },
+    {
       "source": "/auth/(.*)",
       "destination": "https://healthcare-backend-telt.onrender.com/auth/$1"
     },
@@ -29,7 +33,47 @@
       "destination": "https://healthcare-backend-telt.onrender.com/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/appointments/new",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/doctor",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/aimar",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/app",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/app/measurements/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/scan/:deviceId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pair",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pair/:deviceId/:pairingToken",
       "destination": "/index.html"
     }
   ]

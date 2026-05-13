@@ -29,6 +29,7 @@ function injectSeo(template, seo) {
   let html = template;
   html = updateTag(html, /<title>.*?<\/title>/s, `<title>${seo.title}</title>`);
   html = updateTag(html, /<meta name="description" content=".*?" \/>/s, `<meta name="description" content="${seo.description}" />`);
+  html = updateTag(html, /<meta name="robots" content=".*?" \/>/s, `<meta name="robots" content="${seo.robots ?? "index, follow"}" />`);
   html = updateTag(html, /<link rel="canonical" href=".*?" \/>/s, `<link rel="canonical" href="${seo.canonicalUrl}" />`);
   html = updateTag(html, /<meta property="og:title" content=".*?" \/>/s, `<meta property="og:title" content="${seo.title}" />`);
   html = updateTag(html, /<meta property="og:description" content=".*?" \/>/s, `<meta property="og:description" content="${seo.description}" />`);
@@ -66,6 +67,18 @@ async function main() {
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, html, "utf8");
   }
+
+  const notFoundHtml = injectSeo(
+    template.replace('<div id="root"></div>', `<div id="root">${render("/404")}</div>`),
+    {
+      title: "404 — Страница не найдена | HealthAssist",
+      description: "Страница HealthAssist не найдена. Проверьте адрес или вернитесь на главную.",
+      canonicalUrl: `${publicUrl}/404`,
+      robots: "noindex, nofollow",
+    },
+  );
+
+  await fs.writeFile(path.join(distDir, "404.html"), notFoundHtml, "utf8");
 }
 
 main().catch((error) => {

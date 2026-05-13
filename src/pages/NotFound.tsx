@@ -1,6 +1,17 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { usePageSeo } from "../lib/seo";
 
 export default function NotFound() {
+  const location = useLocation();
+
+  usePageSeo({
+    title: "404 — Страница не найдена | HealthAssist",
+    description: "Страница HealthAssist не найдена. Проверьте адрес или вернитесь на главную.",
+    path: location.pathname || "/404",
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
+
   return (
     <div className="nf">
       {/* Right panel — doctor photo */}
