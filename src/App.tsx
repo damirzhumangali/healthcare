@@ -27,6 +27,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AimarControl from "./pages/AimarControl";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import VkAuthCallback from "./pages/VkAuthCallback";
+import NotFound from "./pages/NotFound";
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./lib/RequireAuth";
 import { hasSession, logout, requiresServerSessionValidation, syncSessionFromServer } from "./lib/auth";
@@ -948,6 +949,7 @@ export default function App() {
       <Route path="/scan/:deviceId" element={<ScanDevice />} />
       <Route path="/pair" element={<DevicePairing />} />
       <Route path="/pair/:deviceId/:pairingToken" element={<DevicePairing />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

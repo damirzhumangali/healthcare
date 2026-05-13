@@ -2333,3 +2333,119 @@ button, input{font:inherit}
     color:#d8e9ff;
   }
 }
+
+/* ── 404 Not Found ──────────────────────────────────────── */
+.notfound{
+  min-height:100vh;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  padding:24px;
+}
+.notfound__bg{
+  position:absolute;
+  inset:0;
+  background:
+    url("/images/doctor-bg.jpg") right center / cover no-repeat;
+  opacity:0.18;
+  pointer-events:none;
+}
+.notfound__bg::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(to right, var(--bg) 38%, transparent 80%),
+    linear-gradient(to top, var(--bg) 0%, transparent 40%);
+}
+.notfound__content{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  gap:48px;
+  max-width:900px;
+  width:100%;
+}
+.notfound__robot-wrap{
+  flex:0 0 auto;
+  width:clamp(180px, 26vw, 320px);
+  filter:
+    drop-shadow(0 0 32px rgba(79,140,255,.30))
+    drop-shadow(0 0 80px rgba(96,220,165,.18));
+  animation:notfound-float 4s ease-in-out infinite;
+}
+.notfound__robot{
+  width:100%;
+  height:auto;
+  display:block;
+}
+@keyframes notfound-float{
+  0%,100%{ transform:translateY(0) }
+  50%{ transform:translateY(-14px) }
+}
+.notfound__copy{
+  flex:1;
+  min-width:0;
+}
+.notfound__code{
+  font-size:clamp(80px, 14vw, 140px);
+  font-weight:900;
+  line-height:1;
+  margin:8px 0 4px;
+  background:linear-gradient(135deg, #4f8cff 0%, #60dca5 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:-4px;
+}
+.notfound__title{
+  font-size:clamp(20px, 3vw, 28px);
+  font-weight:700;
+  margin:0 0 12px;
+}
+.notfound__desc{
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.6;
+  margin:0 0 28px;
+  max-width:400px;
+}
+.notfound__actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.notfound__btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px 24px;
+  border-radius:12px;
+  font-size:14px;
+  font-weight:700;
+  text-decoration:none;
+  transition:opacity .15s, transform .15s;
+}
+.notfound__btn:hover{ opacity:.85; transform:translateY(-1px) }
+.notfound__btn--primary{
+  background:linear-gradient(135deg, #4f8cff, #60dca5);
+  color:#0b0f14;
+}
+.notfound__btn--ghost{
+  border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+}
+@media(max-width:640px){
+  .notfound__content{
+    flex-direction:column;
+    text-align:center;
+    gap:24px;
+  }
+  .notfound__robot-wrap{ width:clamp(140px,50vw,220px) }
+  .notfound__desc{ max-width:100% }
+  .notfound__actions{ justify-content:center }
+}
