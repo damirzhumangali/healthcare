@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import { fetchMyMeasurements, createMeasurement } from "../lib/apiMeasurements";
+import { fetchMyMeasurements, readCachedMeasurements, type MeasurementItem } from "../lib/apiMeasurements";
 import {
   DOCTORS,
   fetchAppointments,
@@ -17,17 +17,6 @@ type StoredUser = {
   email?: string;
   name?: string;
   role?: string;
-};
-
-type MeasurementItem = {
-  id: string;
-  createdAt: string;
-  deviceId: string;
-  systolic: number;
-  diastolic: number;
-  tempC: number;
-  hr: number;
-  spo2: number;
 };
 
 const copy = {
@@ -240,7 +229,7 @@ export default function Dashboard() {
 
   const t = copy[locale];
 
-  const [items, setItems] = useState<MeasurementItem[]>([]);
+  const [items, setItems] = useState<MeasurementItem[]>(() => readCachedMeasurements());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
@@ -262,6 +251,7 @@ export default function Dashboard() {
       const data = await fetchMyMeasurements();
       setItems(data.items ?? []);
     } catch {
+      setItems(readCachedMeasurements());
       setErr(t.measurementError);
     } finally {
       setLoading(false);
