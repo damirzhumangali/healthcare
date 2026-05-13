@@ -98,7 +98,7 @@ export default function AppLayout() {
       <header className="topbar">
         <div className="brand">
           <img src="/icon-192.png" alt="HealthAssist" className="brand__logo" />
-          <div className="brand__meta hidden md:block">
+          <div className="brand__meta hidden sm:block xl:block">
             <div className="brand__title">HealthAssist</div>
             <div className="brand__sub">
               {user ? (
@@ -113,7 +113,7 @@ export default function AppLayout() {
           </div>
         </div>
 
-        <div className="actions app-topbar__toolbar hidden md:flex">
+        <div className="actions app-topbar__toolbar hidden xl:flex">
           <button
             type="button"
             className="theme-toggle"
@@ -151,9 +151,9 @@ export default function AppLayout() {
           </Button>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 overflow-hidden md:hidden">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden xl:hidden">
           <div
-            className={`flex h-7 w-[84px] shrink-0 rounded-full border overflow-hidden ${
+            className={`flex h-8 w-[96px] shrink-0 rounded-full border overflow-hidden md:h-9 md:w-[118px] ${
               theme === "dark" ? "border-white/20" : "border-slate-300"
             }`}
           >
@@ -161,7 +161,7 @@ export default function AppLayout() {
               <button
                 key={item}
                 onClick={() => setLocale(item)}
-                className={`flex-1 min-w-0 px-0.5 py-1 text-[9px] font-medium ${
+                className={`flex-1 min-w-0 px-0.5 py-1 text-[10px] font-medium md:text-xs ${
                   locale === item
                     ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                     : ""
@@ -180,22 +180,23 @@ export default function AppLayout() {
             }}
             className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
               theme === "dark" ? "border-white/20" : "border-slate-300"
-            }`}
+            } md:h-9 md:w-auto md:min-w-[84px] md:px-3 md:text-xs`}
             aria-label={t.logoutShort}
             title={t.logoutShort}
           >
-            <LogOut className="h-3.5 w-3.5" />
+            <LogOut className="h-3.5 w-3.5 md:mr-1.5 md:h-4 md:w-4" />
+            <span className="hidden md:inline">{t.logoutShort}</span>
           </button>
 
           <button
             type="button"
             onClick={preferences.toggleTheme}
-            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border md:h-9 md:w-9 ${
               theme === "dark" ? "border-white/20" : "border-slate-300"
             }`}
             aria-label={theme === "dark" ? t.lightTheme : t.darkTheme}
           >
-            {theme === "dark" ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+            {theme === "dark" ? <Sun className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <Moon className="h-3.5 w-3.5 md:h-4 md:w-4" />}
           </button>
         </div>
       </header>
