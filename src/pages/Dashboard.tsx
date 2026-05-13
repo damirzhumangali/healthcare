@@ -407,20 +407,6 @@ export default function Dashboard() {
                 <Button className="dashboard-actions__button" variant="ghost" onClick={() => nav("/appointments/new")}>
                   {t.bookDoctor}
                 </Button>
-                <Button
-                  className="dashboard-actions__button"
-                  onClick={async () => {
-                    setErr(null);
-                    try {
-                      await createMeasurement("device-001");
-                      await load();
-                    } catch {
-                      setErr(t.createMeasurementError);
-                    }
-                  }}
-                >
-                  {t.newMeasurement}
-                </Button>
               </div>
             </div>
           </Card>
