@@ -4,9 +4,18 @@ import Card from "../components/Card";
 import { isAdminAccount } from "../lib/adminAccess";
 import { consumePostLoginRedirect } from "../lib/authRedirect";
 import { setSession } from "../lib/auth";
+import { usePageSeo } from "../lib/seo";
 import { clearVkFlowState, createVkSession, exchangeVkCode } from "../lib/vkAuth";
 
 export default function VkAuthCallback() {
+  usePageSeo({
+    title: "Авторизация VK ID — HealthAssist",
+    description: "Служебный callback для входа через VK ID в HealthAssist.",
+    path: "/auth/vk/callback",
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
+
   const nav = useNavigate();
   const [msg, setMsg] = useState("Авторизация через VK ID...");
 

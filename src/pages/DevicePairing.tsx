@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { approveDevicePairingSession } from "../lib/devicePairing";
 import { getCurrentUser, hasSession } from "../lib/auth";
 import { storePostLoginRedirect } from "../lib/authRedirect";
+import { usePageSeo } from "../lib/seo";
 
 export default function DevicePairing() {
   const nav = useNavigate();
@@ -12,6 +13,14 @@ export default function DevicePairing() {
 
   const pairingToken =
     search.get("token") || params.pairingToken || "";
+
+  usePageSeo({
+    title: "Подтверждение станции — HealthAssist",
+    description: "Служебная страница подтверждения входа на планшете по QR-коду.",
+    path: location.pathname,
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
 
   useEffect(() => {
     if (!pairingToken) {

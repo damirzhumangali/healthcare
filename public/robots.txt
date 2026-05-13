@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# Sitemap (замени домен после покупки)
-# Sitemap: https://healthassist.kz/sitemap.xml
+Sitemap: https://healthcare-bmo.vercel.app/sitemap.xml

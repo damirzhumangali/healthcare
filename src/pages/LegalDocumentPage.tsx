@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { readStoredLocale, type AppLocale } from "../lib/locale";
+import { usePageSeo } from "../lib/seo";
 
 type LegalDocumentId = "privacy" | "terms" | "medical-disclaimer";
 
@@ -12,6 +13,8 @@ type LegalSection = {
 type LegalDocument = {
   title: string;
   meta: string;
+  seoDescription: string;
+  path: string;
   intro?: string;
   sections: LegalSection[];
   closing?: string;
@@ -45,6 +48,9 @@ const legalDocuments: Record<LegalDocumentId, LegalDocument> = {
   privacy: {
     title: "Политика конфиденциальности",
     meta: "HealthAssist | Версия 1.0 | Дата вступления в силу: 10 мая 2026 г.",
+    seoDescription:
+      "Политика конфиденциальности HealthAssist: как сервис обрабатывает, хранит и защищает персональные и медицинские данные пользователей.",
+    path: "/privacy",
     sections: [
       {
         title: "1. Общие положения",
@@ -128,6 +134,9 @@ const legalDocuments: Record<LegalDocumentId, LegalDocument> = {
   terms: {
     title: "Пользовательское соглашение",
     meta: "HealthAssist | Версия 1.0 | Дата вступления в силу: 10 мая 2026 г.",
+    seoDescription:
+      "Пользовательское соглашение HealthAssist: правила использования платформы, права и обязанности пользователей и сервиса.",
+    path: "/terms",
     sections: [
       {
         title: "1. Предмет соглашения",
@@ -225,6 +234,9 @@ const legalDocuments: Record<LegalDocumentId, LegalDocument> = {
   "medical-disclaimer": {
     title: "Отказ от медицинской ответственности",
     meta: "HealthAssist | Версия 1.0 | Дата вступления в силу: 10 мая 2026 г.",
+    seoDescription:
+      "Медицинский дисклеймер HealthAssist: сервис не заменяет консультацию врача и не предназначен для экстренной помощи.",
+    path: "/medical-disclaimer",
     intro: "Пожалуйста, внимательно прочитайте настоящий документ перед использованием платформы HealthAssist.",
     sections: [
       {
@@ -292,6 +304,14 @@ export default function LegalDocumentPage({ documentId }: { documentId: LegalDoc
   const locale = readStoredLocale();
   const chrome = chromeCopy[locale as AppLocale];
   const document = legalDocuments[documentId];
+
+  usePageSeo({
+    title: `${document.title} — HealthAssist`,
+    description: document.seoDescription,
+    path: document.path,
+    locale,
+    ogType: "article",
+  });
 
   return (
     <div className="min-h-screen bg-[#02050c] text-slate-100">

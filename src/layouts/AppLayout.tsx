@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Moon, Sun } from "lucide-react";
 import Button from "../components/Button";
 import { getCurrentUser, logout } from "../lib/authStore";
@@ -9,6 +9,7 @@ import {
   type AppTheme,
   type Locale,
 } from "../lib/appPreferences";
+import { usePageSeo } from "../lib/seo";
 
 const copy = {
   ru: {
@@ -59,6 +60,7 @@ function TelegramIcon({ className = "" }: { className?: string }) {
 
 export default function AppLayout() {
   const nav = useNavigate();
+  const location = useLocation();
   const user = getCurrentUser();
   const [locale, setLocale] = useState<Locale>(() => {
     const value = window.localStorage.getItem("ha_locale");
@@ -87,6 +89,32 @@ export default function AppLayout() {
     [locale, setLocale, theme, setTheme]
   );
   const t = copy[locale];
+  const seoTitle =
+    location.pathname.includes("/measurements/")
+      ? locale === "kk"
+        ? "Өлшеу деректері — HealthAssist"
+        : locale === "en"
+          ? "Measurement details — HealthAssist"
+          : "Детали измерения — HealthAssist"
+      : locale === "kk"
+        ? "Науқас кабинеті — HealthAssist"
+        : locale === "en"
+          ? "Patient dashboard — HealthAssist"
+          : "Кабинет пациента — HealthAssist";
+  const seoDescription =
+    locale === "kk"
+      ? "HealthAssist ішіндегі пациентке арналған жеке, индекстелмейтін аймақ."
+      : locale === "en"
+        ? "Private, non-indexed patient area inside HealthAssist."
+        : "Приватная, неиндексируемая зона пациента внутри HealthAssist.";
+
+  usePageSeo({
+    title: seoTitle,
+    description: seoDescription,
+    path: location.pathname,
+    locale,
+    robots: "noindex, nofollow",
+  });
 
   if (isAdminAccount(user)) {
     return <Navigate to="/admin" replace />;

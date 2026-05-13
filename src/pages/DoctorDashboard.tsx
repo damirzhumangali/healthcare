@@ -10,6 +10,7 @@ import {
   type AppointmentStatus,
 } from "../lib/apiAppointments";
 import { hasSession } from "../lib/auth";
+import { usePageSeo } from "../lib/seo";
 
 type StoredUser = {
   id?: string;
@@ -54,6 +55,14 @@ function statusClass(status: AppointmentStatus) {
 }
 
 export default function DoctorDashboard() {
+  usePageSeo({
+    title: "Кабинет врача — HealthAssist",
+    description: "Служебный кабинет врача в системе HealthAssist.",
+    path: "/doctor",
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
+
   const user = useMemo(() => readCurrentUser(), []);
   const role = user?.role;
   const allowed = role === "doctor" || role === "admin";

@@ -12,6 +12,7 @@ import {
   type DeviceSessionState,
 } from "../lib/devicePairing";
 import { getCurrentUser, hasSession, logout } from "../lib/auth";
+import { usePageSeo } from "../lib/seo";
 
 type Locale = "ru" | "kk" | "en";
 
@@ -242,6 +243,20 @@ export default function ScanDevice() {
   });
 
   const t = copy[locale];
+  const seoCopy = {
+    ru: {
+      title: `Станция измерений ${deviceId} — HealthAssist`,
+      description: "Служебная QR-станция HealthAssist для привязки пациента и сбора измерений.",
+    },
+    kk: {
+      title: `${deviceId} өлшеу станциясы — HealthAssist`,
+      description: "Пациентті байланыстыру мен өлшеулерді жинауға арналған қызметтік QR-станция.",
+    },
+    en: {
+      title: `Measurement station ${deviceId} — HealthAssist`,
+      description: "Internal HealthAssist QR station used for patient pairing and measurements.",
+    },
+  } as const;
 
   const [authed, setAuthed] = useState(() => hasSession());
   const [pairing, setPairing] = useState<DevicePairingSession | null>(null);
@@ -269,6 +284,15 @@ export default function ScanDevice() {
     "HealthAssist";
   const pairUrl = pairing?.pairingUrl ?? "";
   const latestMeasurement = deviceSession?.measurements[0] ?? null;
+  const seo = seoCopy[locale];
+
+  usePageSeo({
+    title: seo.title,
+    description: seo.description,
+    path: `/scan/${deviceId}`,
+    locale,
+    robots: "noindex, nofollow",
+  });
 
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);

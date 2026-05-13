@@ -7,6 +7,7 @@ import Input from "../components/Input";
 import { getGoogleAuthUrl } from "../lib/apiAuth";
 import { login } from "../lib/authStore";
 import { resolvePostLoginRedirect, storePostLoginRedirect } from "../lib/authRedirect";
+import { usePageSeo } from "../lib/seo";
 import { isVkAuthEnabled, startVkLogin } from "../lib/vkAuth";
 
 type Locale = "ru" | "kk" | "en";
@@ -112,6 +113,20 @@ export default function Login() {
   });
 
   const t = copy[locale];
+  const seoCopy = {
+    ru: {
+      title: "Вход в HealthAssist",
+      description: "Безопасный вход в HealthAssist для пациентов, врачей и администраторов клиники.",
+    },
+    kk: {
+      title: "HealthAssist жүйесіне кіру",
+      description: "Пациенттерге, дәрігерлерге және клиника әкімшілеріне арналған қауіпсіз кіру беті.",
+    },
+    en: {
+      title: "Sign in to HealthAssist",
+      description: "Secure sign-in to HealthAssist for patients, doctors, and clinic administrators.",
+    },
+  } as const;
   const subtitle = allowLocalCredentials
     ? t.subtitle
     : locale === "kk"
@@ -123,6 +138,15 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const seo = seoCopy[locale];
+
+  usePageSeo({
+    title: seo.title,
+    description: seo.description,
+    path: "/login",
+    locale,
+    robots: "noindex, nofollow",
+  });
 
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);

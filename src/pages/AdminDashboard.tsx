@@ -37,6 +37,7 @@ import { isAdminAccount } from "../lib/adminAccess";
 import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
 import { getToken, hasSession, setCurrentUser, setToken } from "../lib/auth";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
+import { usePageSeo } from "../lib/seo";
 
 type StoredUser = {
   id?: string;
@@ -436,6 +437,14 @@ function appointmentCountLabel(locale: Locale, count: number) {
 }
 
 export default function AdminDashboard() {
+  usePageSeo({
+    title: "Админ-панель — HealthAssist",
+    description: "Служебная административная панель HealthAssist.",
+    path: "/admin",
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
+
   const nav = useNavigate();
   const user = useMemo(() => readCurrentUser(), []);
   const allowed = isAdminAccount(user) || isLocalDemoHost();

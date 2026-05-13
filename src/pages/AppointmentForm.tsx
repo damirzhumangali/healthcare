@@ -8,6 +8,7 @@ import { createAppointment, DOCTORS, fetchDoctors, type DoctorOption } from "../
 import { isAdminAccount } from "../lib/adminAccess";
 import { getCurrentUser } from "../lib/authStore";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
+import { usePageSeo } from "../lib/seo";
 
 type Locale = AppLocale;
 
@@ -90,6 +91,29 @@ export default function AppointmentForm() {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const t = appointmentText[locale];
+  const seoCopy = {
+    ru: {
+      title: "Запись к врачу — HealthAssist",
+      description: "Служебная страница записи к врачу в личном кабинете HealthAssist.",
+    },
+    kk: {
+      title: "Дәрігерге жазылу — HealthAssist",
+      description: "HealthAssist жеке кабинетінде дәрігерге жазылуға арналған қызметтік бет.",
+    },
+    en: {
+      title: "Doctor appointment — HealthAssist",
+      description: "Internal HealthAssist page for booking a doctor appointment.",
+    },
+  } as const;
+  const seo = seoCopy[locale];
+
+  usePageSeo({
+    title: seo.title,
+    description: seo.description,
+    path: "/appointments/new",
+    locale,
+    robots: "noindex, nofollow",
+  });
 
   useEffect(() => {
     let cancelled = false;

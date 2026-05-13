@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, DoorOpen, DoorClosed, Loader2, Wifi, WifiOff } from "lucide-react";
 import { fetchServoState, sendServoCommand, type ServoDeviceState } from "../lib/apiAdmin";
 import { hasSession } from "../lib/auth";
+import { usePageSeo } from "../lib/seo";
 
 const DEVICE_ID = "aimar";
 
@@ -15,6 +16,14 @@ function formatTime(iso: string) {
 }
 
 export default function AimarControl() {
+  usePageSeo({
+    title: "Aimar Control — HealthAssist",
+    description: "Служебная страница управления модулем Aimar.",
+    path: "/admin/aimar",
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
+
   const nav = useNavigate();
   const [state, setState] = useState<ServoDeviceState | null>(null);
   const [sending, setSending] = useState<"open" | "close" | null>(null);

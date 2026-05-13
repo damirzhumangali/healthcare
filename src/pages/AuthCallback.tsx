@@ -6,8 +6,17 @@ import { consumePostLoginRedirect } from "../lib/authRedirect";
 import { setSession } from "../lib/auth";
 import { isAdminAccount } from "../lib/adminAccess";
 import { approveDevicePairingSession } from "../lib/devicePairing";
+import { usePageSeo } from "../lib/seo";
 
 export default function AuthCallback() {
+  usePageSeo({
+    title: "Авторизация Google — HealthAssist",
+    description: "Служебный callback для входа через Google в HealthAssist.",
+    path: "/auth/callback",
+    locale: "ru",
+    robots: "noindex, nofollow",
+  });
+
   const nav = useNavigate();
   const [msg, setMsg] = useState("Авторизация через Google...");
 

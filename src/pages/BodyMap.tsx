@@ -3,6 +3,7 @@ import { ArrowLeft, Brain, Moon, PersonStanding, Sparkles, Sun } from "lucide-re
 import { Link } from "react-router-dom";
 import Body3D from "../components/Body3D";
 import { API_URL } from "../lib/apiBase";
+import { usePageSeo } from "../lib/seo";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
@@ -202,6 +203,23 @@ export default function BodyMap() {
   });
 
   const t = copy[locale];
+  const seoCopy = {
+    ru: {
+      title: "3D карта тела и симптомов — HealthAssist",
+      description:
+        "Интерактивная 3D-карта тела HealthAssist помогает отметить боль, описать симптомы и получить базовую AI-подсказку по самочувствию.",
+    },
+    kk: {
+      title: "3D дене картасы және белгілер — HealthAssist",
+      description:
+        "HealthAssist интерактивті 3D дене картасы ауырған жерді белгілеуге, белгілерді сипаттауға және бастапқы AI-кеңес алуға көмектеседі.",
+    },
+    en: {
+      title: "3D body map and symptoms — HealthAssist",
+      description:
+        "The interactive HealthAssist 3D body map helps patients mark pain points, describe symptoms, and get basic AI guidance.",
+    },
+  } as const;
 
   const [selected, setSelected] = useState<BodyPartKey | null>(null);
   const [symptoms, setSymptoms] = useState("");
@@ -209,13 +227,20 @@ export default function BodyMap() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const seo = seoCopy[locale];
+
+  usePageSeo({
+    title: seo.title,
+    description: seo.description,
+    path: "/body",
+    locale,
+  });
 
   useEffect(() => {
     window.localStorage.setItem("ha_theme", theme);
   }, [theme]);
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);
-    document.documentElement.lang = locale === "kk" ? "kk" : locale;
   }, [locale]);
 
   const pageBg =
