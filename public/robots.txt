@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://healthcare-bmo.vercel.app/sitemap.xml
+Sitemap: https://healthcare.kz/sitemap.xml

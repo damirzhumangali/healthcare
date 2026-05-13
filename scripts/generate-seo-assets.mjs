@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const defaultPublicUrl = "https://healthcare-bmo.vercel.app";
+const defaultPublicUrl = "https://healthcare.kz";
 const publicUrl = normalizeBaseUrl(process.env.VITE_PUBLIC_APP_URL || defaultPublicUrl);
 const publicDir = path.resolve(process.cwd(), "public");
 const buildDate = new Date().toISOString();

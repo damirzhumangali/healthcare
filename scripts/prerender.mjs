@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 const root = process.cwd();
 const distDir = path.join(root, "dist");
 const ssrDir = path.join(root, "dist-ssr");
-const publicUrl = normalizeBaseUrl(process.env.VITE_PUBLIC_APP_URL || "https://healthcare-bmo.vercel.app");
+const publicUrl = normalizeBaseUrl(process.env.VITE_PUBLIC_APP_URL || "https://healthcare.kz");
 
 function normalizeBaseUrl(value) {
   return value.trim().replace(/\/+$/, "");
