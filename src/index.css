@@ -1121,14 +1121,14 @@ button, input{font:inherit}
 
   /* ── compact mobile layout ── */
   .container{
-    padding: 14px 12px 28px;
+    padding: 12px 10px 24px;
   }
   .card{
-    padding: 16px;
+    padding: 15px;
     border-radius: 16px;
   }
   .stack{
-    gap: 10px;
+    gap: 9px;
   }
   .h1{font-size: 22px}
   .h2{font-size: 15px}
@@ -1138,28 +1138,92 @@ button, input{font:inherit}
     border-radius: 10px;
   }
   .dashboard-layout{
-    gap: 16px;
+    gap: 12px;
+  }
+  .dashboard-page{
+    padding-top: 10px;
+  }
+  .dashboard-hero,
+  .dashboard-sidebar,
+  .dashboard-main{
+    width: min(100%, 22.75rem);
+    margin-inline: auto;
   }
   .patient-hero{
-    padding:20px 18px;
+    gap: 14px;
+    padding:16px 14px;
+    border-radius:20px;
+  }
+  .patient-hero__eyebrow{
+    margin-bottom:10px;
+    font-size:11px;
+    letter-spacing:.18em;
   }
   .patient-hero__title{
-    font-size:clamp(2rem, 1.75rem + 1.5vw, 2.45rem);
+    font-size:clamp(1.9rem, 1.68rem + 1vw, 2.2rem);
   }
   .patient-hero__subtitle{
-    font-size:15px;
+    margin-top:10px;
+    font-size:14px;
+    line-height:1.48;
   }
-  .patient-hero__stats,
+  .patient-account{
+    margin-top:14px;
+    padding:8px 12px;
+    border-radius:14px;
+    font-size:13px;
+  }
+  .patient-hero__stats{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:8px;
+  }
+  .patient-hero__stat{
+    padding:10px;
+    border-radius:14px;
+  }
+  .patient-hero__stat-label{
+    font-size:9px;
+    letter-spacing:.12em;
+  }
+  .patient-hero__stat-value{
+    font-size:22px;
+  }
+  .patient-hero__panel{
+    padding:14px;
+    border-radius:18px;
+  }
+  .patient-hero__panel-top{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .patient-hero__panel-title{
+    font-size:18px;
+  }
   .patient-hero__panel-grid{
     grid-template-columns:1fr;
+    gap:10px;
+    margin-top:12px;
   }
-  .patient-hero__stat,
   .patient-hero__mini{
     min-height:auto;
+    padding:12px 13px;
+    border-radius:16px;
+  }
+  .patient-hero__mini-label{
+    font-size:10px;
+  }
+  .patient-hero__mini-value{
+    font-size:16px;
+    line-height:1.3;
+  }
+  .patient-hero__mini-meta{
+    font-size:12px;
   }
   .dashboard-actions__button{
-    min-height:56px;
-    font-size:16px;
+    min-height:52px;
+    font-size:15px;
+    border-radius:14px;
   }
   .auth-actions{grid-template-columns:1fr}
   .patient-hero,
