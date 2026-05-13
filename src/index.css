@@ -2372,8 +2372,9 @@ button, input{font:inherit}
   position:relative;
   z-index:1;
   background:
-    radial-gradient(900px 700px at 10% 30%, rgba(79,140,255,.10), transparent 60%),
-    radial-gradient(600px 500px at 30% 80%, rgba(96,220,165,.07), transparent 55%),
+    radial-gradient(1200px 700px at 15% 0%, var(--bgA), transparent 60%),
+    radial-gradient(900px 500px at 90% 20%, var(--bgB), transparent 55%),
+    radial-gradient(800px 480px at 60% 100%, var(--bgC), transparent 55%),
     var(--bg);
 }
 .nf__inner{
