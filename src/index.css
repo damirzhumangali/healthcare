@@ -58,7 +58,7 @@ button, input{font:inherit}
 ::selection{background: rgba(79,140,255,.35)}
 
 .container{
-  max-width: 1360px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 28px 24px 60px;
 }
@@ -633,7 +633,7 @@ button, input{font:inherit}
 }
 
 /* Tablet: 720–1179px — sidebar becomes a 2-col grid */
-@media (min-width: 720px) and (max-width: 1179px){
+@media (min-width: 720px) and (max-width: 1279px){
   .dashboard-layout{ gap:18px }
   .dashboard-sidebar{
     display:grid;
@@ -646,12 +646,12 @@ button, input{font:inherit}
 }
 
 /* Desktop: 1180px+ */
-@media (min-width: 1180px){
+@media (min-width: 1280px){
   .dashboard-layout{
     display:grid;
-    grid-template-columns: 400px minmax(0, 1fr);
+    grid-template-columns: 390px minmax(0, 1fr);
     align-items: start;
-    gap:22px;
+    gap:24px;
   }
   .dashboard-hero{
     grid-column: 1 / -1;
@@ -659,25 +659,30 @@ button, input{font:inherit}
   .dashboard-sidebar{
     display:flex;
     flex-direction:column;
-    gap:18px;
+    gap:20px;
     position:sticky;
-    top:80px;
+    top:88px;
   }
   .dashboard-main{
     display:flex;
     flex-direction:column;
-    gap:18px;
+    gap:20px;
   }
   .card{
     padding:26px;
     border-radius:22px;
   }
   .patient-hero{
-    padding: 32px 36px;
+    padding: 34px 40px;
+    min-height: 210px;
     background:
       linear-gradient(135deg, rgba(79,140,255,.10), rgba(96,220,165,.07));
     border: 1px solid rgba(79,140,255,.18);
     border-radius:24px;
+  }
+  .patient-account{
+    padding:9px 14px;
+    font-size:14px;
   }
   .metric__value{ font-size:26px }
 }
