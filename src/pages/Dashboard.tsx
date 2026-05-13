@@ -35,6 +35,15 @@ const copy = {
     title: "Кабинет пациента",
     subtitle: "Записывайтесь к врачу, следите за талоном и храните историю измерений.",
     hello: "Аккаунт",
+    heroAppointments: "Записей",
+    heroMeasurements: "Измерений",
+    heroTicket: "Талон",
+    heroSnapshot: "Состояние кабинета",
+    heroQueueMissing: "Талон пока не получен",
+    heroUpcomingVisit: "Ближайшая запись",
+    heroLatestMeasurement: "Последнее измерение",
+    heroNoAppointments: "Записей пока нет",
+    heroNoMeasurements: "Данных измерений пока нет",
     quickActions: "Быстрые действия",
     quickActionsHint: "Выберите, что нужно сделать сейчас.",
     bookDoctor: "Записаться к врачу",
@@ -79,6 +88,15 @@ const copy = {
     title: "Науқас кабинеты",
     subtitle: "Дәрігерге жазылып, талонды бақылап, өлшеулер тарихын сақтаңыз.",
     hello: "Аккаунт",
+    heroAppointments: "Жазылулар",
+    heroMeasurements: "Өлшеулер",
+    heroTicket: "Талон",
+    heroSnapshot: "Кабинет күйі",
+    heroQueueMissing: "Талон әлі алынбаған",
+    heroUpcomingVisit: "Жақын жазылу",
+    heroLatestMeasurement: "Соңғы өлшеу",
+    heroNoAppointments: "Жазылулар әзірге жоқ",
+    heroNoMeasurements: "Өлшеу деректері әзірге жоқ",
     quickActions: "Жылдам әрекеттер",
     quickActionsHint: "Қазір не істеу керегін таңдаңыз.",
     bookDoctor: "Дәрігерге жазылу",
@@ -123,6 +141,15 @@ const copy = {
     title: "Patient Dashboard",
     subtitle: "Book visits, track your clinic ticket, and keep measurement history.",
     hello: "Account",
+    heroAppointments: "Appointments",
+    heroMeasurements: "Measurements",
+    heroTicket: "Ticket",
+    heroSnapshot: "Dashboard status",
+    heroQueueMissing: "No active ticket yet",
+    heroUpcomingVisit: "Closest visit",
+    heroLatestMeasurement: "Latest reading",
+    heroNoAppointments: "No appointments yet",
+    heroNoMeasurements: "No measurements yet",
     quickActions: "Quick Actions",
     quickActionsHint: "Choose what you need to do now.",
     bookDoctor: "Book a Doctor",
@@ -212,6 +239,8 @@ export default function Dashboard() {
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
 
   const t = copy[locale];
+  const latestMeasurement = items[0] ?? null;
+  const nextAppointment = appointments[0] ?? null;
 
   const [items, setItems] = useState<MeasurementItem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -276,19 +305,87 @@ export default function Dashboard() {
   }, [load, loadAppointments, refreshTicket]);
 
   return (
-    <div className="container">
+    <div className="container dashboard-page">
       <div className="dashboard-layout">
 
         {/* Hero — full width */}
         <div className="dashboard-hero">
           <div className="patient-hero">
-            <div>
-              <div className="kicker" style={{ marginBottom: 10 }}>HealthAssist</div>
-              <h1 className="h1" style={{ marginBottom: 6 }}>{t.title}</h1>
-              <p className="muted" style={{ margin: 0, maxWidth: 560 }}>{t.subtitle}</p>
+            <div className="patient-hero__copy">
+              <div className="patient-hero__eyebrow">HealthAssist</div>
+              <h1 className="patient-hero__title">{t.title}</h1>
+              <p className="patient-hero__subtitle">{t.subtitle}</p>
               <div className="patient-account">
                 <span>{t.hello}</span>
                 <strong>{displayName}</strong>
+              </div>
+            </div>
+
+            <div className="patient-hero__aside">
+              <div className="patient-hero__stats">
+                <div className="patient-hero__stat">
+                  <span className="patient-hero__stat-label">{t.heroAppointments}</span>
+                  <strong className="patient-hero__stat-value">
+                    {appointmentsLoading ? "…" : appointments.length}
+                  </strong>
+                </div>
+                <div className="patient-hero__stat">
+                  <span className="patient-hero__stat-label">{t.heroMeasurements}</span>
+                  <strong className="patient-hero__stat-value">
+                    {loading ? "…" : items.length}
+                  </strong>
+                </div>
+                <div className="patient-hero__stat">
+                  <span className="patient-hero__stat-label">{t.heroTicket}</span>
+                  <strong className="patient-hero__stat-value">
+                    {ticket ? `A-${ticket.ticketNumber}` : "—"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="patient-hero__panel">
+                <div className="patient-hero__panel-top">
+                  <div>
+                    <div className="patient-hero__panel-label">{t.heroSnapshot}</div>
+                    <div className="patient-hero__panel-title">
+                      {ticket
+                        ? ticket.status === "invited"
+                          ? t.invited
+                          : ticket.status === "waiting"
+                            ? t.waitForCall
+                            : t.ticketMissed
+                        : t.heroQueueMissing}
+                    </div>
+                  </div>
+                  {ticket ? (
+                    <span className={`badge ${ticket.status === "invited" ? "badge--ok" : ticket.status === "waiting" ? "badge--warn" : "badge--danger"}`}>
+                      <span className="badge__dot" />
+                      {ticket.status === "invited" ? t.invited : ticket.status === "waiting" ? t.waitForCall : t.ticketMissed}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="patient-hero__panel-grid">
+                  <div className="patient-hero__mini">
+                    <span className="patient-hero__mini-label">{t.heroUpcomingVisit}</span>
+                    <strong className="patient-hero__mini-value">
+                      {nextAppointment ? `${nextAppointment.date} • ${nextAppointment.time}` : "—"}
+                    </strong>
+                    <span className="patient-hero__mini-meta">
+                      {nextAppointment ? doctorLabel(nextAppointment) : t.heroNoAppointments}
+                    </span>
+                  </div>
+
+                  <div className="patient-hero__mini">
+                    <span className="patient-hero__mini-label">{t.heroLatestMeasurement}</span>
+                    <strong className="patient-hero__mini-value">
+                      {latestMeasurement ? `${latestMeasurement.tempC}°C / ${latestMeasurement.hr}` : "—"}
+                    </strong>
+                    <span className="patient-hero__mini-meta">
+                      {latestMeasurement ? fmtDate(latestMeasurement.createdAt) : t.heroNoMeasurements}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -303,14 +400,15 @@ export default function Dashboard() {
                 <h2 className="h2" style={{ margin: 0 }}>{t.quickActions}</h2>
                 <p className="muted" style={{ margin: "6px 0 0" }}>{t.quickActionsHint}</p>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div className="dashboard-actions">
                 {isAdmin ? (
-                  <Button onClick={() => nav("/admin")}>{t.adminPanel}</Button>
+                  <Button className="dashboard-actions__button" onClick={() => nav("/admin")}>{t.adminPanel}</Button>
                 ) : null}
-                <Button variant="ghost" onClick={() => nav("/appointments/new")}>
+                <Button className="dashboard-actions__button" variant="ghost" onClick={() => nav("/appointments/new")}>
                   {t.bookDoctor}
                 </Button>
                 <Button
+                  className="dashboard-actions__button"
                   onClick={async () => {
                     setErr(null);
                     try {
