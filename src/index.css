@@ -1146,8 +1146,15 @@ button, input{font:inherit}
   .dashboard-hero,
   .dashboard-sidebar,
   .dashboard-main{
-    width: min(100%, 22.75rem);
+    width: min(100%, 21.9rem);
     margin-inline: auto;
+  }
+  .dashboard-sidebar > .card,
+  .dashboard-main > .card{
+    width: min(100%, 21.4rem);
+    margin-inline: auto;
+    padding: 13px 12px;
+    border-radius: 18px;
   }
   .patient-hero{
     gap: 14px;
@@ -1220,9 +1227,37 @@ button, input{font:inherit}
   .patient-hero__mini-meta{
     font-size:12px;
   }
+  .metric{
+    padding: 10px 11px;
+    border-radius: 14px;
+  }
+  .metric__label{
+    font-size: 10px;
+    letter-spacing: .1em;
+  }
+  .metric__value{
+    margin-top: 4px;
+    font-size: 18px;
+  }
+  .dashboard-list-item{
+    padding: 12px 13px;
+    border-radius: 15px;
+  }
+  .dashboard-measure-row{
+    gap: 8px 12px;
+    font-size: 13px;
+  }
+  .dashboard-measure-row .muted{
+    font-size: 11px;
+  }
+  .badge{
+    gap: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
   .dashboard-actions__button{
-    min-height:52px;
-    font-size:15px;
+    min-height:48px;
+    font-size:14px;
     border-radius:14px;
   }
   .auth-actions{grid-template-columns:1fr}
