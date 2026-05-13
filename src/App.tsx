@@ -33,6 +33,7 @@ import RequireAuth from "./lib/RequireAuth";
 import { hasSession, logout, requiresServerSessionValidation, syncSessionFromServer } from "./lib/auth";
 import { isAdminAccount } from "./lib/adminAccess";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "./lib/locale";
+import { getPublicSeo } from "./lib/publicSeo";
 import { usePageSeo } from "./lib/seo";
 
 type Locale = AppLocale;
@@ -280,6 +281,10 @@ const text = {
 } as const;
 
 function readStoredUser(): StoredUser | null {
+  if (typeof localStorage === "undefined") {
+    return null;
+  }
+
   try {
     const raw = localStorage.getItem("healthassist_current_user");
     return raw ? (JSON.parse(raw) as StoredUser) : null;
@@ -293,29 +298,12 @@ function Landing() {
   const [theme, setTheme] = useState<Theme>("dark");
   const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
   const [activeMobileSection, setActiveMobileSection] = useState(() =>
-    window.location.hash.replace("#", "") || "features"
+    typeof window === "undefined" ? "features" : window.location.hash.replace("#", "") || "features"
   );
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [isAuthed, setIsAuthed] = useState(() => hasSession());
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(() => readStoredUser());
   const t = text[locale];
-  const landingSeo = {
-    ru: {
-      title: "HealthAssist — AI-платформа для пациентов и клиник Казахстана",
-      description:
-        "HealthAssist помогает пациентам проверять симптомы, находить клиники, использовать 3D-карту тела и подключаться к QR-станциям для измерения температуры и пульса.",
-    },
-    kk: {
-      title: "HealthAssist — Қазақстанға арналған AI-медициналық платформа",
-      description:
-        "HealthAssist пациенттерге белгілерді тексеруге, емханаларды табуға, 3D дене картасын қолдануға және QR-станциялар арқылы өлшеулер жасауға көмектеседі.",
-    },
-    en: {
-      title: "HealthAssist — AI healthcare platform for patients and clinics",
-      description:
-        "HealthAssist helps patients check symptoms, find clinics, use a 3D body map, and connect to QR-based stations for temperature and pulse measurements.",
-    },
-  } as const;
   const currentUserName = currentUser?.name || currentUser?.email || "";
   const isAdminUser = isAdminAccount(currentUser);
   const mobileNavItems = [
@@ -385,7 +373,7 @@ function Landing() {
     theme === "dark" ? "bg-slate-900/70 border-white/10" : "bg-white border-slate-200";
   const mutedClass = theme === "dark" ? "text-slate-300" : "text-slate-600";
   const footerLabelClass = theme === "dark" ? "text-slate-100" : "text-slate-900";
-  const seo = landingSeo[locale];
+  const seo = getPublicSeo("/", locale);
 
   usePageSeo({
     title: seo.title,

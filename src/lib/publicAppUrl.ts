@@ -9,6 +9,10 @@ export function getPublicAppUrl() {
     return normalizeBaseUrl(envPublicAppUrl);
   }
 
+  if (typeof window === "undefined") {
+    return "http://localhost:4173";
+  }
+
   return window.location.origin;
 }
 

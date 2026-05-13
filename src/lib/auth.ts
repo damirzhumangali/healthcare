@@ -4,6 +4,10 @@ const TOKEN_KEY = "healthassist_token";
 const CURRENT_USER_KEY = "healthassist_current_user";
 const IS_PRODUCTION = import.meta.env.PROD;
 
+function canUseLocalStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
 export type SessionUser = {
   id?: string;
   email?: string;
@@ -13,18 +17,34 @@ export type SessionUser = {
 };
 
 export function getToken(): string | null {
+  if (!canUseLocalStorage()) {
+    return null;
+  }
+
   return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token: string) {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
   localStorage.setItem(TOKEN_KEY, token);
 }
 
 export function clearToken() {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
   localStorage.removeItem(TOKEN_KEY);
 }
 
 export function getCurrentUser(): SessionUser | null {
+  if (!canUseLocalStorage()) {
+    return null;
+  }
+
   try {
     const raw = localStorage.getItem(CURRENT_USER_KEY);
     return raw ? (JSON.parse(raw) as SessionUser) : null;
@@ -34,6 +54,10 @@ export function getCurrentUser(): SessionUser | null {
 }
 
 export function setCurrentUser(user: SessionUser) {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
   localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
 }
 
@@ -69,14 +93,16 @@ export function setSession(input: {
 
   if (input.user) {
     setCurrentUser(input.user);
-  } else {
+  } else if (canUseLocalStorage()) {
     localStorage.removeItem(CURRENT_USER_KEY);
   }
 }
 
 export function clearStoredSession() {
   clearToken();
-  localStorage.removeItem(CURRENT_USER_KEY);
+  if (canUseLocalStorage()) {
+    localStorage.removeItem(CURRENT_USER_KEY);
+  }
 }
 
 export async function fetchSessionUser(): Promise<SessionUser | null> {

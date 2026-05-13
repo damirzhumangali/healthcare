@@ -2,15 +2,19 @@ import { API_URL } from "./apiBase";
 
 const VK_APP_ID = Number(import.meta.env.VITE_VK_APP_ID || 0);
 const VK_SCOPE = (import.meta.env.VITE_VK_SCOPE as string | undefined)?.trim() || "email";
-const VK_REDIRECT_URL =
-  (import.meta.env.VITE_VK_REDIRECT_URL as string | undefined)?.trim() ||
-  `${window.location.origin}/auth/vk/callback`;
 
 const STATE_KEY = "healthassist_vk_state";
 const CODE_VERIFIER_KEY = "healthassist_vk_code_verifier";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
+
+function getVkRedirectUrl() {
+  const configured = (import.meta.env.VITE_VK_REDIRECT_URL as string | undefined)?.trim();
+  if (configured) return configured;
+  if (typeof window === "undefined") return "http://localhost:4173/auth/vk/callback";
+  return `${window.location.origin}/auth/vk/callback`;
+}
 
 function randomToken(size = 48) {
   const bytes = new Uint8Array(size);
@@ -54,7 +58,7 @@ function initVkConfig(
 
   VKID.Config.init({
     app: VK_APP_ID,
-    redirectUrl: VK_REDIRECT_URL,
+    redirectUrl: getVkRedirectUrl(),
     state,
     codeVerifier,
     scope: VK_SCOPE,
