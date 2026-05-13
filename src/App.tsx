@@ -423,7 +423,7 @@ function Landing() {
   );
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${rootClass}`}>
+    <div className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${rootClass}`}>
       <style>{`html { scroll-behavior: smooth; }`}</style>
 
       <header
@@ -433,7 +433,7 @@ function Landing() {
             : "border-slate-200 bg-white/80"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-2 py-2.5 md:px-4 md:py-3">
+        <div className="mx-auto max-w-7xl px-2 py-2.5 md:px-3 md:py-3 xl:px-4">
           <div className="flex items-center justify-between gap-1.5 md:gap-4">
             <a
               href="#top"
@@ -445,10 +445,10 @@ function Landing() {
                 alt="HealthAssist"
                 className="h-7 w-7 rounded-xl object-cover md:h-9 md:w-9"
               />
-              <span className="hidden font-semibold md:inline">HealthAssist</span>
+              <span className="hidden font-semibold sm:inline">HealthAssist</span>
             </a>
 
-            <nav className="hidden md:flex items-center gap-6 text-sm">
+            <nav className="hidden xl:flex items-center gap-4 text-sm 2xl:gap-6">
               <a href="#features">{t.navFeatures}</a>
               <a href="#story">{t.navStory}</a>
               <a href="#faq">{t.navFaq}</a>
@@ -459,7 +459,7 @@ function Landing() {
               </Link>
             </nav>
 
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-2">
               <div className="flex rounded-full border border-white/20 overflow-hidden">
                 {APP_LOCALES.map((l) => (
                   <button
@@ -519,9 +519,9 @@ function Landing() {
               )}
             </div>
 
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 overflow-hidden md:hidden">
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden xl:hidden">
               <div
-                className={`flex h-7 w-[84px] shrink-0 rounded-full border overflow-hidden ${
+                className={`flex h-8 w-[96px] shrink-0 rounded-full border overflow-hidden md:h-9 md:w-[118px] ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
               >
@@ -529,7 +529,7 @@ function Landing() {
                   <button
                     key={l}
                     onClick={() => handleLocaleChange(l)}
-                    className={`flex-1 min-w-0 px-0.5 py-1 text-[9px] font-medium ${
+                    className={`flex-1 min-w-0 px-0.5 py-1 text-[10px] font-medium md:text-xs ${
                       locale === l
                         ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
                         : ""
@@ -544,7 +544,7 @@ function Landing() {
                 <>
                   <button
                     onClick={openUserArea}
-                    className="inline-flex h-[30px] min-w-[62px] items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2 text-[10px] font-semibold text-slate-950"
+                    className="inline-flex h-8 min-w-[70px] items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2.5 text-[11px] font-semibold text-slate-950 md:h-9 md:min-w-[86px] md:px-3 md:text-xs"
                   >
                     {isAdminUser ? t.navAdminMobile : t.navCabinetMobile}
                   </button>
@@ -554,20 +554,20 @@ function Landing() {
                       setIsAuthed(false);
                       setCurrentUser(null);
                     }}
-                    className={`inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border ${
+                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border md:h-9 md:w-9 ${
                       theme === "dark" ? "border-white/20" : "border-slate-300"
                     }`}
                     aria-label={t.navLogout}
                     title={t.navLogout}
                   >
-                    <LogOut className="h-3.5 w-3.5" />
+                    <LogOut className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </button>
                 </>
               ) : (
                 <>
                   <Link
                     to="/login"
-                    className="inline-flex h-7 w-[52px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-1 text-[9px] font-semibold text-slate-950"
+                    className="inline-flex h-8 min-w-[70px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2.5 text-[11px] font-semibold text-slate-950 md:h-9 md:min-w-[84px] md:px-3 md:text-xs"
                   >
                     {t.navLoginMobile}
                   </Link>
@@ -576,19 +576,19 @@ function Landing() {
 
               <button
                 onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
-                className={`landing-mobile-theme-toggle inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${
+                className={`landing-mobile-theme-toggle inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border md:h-9 md:w-9 ${
                   theme === "dark" ? "border-white/20" : "border-slate-300"
                 }`}
                 aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               >
-                {theme === "dark" ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+                {theme === "dark" ? <Sun className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <Moon className="h-3.5 w-3.5 md:h-4 md:w-4" />}
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main id="top" className={`${pageBackgroundClass} pb-24 md:pb-0`}>
+      <main id="top" className={`${pageBackgroundClass} pb-24 xl:pb-0`}>
         <CinematicHero
           kicker={t.heroKicker}
           lines={[t.heroStudioLine1, t.heroStudioLine2, t.heroStudioLine3]}
@@ -722,7 +722,7 @@ function Landing() {
       </main>
 
       <nav
-        className={`md:hidden fixed inset-x-3 bottom-3 z-50 rounded-[26px] border p-2 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl ${
+        className={`fixed bottom-3 left-1/2 z-50 w-[min(calc(100%-1.5rem),44rem)] -translate-x-1/2 rounded-[26px] border p-2 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl xl:hidden ${
           theme === "dark"
             ? "border-white/10 bg-slate-950/90"
             : "border-slate-200 bg-white/92"
@@ -771,7 +771,7 @@ function Landing() {
       </nav>
 
       <footer
-        className={`border-t py-8 pb-28 md:pb-8 ${pageBackgroundClass} ${
+        className={`border-t py-8 pb-28 xl:pb-8 ${pageBackgroundClass} ${
           theme === "dark" ? "border-white/10" : "border-slate-200"
         }`}
       >
