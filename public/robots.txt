@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap (замени домен после покупки)
+# Sitemap: https://healthassist.kz/sitemap.xml

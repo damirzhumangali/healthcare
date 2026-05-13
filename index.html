@@ -1,12 +1,65 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>healthassist</title>
-    <!-- Tailwind CSS via CDN so utility классы из React работают сразу -->
+
+    <!-- Primary SEO -->
+    <title>HealthAssist — Умная медицинская станция | Казахстан</title>
+    <meta name="description" content="HealthAssist — автоматическая медицинская станция измерений. Температура, пульс, SpO₂ через QR-код и смартфон. Для клиник и пациентов Казахстана." />
+    <meta name="keywords" content="медицинская станция, измерение пульса, температура тела, SpO2, здоровье, HealthAssist, AIMAR, Казахстан, денсаулық, өлшеу станциясы" />
+    <meta name="author" content="HealthAssist" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#0b0f14" />
+
+    <!-- Canonical (замени на свой домен после покупки) -->
+    <!-- <link rel="canonical" href="https://healthassist.kz" /> -->
+
+    <!-- Open Graph (соцсети: Telegram, WhatsApp, Facebook) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="HealthAssist — Умная медицинская станция" />
+    <meta property="og:description" content="Автоматическое измерение температуры и пульса через QR-станцию. Для клиник Казахстана." />
+    <meta property="og:image" content="/icon-192.png" />
+    <meta property="og:locale" content="ru_KZ" />
+    <meta property="og:locale:alternate" content="kk_KZ" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <!-- <meta property="og:url" content="https://healthassist.kz" /> -->
+    <meta property="og:site_name" content="HealthAssist" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="HealthAssist — Умная медицинская станция" />
+    <meta name="twitter:description" content="Автоматическое измерение температуры и пульса через QR-станцию." />
+    <meta name="twitter:image" content="/icon-192.png" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "HealthAssist",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Web",
+      "description": "Система автоматических медицинских измерений с QR-станцией для клиник и пациентов Казахстана.",
+      "inLanguage": ["ru", "kk", "en"],
+      "author": {
+        "@type": "Organization",
+        "name": "HealthAssist",
+        "areaServed": "KZ"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "KZT"
+      }
+    }
+    </script>
+
+    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
