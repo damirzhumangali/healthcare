@@ -213,7 +213,7 @@ const telemedCopy = {
     liveMetrics: "Данные в реальном времени",
     timeline: "Как это пройдет",
     vitalsHint:
-      "Пульс, температура, давление и SpO₂ уходят врачу автоматически, без ручного ввода со стороны пациента.",
+      "Температура и пульс уходят врачу автоматически, без ручного ввода со стороны пациента.",
     camera: "Камера врача",
     audio: "Микрофон и динамик",
     monitoring: "Мониторинг",
@@ -248,7 +248,7 @@ const telemedCopy = {
     liveMetrics: "Нақты уақыттағы деректер",
     timeline: "Қалай өтеді",
     vitalsHint:
-      "Пульс, температура, қысым және SpO₂ пациент ештеңе енгізбей-ақ дәрігерге автоматты түрде жіберіледі.",
+      "Температура мен пульс пациент ештеңе енгізбей-ақ дәрігерге автоматты түрде жіберіледі.",
     camera: "Дәрігер камерасы",
     audio: "Микрофон мен динамик",
     monitoring: "Мониторинг",
@@ -283,7 +283,7 @@ const telemedCopy = {
     liveMetrics: "Live vitals",
     timeline: "How it will work",
     vitalsHint:
-      "Pulse, temperature, blood pressure, and SpO₂ are sent to the doctor automatically without patient input.",
+      "Temperature and pulse are sent to the doctor automatically without patient input.",
     camera: "Doctor camera",
     audio: "Mic and speaker",
     monitoring: "Monitoring",
@@ -770,14 +770,6 @@ export default function Dashboard() {
                           <span>{t.pulse}</span>
                           <strong>{nextConsultation.vitals.pulseBpm}</strong>
                         </div>
-                        <div className="telemed-vital">
-                          <span>{t.pressure}</span>
-                          <strong>{nextConsultation.vitals.systolic}/{nextConsultation.vitals.diastolic}</strong>
-                        </div>
-                        <div className="telemed-vital">
-                          <span>{t.spo2}</span>
-                          <strong>{nextConsultation.vitals.spo2}%</strong>
-                        </div>
                       </div>
                       <p className="muted" style={{ margin: "12px 0 0", fontSize: 13 }}>{tele.vitalsHint}</p>
                     </div>
@@ -870,8 +862,6 @@ export default function Dashboard() {
                         <div className="dashboard-measure-row">
                           <span><b>{m.tempC}°C</b> <span className="muted">{t.temp}</span></span>
                           <span><b>{m.hr}</b> <span className="muted">{t.pulse}</span></span>
-                          <span><b>{m.systolic}/{m.diastolic}</b> <span className="muted">{t.pressure}</span></span>
-                          <span><b>{m.spo2}%</b> <span className="muted">{t.spo2}</span></span>
                         </div>
                       </div>
                     </Link>
