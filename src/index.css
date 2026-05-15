@@ -2927,3 +2927,427 @@ button, input{font:inherit}
   text-align:center;
   color:#9ca3af;
 }
+
+/* ── Jitsi overlay (doctor side) ─────────────────────────────────────── */
+.wc-jitsi-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9000;
+  background:#0a0c0a;
+  display:flex;
+  flex-direction:column;
+}
+.wc-jitsi-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 18px;
+  background:#111613;
+  border-bottom:1px solid rgba(74,222,128,.25);
+  font-size:14px;
+  color:#d1d5db;
+  font-weight:600;
+}
+.wc-jitsi-close{
+  display:flex;
+  align-items:center;
+  background:transparent;
+  border:none;
+  color:#9ca3af;
+  cursor:pointer;
+  padding:4px;
+  border-radius:6px;
+  transition:color .15s;
+}
+.wc-jitsi-close:hover{ color:#f87171 }
+
+/* ── Medication modal ─────────────────────────────────────────────────── */
+.wc-med-overlay{
+  position:fixed;
+  inset:0;
+  z-index:8000;
+  background:rgba(0,0,0,.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.wc-med-modal{
+  background:#181e2e;
+  border:1px solid rgba(251,191,36,.25);
+  border-radius:12px;
+  padding:24px;
+  width:100%;
+  max-width:700px;
+  max-height:80vh;
+  overflow-y:auto;
+}
+.wc-med-modal__head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+.wc-med-modal__head h3{
+  margin:0;
+  font-size:16px;
+  font-weight:700;
+  color:#f4f4ef;
+  flex:1;
+}
+.wc-med-row{
+  display:grid;
+  grid-template-columns:90px 1fr 100px 1fr 36px;
+  gap:8px;
+  margin-bottom:10px;
+  align-items:center;
+}
+.wc-med-row input{
+  background:#0f1117;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:6px;
+  padding:7px 10px;
+  color:#f4f4ef;
+  font-size:13px;
+}
+.wc-med-row button{
+  background:transparent;
+  border:1px solid rgba(248,113,113,.3);
+  border-radius:6px;
+  color:#f87171;
+  cursor:pointer;
+  padding:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ── Robot Terminal ───────────────────────────────────────────────────── */
+.rt{
+  min-height:100vh;
+  background:#050805;
+  color:#f4f4ef;
+  font-family:inherit;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+.rt--waiting{
+  gap:24px;
+  text-align:center;
+}
+.rt__brand{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  color:#60a5fa;
+}
+.rt__brand span{
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.rt__waiting-body{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+}
+.rt__waiting-body h1{
+  font-size:clamp(22px,4vw,36px);
+  font-weight:700;
+  margin:0;
+}
+.rt__waiting-body p{
+  font-size:16px;
+  color:#6b7280;
+  margin:0;
+}
+.rt__clock{
+  font-size:clamp(48px,8vw,80px);
+  font-weight:900;
+  color:#374151;
+  letter-spacing:.06em;
+  margin-top:12px;
+}
+.rt__spin{
+  animation:spin 1.4s linear infinite;
+  color:#3b82f6;
+}
+@keyframes spin{ to{ transform:rotate(360deg) } }
+
+.rt--done{
+  gap:18px;
+  text-align:center;
+}
+.rt--done h1{ font-size:32px;margin:0 }
+.rt--done p{ color:#9ca3af;margin:0 }
+
+/* Bedside waiting */
+.rt--bedside{
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:24px;
+  gap:20px;
+}
+.rt__topbar{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.rt__brand-sm{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-weight:900;
+  font-size:16px;
+  color:#60a5fa;
+  letter-spacing:.08em;
+}
+.rt__badge{
+  padding:4px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+.rt__badge--blue{
+  background:#1e3a8a;
+  color:#93c5fd;
+}
+.rt__patient-card{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  background:#101610;
+  border:1px solid rgba(96,165,250,.2);
+  border-radius:12px;
+  padding:20px 24px;
+}
+.rt__patient-card h2{
+  font-size:clamp(20px,3vw,32px);
+  margin:0 0 4px;
+}
+.rt__patient-card p{
+  color:#60a5fa;
+  margin:0;
+  font-size:15px;
+}
+.rt__info-row{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+  font-size:14px;
+  color:#9ca3af;
+  padding:12px 16px;
+  background:#0f1117;
+  border-radius:8px;
+}
+.rt__info-row strong{ color:#f4f4ef }
+.rt__waiting-call{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:16px 20px;
+  background:rgba(59,130,246,.08);
+  border:1px solid rgba(59,130,246,.2);
+  border-radius:10px;
+  color:#93c5fd;
+  font-size:15px;
+  font-weight:600;
+}
+.rt__pulse-icon{
+  animation:pulse-icon 1.5s ease-in-out infinite;
+  color:#60a5fa;
+}
+@keyframes pulse-icon{
+  0%,100%{ opacity:1;transform:scale(1) }
+  50%{ opacity:.5;transform:scale(1.15) }
+}
+
+/* Vitals bar */
+.rt-vitals{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+.rt-vital{
+  background:#101610;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;
+  padding:12px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  text-align:center;
+}
+.rt-vital__label{
+  font-size:11px;
+  color:#6b7280;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.rt-vital__value{
+  font-size:clamp(18px,2.5vw,28px);
+  font-weight:900;
+  color:#4ade80;
+}
+.rt-vital__value small{
+  font-size:.55em;
+  font-weight:400;
+  color:#9ca3af;
+}
+
+/* Live layout */
+.rt--live{
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:0;
+  background:#050805;
+}
+.rt__live-layout{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  height:100vh;
+}
+.rt__video-panel{
+  display:flex;
+  flex-direction:column;
+  background:#000;
+}
+.rt__video-topbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 16px;
+  background:#0a0c0a;
+  border-bottom:1px solid rgba(74,222,128,.2);
+  font-size:13px;
+  color:#d1d5db;
+  font-weight:600;
+  flex-shrink:0;
+}
+.rt__live-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#ef4444;
+  box-shadow:0 0 0 0 rgba(239,68,68,.4);
+  animation:live-blink 1.2s ease-in-out infinite;
+  flex-shrink:0;
+}
+@keyframes live-blink{
+  0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,.4) }
+  60%{ box-shadow:0 0 0 8px rgba(239,68,68,0) }
+}
+.rt__no-call{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  color:#374151;
+}
+
+/* Side panel */
+.rt__side-panel{
+  background:#0a0c0a;
+  border-left:1px solid rgba(255,255,255,.08);
+  padding:18px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  overflow-y:auto;
+}
+.rt__patient-mini{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.rt__patient-mini strong{ font-size:16px;color:#f4f4ef }
+.rt__patient-mini span{ font-size:12px;color:#6b7280 }
+.rt-meds__title{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:13px;
+  font-weight:700;
+  color:#fbbf24;
+  margin-bottom:10px;
+}
+.rt-meds__grid{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.rt-med-slot{
+  background:#111613;
+  border:1px solid rgba(251,191,36,.2);
+  border-radius:8px;
+  padding:10px 12px;
+}
+.rt-med-slot__label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#d97706;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.rt-med-slot__drug{
+  font-size:15px;
+  font-weight:700;
+  color:#f4f4ef;
+}
+.rt-med-slot__dosage{
+  font-size:13px;
+  color:#9ca3af;
+}
+.rt-med-slot__instr{
+  font-size:12px;
+  color:#6b7280;
+  margin-top:4px;
+  font-style:italic;
+}
+.rt__meds-toggle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(251,191,36,.1);
+  border:1px solid rgba(251,191,36,.3);
+  border-radius:8px;
+  color:#fbbf24;
+  padding:10px 14px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  width:100%;
+  text-align:left;
+  transition:background .15s;
+}
+.rt__meds-toggle:hover{ background:rgba(251,191,36,.18) }
+.rt__notes{
+  font-size:12px;
+  color:#6b7280;
+  border-top:1px solid rgba(255,255,255,.06);
+  padding-top:12px;
+}
+.rt__notes span{ font-weight:700;color:#9ca3af }
+.rt__notes p{ margin:4px 0 0 }
+
+@media (max-width:768px){
+  .rt__live-layout{
+    grid-template-columns:1fr;
+    grid-template-rows:1fr auto;
+  }
+  .rt-vitals{ grid-template-columns:repeat(2,1fr) }
+  .wc-med-row{
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:auto auto auto;
+  }
+}

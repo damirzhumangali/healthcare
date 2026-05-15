@@ -1,19 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   CalendarClock,
   ClipboardList,
   Cpu,
+  ExternalLink,
   House,
   LayoutDashboard,
   MessageSquare,
   MonitorSmartphone,
   PhoneCall,
+  Pill,
   Plus,
   Settings,
   Trash2,
   Users,
   Video,
+  X,
 } from "lucide-react";
 import { DOCTORS } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
@@ -26,8 +29,10 @@ import {
   deleteBedsideConsultation,
   listAllBedsideConsultations,
   updateBedsideConsultationStage,
+  updateMedication,
   type BedsideConsultationView,
   type ConsultationStage,
+  type MedicationSlot,
 } from "../lib/onlineConsultations";
 
 type StoredUser = { id?: string; email?: string; name?: string; role?: string };
@@ -90,6 +95,65 @@ function emptyForm(): WardFormState {
   };
 }
 
+function emptyMedSlot(): MedicationSlot {
+  return { compartment: "", drug: "", dosage: "", instruction: "" };
+}
+
+function JitsiPanel({ roomId, doctorName, onClose }: { roomId: string; doctorName: string; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const apiRef = useRef<{ dispose(): void } | null>(null);
+
+  useEffect(() => {
+    function init() {
+      if (!ref.current) return;
+      const JitsiAPI = (window as Record<string, unknown>).JitsiMeetExternalAPI as new (
+        domain: string, opts: Record<string, unknown>
+      ) => { dispose(): void };
+      if (!JitsiAPI) return;
+      if (apiRef.current) apiRef.current.dispose();
+      apiRef.current = new JitsiAPI("meet.jit.si", {
+        roomName: roomId,
+        parentNode: ref.current,
+        width: "100%",
+        height: "100%",
+        userInfo: { displayName: `Врач: ${doctorName}` },
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: false,
+          disableDeepLinking: true,
+          enableWelcomePage: false,
+          prejoinPageEnabled: false,
+        },
+        interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+          TOOLBAR_BUTTONS: ["microphone", "camera", "hangup", "fullscreen"],
+        },
+      });
+    }
+
+    if ((window as Record<string, unknown>).JitsiMeetExternalAPI) {
+      init();
+    } else {
+      const s = document.createElement("script");
+      s.src = "https://meet.jit.si/external_api.js";
+      s.onload = init;
+      document.head.appendChild(s);
+    }
+    return () => { apiRef.current?.dispose(); apiRef.current = null; };
+  }, [roomId, doctorName]);
+
+  return (
+    <div className="wc-jitsi-overlay">
+      <div className="wc-jitsi-header">
+        <span className="rt__live-dot" style={{ marginRight: 8 }} />
+        Видеозвонок · {roomId}
+        <button className="wc-jitsi-close" type="button" onClick={onClose}><X size={18} /></button>
+      </div>
+      <div ref={ref} style={{ flex: 1 }} />
+    </div>
+  );
+}
+
 export default function WardConsultationsPage() {
   usePageSeo({
     title: "Палатные консультации — HealthAssist",
@@ -108,6 +172,9 @@ export default function WardConsultationsPage() {
   const [consults, setConsults] = useState<BedsideConsultationView[]>(() => listAllBedsideConsultations());
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<WardFormState>(emptyForm);
+  const [activeCall, setActiveCall] = useState<{ roomId: string; doctorName: string } | null>(null);
+  const [medEditId, setMedEditId] = useState<string | null>(null);
+  const [medSlots, setMedSlots] = useState<MedicationSlot[]>([emptyMedSlot()]);
 
   function refresh() {
     setConsults(listAllBedsideConsultations());
@@ -139,6 +206,25 @@ export default function WardConsultationsPage() {
 
   function handleStage(id: string, stage: ConsultationStage) {
     updateBedsideConsultationStage(id, stage);
+    refresh();
+  }
+
+  function openCall(consult: BedsideConsultationView) {
+    if (!consult.meetRoomId) return;
+    setActiveCall({ roomId: consult.meetRoomId, doctorName: consult.doctorName });
+    handleStage(consult.id, "live");
+  }
+
+  function openMedEdit(consult: BedsideConsultationView) {
+    setMedEditId(consult.id);
+    setMedSlots(consult.medication?.length ? consult.medication : [emptyMedSlot()]);
+  }
+
+  function saveMeds() {
+    if (!medEditId) return;
+    const filled = medSlots.filter((s) => s.drug.trim());
+    updateMedication(medEditId, filled);
+    setMedEditId(null);
     refresh();
   }
 
@@ -501,35 +587,57 @@ export default function WardConsultationsPage() {
                           Подтвердить: у кровати
                         </button>
                       ) : null}
-                      {consult.stage === "bedside_ready" && !isLive ? (
+                      {(consult.stage === "bedside_ready" || canStart) && !isLive && !isDone ? (
                         <button
                           className="doctor-admin__status doctor-admin__status--ok ward-consult-card__call-btn"
                           type="button"
-                          onClick={() => handleStage(consult.id, "live")}
-                        >
-                          <PhoneCall size={14} />
-                          Начать звонок
-                        </button>
-                      ) : null}
-                      {canStart && consult.stage === "scheduled" ? (
-                        <button
-                          className="doctor-admin__status doctor-admin__status--ok ward-consult-card__call-btn"
-                          type="button"
-                          onClick={() => handleStage(consult.id, "live")}
+                          onClick={() => openCall(consult)}
                         >
                           <PhoneCall size={14} />
                           Начать звонок
                         </button>
                       ) : null}
                       {isLive ? (
-                        <button
-                          className="doctor-admin__status doctor-admin__status--green"
-                          type="button"
-                          onClick={() => handleStage(consult.id, "completed")}
-                        >
-                          Завершить и сохранить
-                        </button>
+                        <>
+                          <button
+                            className="doctor-admin__status doctor-admin__status--ok ward-consult-card__call-btn"
+                            type="button"
+                            onClick={() => openCall(consult)}
+                          >
+                            <Video size={14} />
+                            Открыть звонок
+                          </button>
+                          <button
+                            className="doctor-admin__status doctor-admin__status--green"
+                            type="button"
+                            onClick={() => handleStage(consult.id, "completed")}
+                          >
+                            Завершить
+                          </button>
+                        </>
                       ) : null}
+                      {/* Лекарства */}
+                      <button
+                        className="doctor-admin__status doctor-admin__status--amber"
+                        type="button"
+                        title="Назначить лекарства"
+                        onClick={() => openMedEdit(consult)}
+                      >
+                        <Pill size={13} />
+                        {consult.medication?.length ? `${consult.medication.length} лек.` : "Лекарства"}
+                      </button>
+                      {/* Ссылка на терминал */}
+                      <a
+                        className="doctor-admin__status doctor-admin__status--dark"
+                        href="/robot-terminal"
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Открыть страницу планшета робота"
+                        style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}
+                      >
+                        <ExternalLink size={13} />
+                        Планшет
+                      </a>
                       <button
                         className="ward-consult-card__delete"
                         type="button"
@@ -546,6 +654,76 @@ export default function WardConsultationsPage() {
           </div>
         </section>
       </main>
+
+      {/* Jitsi overlay */}
+      {activeCall ? (
+        <JitsiPanel
+          roomId={activeCall.roomId}
+          doctorName={activeCall.doctorName}
+          onClose={() => setActiveCall(null)}
+        />
+      ) : null}
+
+      {/* Medication edit modal */}
+      {medEditId ? (
+        <div className="wc-med-overlay">
+          <div className="wc-med-modal">
+            <div className="wc-med-modal__head">
+              <Pill size={18} style={{ color: "#fbbf24" }} />
+              <h3>Лекарства в ячейках робота</h3>
+              <button type="button" className="wc-jitsi-close" onClick={() => setMedEditId(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 16 }}>
+              Укажите что в каком ящике AIMAR — пациент увидит это на экране планшета.
+            </p>
+            {medSlots.map((slot, i) => (
+              <div className="wc-med-row" key={i}>
+                <input
+                  placeholder="Ячейка (A1, B2...)"
+                  value={slot.compartment}
+                  onChange={(e) => setMedSlots((prev) => prev.map((s, j) => j === i ? { ...s, compartment: e.target.value } : s))}
+                />
+                <input
+                  placeholder="Препарат"
+                  value={slot.drug}
+                  onChange={(e) => setMedSlots((prev) => prev.map((s, j) => j === i ? { ...s, drug: e.target.value } : s))}
+                />
+                <input
+                  placeholder="Доза (500мг)"
+                  value={slot.dosage}
+                  onChange={(e) => setMedSlots((prev) => prev.map((s, j) => j === i ? { ...s, dosage: e.target.value } : s))}
+                />
+                <input
+                  placeholder="Инструкция (после еды)"
+                  value={slot.instruction}
+                  onChange={(e) => setMedSlots((prev) => prev.map((s, j) => j === i ? { ...s, instruction: e.target.value } : s))}
+                />
+                <button type="button" onClick={() => setMedSlots((prev) => prev.filter((_, j) => j !== i))}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button
+                type="button"
+                className="doctor-admin__status doctor-admin__status--dark"
+                onClick={() => setMedSlots((prev) => [...prev, emptyMedSlot()])}
+              >
+                + Добавить ячейку
+              </button>
+              <button
+                type="button"
+                className="doctor-admin__refresh--primary"
+                onClick={saveMeds}
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Mobile nav */}
       <nav className="doctor-admin__mobile-nav" aria-label="Admin mobile navigation">

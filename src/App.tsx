@@ -26,6 +26,7 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AimarControl from "./pages/AimarControl";
 import WardConsultationsPage from "./pages/WardConsultationsPage";
+import RobotTerminal from "./pages/RobotTerminal";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import VkAuthCallback from "./pages/VkAuthCallback";
 import NotFound from "./pages/NotFound";
@@ -924,6 +925,7 @@ export default function App() {
           </RequireAuth>
         }
       />
+      <Route path="/robot-terminal" element={<RobotTerminal />} />
       <Route
         path="/admin/aimar"
         element={

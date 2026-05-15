@@ -7,6 +7,13 @@ export type ConsultationStage =
   | "live"
   | "completed";
 
+export type MedicationSlot = {
+  compartment: string;
+  drug: string;
+  dosage: string;
+  instruction: string;
+};
+
 type ConsultationRecord = {
   id: string;
   appointmentId: string;
@@ -25,6 +32,8 @@ type ConsultationRecord = {
   createdAt: string;
   updatedAt: string;
   stage: ConsultationStage;
+  meetRoomId?: string;
+  medication?: MedicationSlot[];
 };
 
 export type BedsideConsultationView = ConsultationRecord & {
@@ -243,12 +252,17 @@ export type ManualWardConsultationParams = {
   notes?: string;
 };
 
+function generateRoomId(id: string) {
+  return `healthassist-ward-${id.slice(-8)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function createManualWardConsultation(params: ManualWardConsultationParams): BedsideConsultationView {
   const id = `consult-manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const robotIndex = 1 + (Math.floor(Math.random() * 4));
   const record: ConsultationRecord = {
     id,
     appointmentId: id,
+    meetRoomId: generateRoomId(id),
     patientName: params.patientName,
     doctorId: params.doctorId,
     doctorName: params.doctorName,
@@ -271,6 +285,22 @@ export function createManualWardConsultation(params: ManualWardConsultationParam
 
 export function listAllBedsideConsultations(): BedsideConsultationView[] {
   return readConsultations().sort(consultationSort).map(enrichConsultation);
+}
+
+export function updateMedication(id: string, medication: MedicationSlot[]) {
+  const items = readConsultations();
+  const next = items.map((item) =>
+    item.id === id ? { ...item, medication, updatedAt: new Date().toISOString() } : item
+  );
+  writeConsultations(next);
+  const updated = next.find((item) => item.id === id);
+  return updated ? enrichConsultation(updated) : null;
+}
+
+export function getActiveLiveConsultation(): BedsideConsultationView | null {
+  const items = readConsultations();
+  const live = items.find((item) => item.stage === "live");
+  return live ? enrichConsultation(live) : null;
 }
 
 export function deleteBedsideConsultation(id: string) {
