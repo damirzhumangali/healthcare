@@ -87,6 +87,11 @@ const copy = {
     createMeasurementError: "Не получилось создать измерение. Попробуйте еще раз.",
     showAll: "Показать все",
     showLess: "Свернуть",
+    confirmedTitle: "Ваш приём подтверждён",
+    confirmedDoctor: "Врач",
+    confirmedDate: "Дата",
+    confirmedTime: "Время",
+    joinMeeting: "Присоединиться к встрече",
   },
   kk: {
     title: "Науқас кабинеты",
@@ -131,6 +136,11 @@ const copy = {
     history: "Өлшеулер тарихы",
     loading: "Жүктелуде...",
     noMeasurements: "Әлі өлшеулер жоқ. Қолмен қосыңыз.",
+    confirmedTitle: "Қабылдауыңыз расталды",
+    confirmedDoctor: "Дәрігер",
+    confirmedDate: "Күні",
+    confirmedTime: "Уақыты",
+    joinMeeting: "Кездесуге қосылу",
     pressure: "Қысым",
     temp: "Темп",
     pulse: "Пульс",
@@ -184,6 +194,11 @@ const copy = {
     history: "Measurement History",
     loading: "Loading...",
     noMeasurements: "No measurements yet. Add one manually.",
+    confirmedTitle: "Your appointment is confirmed",
+    confirmedDoctor: "Doctor",
+    confirmedDate: "Date",
+    confirmedTime: "Time",
+    joinMeeting: "Join meeting",
     pressure: "Pressure",
     temp: "Temp",
     pulse: "Pulse",
@@ -660,6 +675,59 @@ export default function Dashboard() {
             </div>
           </Card>
         </div>
+
+        {/* Confirmed appointment notification */}
+        {appointments.filter((a) => a.status === "active" && (a.doctor_id || a.doctorId)).map((confirmed) => {
+          const isOnline = confirmed.wants_online || confirmed.wantsOnline;
+          const jitsiUrl = `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
+          return (
+            <div
+              key={`confirmed-${confirmed.id}`}
+              style={{
+                borderRadius: 16, padding: "18px 22px",
+                background: "linear-gradient(135deg, rgba(34,211,153,0.12), rgba(34,211,238,0.08))",
+                border: "1.5px solid rgba(34,211,153,0.35)",
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span style={{ fontSize: 20 }}>✅</span>
+                <strong style={{ fontSize: 16, color: "#34d399" }}>{t.confirmedTitle}</strong>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.confirmedDoctor}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginTop: 3 }}>{doctorLabel(confirmed)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.confirmedDate}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginTop: 3 }}>{confirmed.date}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.confirmedTime}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginTop: 3 }}>{confirmed.time || "—"}</div>
+                </div>
+              </div>
+              {isOnline ? (
+                <a
+                  href={jitsiUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                    color: "#0a1628", borderRadius: 10,
+                    padding: "10px 20px", fontWeight: 800, fontSize: 14,
+                    textDecoration: "none",
+                  }}
+                >
+                  <Video size={16} />
+                  {t.joinMeeting}
+                </a>
+              ) : null}
+            </div>
+          );
+        })}
 
         {/* Main — History + Appointments */}
         <div className="dashboard-main">

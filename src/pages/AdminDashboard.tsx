@@ -892,9 +892,6 @@ export default function AdminDashboard() {
                 const isOnline = item.wants_online || item.wantsOnline;
                 const busyIds = getBusyDoctorIds(item.date, items);
                 const freeDocs = doctors.filter((d) => !busyIds.has(d.id));
-                const busyDocs = doctors.filter((d) => busyIds.has(d.id));
-                const defaultDoctorId = freeDocs[0]?.id ?? doctors[0]?.id ?? "";
-                const selectedDoctorId = assignMap[item.id] ?? defaultDoctorId;
                 const specialtyNeeded = item.specialty_request || item.specialtyRequest;
 
                 return (
@@ -905,110 +902,47 @@ export default function AdminDashboard() {
                       border: "1px solid rgba(251,191,36,0.25)",
                       borderLeft: "4px solid #f59e0b",
                       background: "rgba(251,191,36,0.04)",
-                      padding: "16px 18px",
-                      marginBottom: 10,
-                      display: "flex", flexDirection: "column", gap: 12,
+                      padding: "14px 18px",
+                      display: "flex", alignItems: "center", gap: 14,
                     }}
                   >
-                    {/* Top row: patient info */}
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                      <div className="doctor-admin__mini-avatar" style={{ flexShrink: 0 }}>{initials(name)}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
-                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
-                          {item.date} · {t.patientFallback}
-                        </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                          {specialtyNeeded ? (
-                            <span style={{
-                              background: "rgba(99,102,241,0.18)", color: "#a5b4fc",
-                              borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 700,
-                            }}>
-                              {specialtyNeeded}
-                            </span>
-                          ) : null}
-                          {isOnline ? (
-                            <span style={{
-                              background: "rgba(34,211,238,0.15)", color: "#22d3ee",
-                              borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 700,
-                            }}>
-                              {t.wantsOnlineLabel}
-                            </span>
-                          ) : null}
-                        </div>
-                        {item.reason ? (
-                          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 6, fontStyle: "italic" }}>
-                            {item.reason}
-                          </div>
+                    <div className="doctor-admin__mini-avatar" style={{ flexShrink: 0 }}>{initials(name)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
+                        {specialtyNeeded ? (
+                          <span style={{ background: "rgba(99,102,241,0.18)", color: "#a5b4fc", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
+                            {specialtyNeeded}
+                          </span>
                         ) : null}
+                        {isOnline ? (
+                          <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
+                            {t.wantsOnlineLabel}
+                          </span>
+                        ) : null}
+                        <span style={{ fontSize: 12, color: freeDocs.length > 0 ? "#34d399" : "#f59e0b" }}>
+                          {freeDocs.length > 0 ? `✓ ${freeDocs.length} свободн.` : "⚠ Все заняты"}
+                        </span>
                       </div>
+                      {item.reason ? (
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {item.reason}
+                        </div>
+                      ) : null}
                     </div>
-
-                    {/* Bottom row: assign controls */}
-                    <div style={{
-                      display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
-                      paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)",
-                    }}>
-                      <select
-                        className="doctor-admin__select"
-                        value={selectedDoctorId}
-                        onChange={(e) => setAssignMap((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                        style={{ flex: "1 1 180px", minWidth: 180 }}
-                      >
-                        {freeDocs.length > 0 ? (
-                          <optgroup label={`✓ ${t.freeDoctor}`}>
-                            {freeDocs.map((doc) => (
-                              <option key={doc.id} value={doc.id}>
-                                {doc.name} — {doc.specialty}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ) : null}
-                        {busyDocs.length > 0 ? (
-                          <optgroup label={`✗ ${t.busyDoctor}`}>
-                            {busyDocs.map((doc) => (
-                              <option key={doc.id} value={doc.id}>
-                                {doc.name} — {doc.specialty}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ) : null}
-                      </select>
-                      <input
-                        type="time"
-                        value={assignTimeMap[item.id] ?? "09:00"}
-                        onChange={(e) => setAssignTimeMap((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                        style={{
-                          background: "rgba(255,255,255,0.07)",
-                          border: "1px solid rgba(255,255,255,0.15)",
-                          borderRadius: 8, padding: "6px 10px",
-                          color: "white", fontSize: 13, width: 110,
-                        }}
-                      />
-                      <button
-                        type="button"
-                        disabled={assigningId === item.id}
-                        onClick={() => assignDoctor(item.id)}
-                        style={{
-                          background: "rgba(34,211,153,0.15)", color: "#34d399",
-                          border: "1px solid rgba(34,211,153,0.35)",
-                          borderRadius: 8, padding: "7px 18px",
-                          fontWeight: 700, cursor: "pointer", fontSize: 13,
-                          opacity: assigningId === item.id ? 0.6 : 1,
-                        }}
-                      >
-                        {assigningId === item.id ? "..." : t.assignBtn}
-                      </button>
-                      {freeDocs.length === 0 ? (
-                        <span style={{ fontSize: 12, color: "#f59e0b" }}>
-                          ⚠ Все врачи заняты в этот день
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 12, color: "#34d399" }}>
-                          ✓ {freeDocs.length} {t.freeDoctor.toLowerCase()}
-                        </span>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                      style={{
+                        flexShrink: 0,
+                        background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                        color: "#0a1628", border: "none",
+                        borderRadius: 9, padding: "8px 20px",
+                        fontWeight: 800, cursor: "pointer", fontSize: 13,
+                      }}
+                    >
+                      Принять
+                    </button>
                   </div>
                 );
               })}

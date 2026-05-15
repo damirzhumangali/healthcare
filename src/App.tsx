@@ -27,6 +27,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AimarControl from "./pages/AimarControl";
 import WardConsultationsPage from "./pages/WardConsultationsPage";
 import DoctorSchedulePage from "./pages/DoctorSchedulePage";
+import AdminRequestPage from "./pages/AdminRequestPage";
 import RobotTerminal from "./pages/RobotTerminal";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import VkAuthCallback from "./pages/VkAuthCallback";
@@ -932,6 +933,14 @@ export default function App() {
         element={
           <RequireAuth>
             <DoctorSchedulePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/request/:id"
+        element={
+          <RequireAuth>
+            <AdminRequestPage />
           </RequireAuth>
         }
       />

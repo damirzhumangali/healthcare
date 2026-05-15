@@ -34,9 +34,19 @@ export type DoctorOption = {
 };
 
 export const DOCTORS: DoctorOption[] = [
-  { id: "doctor-001", name: "Айжан Нурбекова", specialty: "Терапевт" },
-  { id: "doctor-002", name: "Ерлан Садыков", specialty: "Кардиолог" },
-  { id: "doctor-003", name: "Мария Ким", specialty: "Невролог" },
+  { id: "doctor-001", name: "Айжан Нурбекова",  specialty: "Терапевт" },
+  { id: "doctor-002", name: "Ерлан Садыков",    specialty: "Кардиолог" },
+  { id: "doctor-003", name: "Мария Ким",         specialty: "Невролог" },
+  { id: "doctor-004", name: "Алибек Жумабеков", specialty: "Хирург" },
+  { id: "doctor-005", name: "Гүлнар Байжанова", specialty: "Педиатр" },
+  { id: "doctor-006", name: "Серік Оспанов",    specialty: "ЛОР" },
+  { id: "doctor-007", name: "Наталья Соколова", specialty: "Офтальмолог" },
+  { id: "doctor-008", name: "Дамир Усенов",     specialty: "Стоматолог" },
+  { id: "doctor-009", name: "Айгүл Нурланова",  specialty: "Гинеколог" },
+  { id: "doctor-010", name: "Руслан Ахметов",   specialty: "Уролог" },
+  { id: "doctor-011", name: "Венера Исмаилова", specialty: "Дерматолог" },
+  { id: "doctor-012", name: "Болат Серіков",    specialty: "Эндокринолог" },
+  { id: "doctor-013", name: "Ирина Власова",    specialty: "Ортопед" },
 ];
 
 const LOCAL_APPOINTMENTS_KEY = "healthassist_appointments_v1";
@@ -288,5 +298,32 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
     return res.json();
   } catch {
     return updateLocalAppointmentStatus(id, status);
+  }
+}
+
+export function getLocalAppointmentById(id: string): Appointment | null {
+  return readAppointments().find((a) => a.id === id) ?? null;
+}
+
+export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
+  const user = readCurrentUser();
+  try {
+    const res = await fetch(`${API_URL}/api/appointments/my`, {
+      headers: authHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error();
+    return normalizeAppointmentList(await res.json());
+  } catch {
+    const all = readAppointments();
+    const mine = all.filter((a) => {
+      const pid = a.patient_id || a.patientId || "";
+      const pemail = (a.patient_email || a.patientEmail || "").toLowerCase();
+      return (
+        (user?.id && pid === user.id) ||
+        (user?.email && pemail === user.email.toLowerCase())
+      );
+    });
+    return { items: mine };
   }
 }
