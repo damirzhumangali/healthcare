@@ -622,12 +622,6 @@ export default function WardConsultationsPage() {
                       </div>
 
                       <div className="ward-consult-card__vitals">
-                        <span className={consult.realTempC != null ? "wc-vital--real" : "wc-vital--est"}>
-                          🌡 {consult.vitals.tempC}°C
-                        </span>
-                        <span className={consult.realHr != null ? "wc-vital--real" : "wc-vital--est"}>
-                          ❤️ {consult.vitals.pulseBpm} уд/мин
-                        </span>
                         <button
                           className="wc-vitals-btn"
                           type="button"
