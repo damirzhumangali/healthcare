@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   DOCTORS,
+  assignDoctorToAppointment,
   fetchAppointments,
   updateAppointmentStatus,
   type Appointment,
@@ -121,6 +122,13 @@ const adminText = {
     emptyDashboardTitle: "Дашборд пока пуст",
     emptyDashboardText:
       "Когда появятся записи или пациенты, здесь сразу отобразятся ключевые метрики и последние обновления.",
+    requestsTitle: "Новые заявки",
+    requestsSubtitle: "Пациенты без назначенного врача. Выберите врача и назначьте.",
+    noRequests: "Новых заявок нет.",
+    assignDoctorLabel: "Назначить врача",
+    assignBtn: "Назначить",
+    wantsOnlineLabel: "Онлайн",
+    assignedOk: "Врач назначен.",
   },
   kk: {
     panelTitle: "Әкімші панелі",
@@ -195,6 +203,13 @@ const adminText = {
     emptyDashboardTitle: "Басқару тақтасы әзірге бос",
     emptyDashboardText:
       "Жазылулар немесе пациенттер түскенде, негізгі метрикалар мен соңғы жаңартулар осында бірден көрінеді.",
+    requestsTitle: "Жаңа өтінімдер",
+    requestsSubtitle: "Дәрігер тағайындалмаған пациенттер. Дәрігер таңдап, тағайындаңыз.",
+    noRequests: "Жаңа өтінімдер жоқ.",
+    assignDoctorLabel: "Дәрігер тағайындау",
+    assignBtn: "Тағайындау",
+    wantsOnlineLabel: "Онлайн",
+    assignedOk: "Дәрігер тағайындалды.",
   },
   en: {
     panelTitle: "Admin Panel",
@@ -269,6 +284,13 @@ const adminText = {
     emptyDashboardTitle: "The dashboard is empty for now",
     emptyDashboardText:
       "As soon as appointments or patients appear, the main metrics and recent updates will show up here.",
+    requestsTitle: "New Requests",
+    requestsSubtitle: "Patients without an assigned doctor. Pick a doctor and assign.",
+    noRequests: "No new requests.",
+    assignDoctorLabel: "Assign doctor",
+    assignBtn: "Assign",
+    wantsOnlineLabel: "Online",
+    assignedOk: "Doctor assigned.",
   },
 } as const;
 
@@ -423,6 +445,8 @@ export default function AdminDashboard() {
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
+  const [assignMap, setAssignMap] = useState<Record<string, string>>({});
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
 
   const t = adminText[locale];
@@ -484,6 +508,10 @@ export default function AdminDashboard() {
     });
   }, [doctorFilter, items, status]);
 
+  const unassignedItems = useMemo(
+    () => items.filter((item) => !item.doctor_id && !item.doctorId && item.status === "pending"),
+    [items]
+  );
   const visibleItems = filteredItems;
   const visiblePatients =
     patients.length > 0
@@ -539,6 +567,20 @@ export default function AdminDashboard() {
       await load();
     } catch {
       setErr("statusUpdate");
+    }
+  }
+
+  async function assignDoctor(id: string) {
+    const doctorId = assignMap[id] || doctors[0]?.id;
+    if (!doctorId) return;
+    setAssigningId(id);
+    try {
+      await assignDoctorToAppointment(id, doctorId);
+      await load();
+    } catch {
+      setErr("statusUpdate");
+    } finally {
+      setAssigningId(null);
     }
   }
 
@@ -805,6 +847,94 @@ export default function AdminDashboard() {
                 </article>
               ))}
         </section>
+
+        {unassignedItems.length > 0 ? (
+          <section className="doctor-admin__panel" style={{ marginBottom: 0 }} id="requests">
+            <div className="doctor-admin__panel-head">
+              <div>
+                <h2>{t.requestsTitle}</h2>
+                <p className="doctor-admin__panel-subtitle">{t.requestsSubtitle}</p>
+              </div>
+              <span style={{
+                background: "rgba(251,191,36,0.18)", color: "#f59e0b",
+                borderRadius: 20, padding: "2px 12px", fontSize: 13, fontWeight: 700,
+              }}>
+                {unassignedItems.length}
+              </span>
+            </div>
+            <div className="doctor-admin__record-list">
+              {unassignedItems.map((item) => {
+                const name = patientLabel(item, t.patientFallback);
+                const selectedDoctorId = assignMap[item.id] ?? (doctors[0]?.id ?? "");
+                const isOnline = item.wants_online || item.wantsOnline;
+                return (
+                  <div
+                    key={`req-${item.id}`}
+                    className="doctor-admin__record"
+                    style={{ borderLeft: "3px solid #f59e0b" }}
+                  >
+                    <div className="doctor-admin__record-date">
+                      <strong>{item.date}</strong>
+                      <span>{item.time}</span>
+                    </div>
+                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                    <div className="doctor-admin__record-main">
+                      <strong>{name}</strong>
+                      {(item.specialty_request || item.specialtyRequest) ? (
+                        <span style={{
+                          display: "inline-block", marginBottom: 2,
+                          background: "rgba(99,102,241,0.15)", color: "#818cf8",
+                          borderRadius: 6, padding: "1px 8px", fontSize: 11, fontWeight: 700,
+                        }}>
+                          {item.specialty_request || item.specialtyRequest}
+                        </span>
+                      ) : null}
+                      <small>{item.reason || t.appointmentFallback}</small>
+                      {isOnline ? (
+                        <span style={{
+                          display: "inline-block", marginTop: 3,
+                          background: "rgba(34,211,238,0.15)", color: "#22d3ee",
+                          borderRadius: 6, padding: "1px 8px", fontSize: 11, fontWeight: 700,
+                        }}>
+                          {t.wantsOnlineLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="doctor-admin__record-actions" style={{ flexShrink: 0 }}>
+                      <select
+                        className="doctor-admin__select"
+                        value={selectedDoctorId}
+                        onChange={(e) =>
+                          setAssignMap((prev) => ({ ...prev, [item.id]: e.target.value }))
+                        }
+                        style={{ minWidth: 160 }}
+                      >
+                        {doctors.map((doc) => (
+                          <option key={doc.id} value={doc.id}>
+                            {doc.name} — {doc.specialty}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={assigningId === item.id}
+                        onClick={() => assignDoctor(item.id)}
+                        style={{
+                          background: "rgba(34,211,153,0.15)", color: "#34d399",
+                          border: "1px solid rgba(34,211,153,0.35)",
+                          borderRadius: 8, padding: "6px 16px",
+                          fontWeight: 700, cursor: "pointer", fontSize: 13,
+                        }}
+                      >
+                        {assigningId === item.id ? "..." : t.assignBtn}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <section className="doctor-admin__content">
           <article className="doctor-admin__panel doctor-admin__schedule" id="schedule">

@@ -1,10 +1,10 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft, House } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/Input";
-import { createAppointment, DOCTORS, fetchDoctors, type DoctorOption } from "../lib/apiAppointments";
+import { createAppointment, DOCTORS } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
 import { getCurrentUser } from "../lib/authStore";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
@@ -12,56 +12,68 @@ import { usePageSeo } from "../lib/seo";
 
 type Locale = AppLocale;
 
+// Unique specialties from DOCTORS — no names exposed to patient
+const SPECIALTIES = [...new Set(DOCTORS.map((d) => d.specialty))];
+
 const appointmentText = {
   ru: {
-    title: "Запись к врачу",
-    subtitle: "Выберите специалиста и удобное время приема.",
+    title: "Записаться к врачу",
+    subtitle: "Укажите тип специалиста и симптомы. Конкретного врача назначит администратор.",
     back: "Назад",
     home: "На главную",
-    doctor: "Врач",
+    specialty: "Специалист",
     date: "Дата",
     time: "Время",
-    reason: "Причина приема",
-    reasonPlaceholder: "Например: головная боль, давление, консультация по анализам",
-    fillAllError: "Заполните врача, дату, время и причину приема.",
-    created: "Запись создана.",
-    createError: "Не удалось создать запись. Попробуйте ещё раз чуть позже.",
-    creating: "Создаем...",
-    submit: "Записаться",
+    symptoms: "Симптомы / Причина обращения",
+    symptomsPlaceholder: "Например: головная боль, высокая температура, боль в груди",
+    onlineConsult: "Хотите онлайн консультацию?",
+    onlineYes: "Да",
+    onlineNo: "Нет",
+    fillAllError: "Заполните специализацию, дату, время и опишите симптомы.",
+    created: "Заявка отправлена. Администратор назначит врача.",
+    createError: "Не удалось создать заявку. Попробуйте ещё раз чуть позже.",
+    creating: "Отправляем...",
+    submit: "Отправить заявку",
     cancel: "Отмена",
   },
   kk: {
     title: "Дәрігерге жазылу",
-    subtitle: "Маманды және қабылдау уақытын таңдаңыз.",
+    subtitle: "Маман түрін және симптомдарды көрсетіңіз. Нақты дәрігерді әкімші тағайындайды.",
     back: "Артқа",
     home: "Басты бетке",
-    doctor: "Дәрігер",
+    specialty: "Маман",
     date: "Күні",
     time: "Уақыты",
-    reason: "Қабылдау себебі",
-    reasonPlaceholder: "Мысалы: бас ауруы, қысым, талдаулар бойынша кеңес",
-    fillAllError: "Дәрігерді, күнді, уақытты және қабылдау себебін толтырыңыз.",
-    created: "Жазылу жасалды.",
-    createError: "Жазылуды жасау мүмкін болмады. Сәл кейінірек қайта көріңіз.",
-    creating: "Жасалуда...",
-    submit: "Жазылу",
+    symptoms: "Симптомдар / Өтініш себебі",
+    symptomsPlaceholder: "Мысалы: бас ауруы, жоғары температура, кеуде ауруы",
+    onlineConsult: "Онлайн кеңес алғыңыз келе ме?",
+    onlineYes: "Иә",
+    onlineNo: "Жоқ",
+    fillAllError: "Маманды, күнді, уақытты толтырыңыз және симптомдарды сипаттаңыз.",
+    created: "Өтінім жіберілді. Әкімші дәрігер тағайындайды.",
+    createError: "Өтінімді жасау мүмкін болмады. Сәл кейінірек қайта көріңіз.",
+    creating: "Жіберілуде...",
+    submit: "Өтінім жіберу",
     cancel: "Бас тарту",
   },
   en: {
-    title: "Book a Doctor Visit",
-    subtitle: "Choose a specialist and a convenient appointment time.",
+    title: "Request a Doctor Visit",
+    subtitle: "Choose a specialist type and describe your symptoms. An admin will assign a doctor.",
     back: "Back",
     home: "Home",
-    doctor: "Doctor",
+    specialty: "Specialist",
     date: "Date",
     time: "Time",
-    reason: "Reason for visit",
-    reasonPlaceholder: "For example: headache, blood pressure, lab results consultation",
-    fillAllError: "Please fill in doctor, date, time, and reason for visit.",
-    created: "Appointment created.",
-    createError: "Could not create the appointment. Please try again a little later.",
-    creating: "Creating...",
-    submit: "Book appointment",
+    symptoms: "Symptoms / Reason for visit",
+    symptomsPlaceholder: "For example: headache, high fever, chest pain",
+    onlineConsult: "Would you like an online consultation?",
+    onlineYes: "Yes",
+    onlineNo: "No",
+    fillAllError: "Please select a specialty, fill in date, time, and describe your symptoms.",
+    created: "Request sent. An admin will assign a doctor.",
+    createError: "Could not create the request. Please try again a little later.",
+    creating: "Sending...",
+    submit: "Send request",
     cancel: "Cancel",
   },
 } as const;
@@ -70,23 +82,15 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function cleanDoctorName(name: string) {
-  return name.replace(/^(?:Др\.|Dr\.)\s*/i, "").trim();
-}
-
-function doctorOptionLabel(doctor: DoctorOption) {
-  return `${cleanDoctorName(doctor.name)} — ${doctor.specialty}`;
-}
-
 export default function AppointmentForm() {
   const nav = useNavigate();
   const currentUser = getCurrentUser();
   const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
-  const [doctors, setDoctors] = useState<DoctorOption[]>(DOCTORS);
-  const [doctorId, setDoctorId] = useState(DOCTORS[0]?.id ?? "");
+  const [specialty, setSpecialty] = useState(SPECIALTIES[0] ?? "");
   const [date, setDate] = useState(today());
   const [time, setTime] = useState("09:00");
-  const [reason, setReason] = useState("");
+  const [symptoms, setSymptoms] = useState("");
+  const [wantsOnline, setWantsOnline] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -115,30 +119,6 @@ export default function AppointmentForm() {
     robots: "noindex, nofollow",
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchDoctors()
-      .then((data) => {
-        if (cancelled) return;
-        const activeDoctors = data.items.filter((doctor) => doctor.active !== false);
-        setDoctors(activeDoctors);
-        setDoctorId((currentDoctorId) =>
-          activeDoctors.some((doctor) => doctor.id === currentDoctorId)
-            ? currentDoctorId
-            : activeDoctors[0]?.id ?? ""
-        );
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDoctors(DOCTORS);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   if (isAdminAccount(currentUser)) {
     return <Navigate to="/admin" replace />;
   }
@@ -153,7 +133,7 @@ export default function AppointmentForm() {
     setErr(null);
     setOk(null);
 
-    if (!doctorId || !date || !time || !reason.trim()) {
+    if (!specialty || !date || !time || !symptoms.trim()) {
       setErr(t.fillAllError);
       return;
     }
@@ -161,13 +141,14 @@ export default function AppointmentForm() {
     setLoading(true);
     try {
       await createAppointment({
-        doctorId,
         date,
         time,
-        reason: reason.trim(),
+        reason: symptoms.trim(),
+        specialtyRequest: specialty,
+        wantsOnline,
       });
       setOk(t.created);
-      window.setTimeout(() => nav("/app"), 650);
+      window.setTimeout(() => nav("/app"), 1200);
     } catch {
       setErr(t.createError);
     } finally {
@@ -222,16 +203,17 @@ export default function AppointmentForm() {
 
         <Card>
           <form className="stack" onSubmit={onSubmit}>
+            {/* Specialty — only type shown, no doctor name */}
             <label className="field">
-              <span className="field__label">{t.doctor}</span>
+              <span className="field__label">{t.specialty}</span>
               <select
                 className="input"
-                value={doctorId}
-                onChange={(e) => setDoctorId(e.target.value)}
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
               >
-                {doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
-                    {doctorOptionLabel(doctor)}
+                {SPECIALTIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
                   </option>
                 ))}
               </select>
@@ -254,16 +236,65 @@ export default function AppointmentForm() {
             </div>
 
             <label className="field">
-              <span className="field__label">{t.reason}</span>
+              <span className="field__label">{t.symptoms}</span>
               <textarea
                 className="input appointment-form__textarea"
-                rows={3}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder={t.reasonPlaceholder}
+                rows={4}
+                value={symptoms}
+                onChange={(e) => setSymptoms(e.target.value)}
+                placeholder={t.symptomsPlaceholder}
                 style={{ height: "auto", resize: "vertical" }}
               />
             </label>
+
+            {/* Online consultation toggle */}
+            <div className="field">
+              <span className="field__label">{t.onlineConsult}</span>
+              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setWantsOnline(true)}
+                  style={{
+                    padding: "8px 28px",
+                    borderRadius: 8,
+                    border: wantsOnline
+                      ? "1.5px solid var(--color-primary, #38bdf8)"
+                      : "1.5px solid rgba(255,255,255,0.15)",
+                    background: wantsOnline
+                      ? "rgba(56,189,248,0.15)"
+                      : "rgba(255,255,255,0.04)",
+                    color: wantsOnline ? "var(--color-primary, #38bdf8)" : "inherit",
+                    fontWeight: wantsOnline ? 700 : 400,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {t.onlineYes}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWantsOnline(false)}
+                  style={{
+                    padding: "8px 28px",
+                    borderRadius: 8,
+                    border: !wantsOnline
+                      ? "1.5px solid var(--color-primary, #38bdf8)"
+                      : "1.5px solid rgba(255,255,255,0.15)",
+                    background: !wantsOnline
+                      ? "rgba(56,189,248,0.15)"
+                      : "rgba(255,255,255,0.04)",
+                    color: !wantsOnline ? "var(--color-primary, #38bdf8)" : "inherit",
+                    fontWeight: !wantsOnline ? 700 : 400,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {t.onlineNo}
+                </button>
+              </div>
+            </div>
 
             {err ? <div className="alert">{err}</div> : null}
             {ok ? (

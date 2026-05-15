@@ -16,7 +16,11 @@ export type Appointment = {
   date: string;
   time: string;
   reason: string;
+  specialty_request?: string;
+  specialtyRequest?: string;
   status: AppointmentStatus;
+  wants_online?: boolean;
+  wantsOnline?: boolean;
   created_at?: string;
   createdAt?: string;
 };
@@ -103,23 +107,27 @@ function readCurrentUser() {
 }
 
 function createLocalAppointment(input: {
-  doctorId: string;
+  doctorId?: string;
   date: string;
   time: string;
   reason: string;
+  specialtyRequest?: string;
+  wantsOnline?: boolean;
 }) {
   const user = readCurrentUser();
-  const doctor = DOCTORS.find((item) => item.id === input.doctorId);
+  const doctor = input.doctorId ? DOCTORS.find((item) => item.id === input.doctorId) : undefined;
   const appointment: Appointment = {
     id: crypto.randomUUID(),
     patient_id: user?.id || user?.email || "local-patient",
     patient_email: user?.email,
     patientName: user?.name || user?.email || "Пациент",
     doctor_id: input.doctorId,
-    doctorName: doctor ? `${doctor.name} - ${doctor.specialty}` : input.doctorId,
+    doctorName: doctor ? `${doctor.name} - ${doctor.specialty}` : undefined,
     date: input.date,
     time: input.time,
     reason: input.reason,
+    specialty_request: input.specialtyRequest,
+    wants_online: input.wantsOnline,
     status: "pending",
     created_at: new Date().toISOString(),
   };
@@ -186,10 +194,12 @@ export async function fetchDoctors(includeInactive = false): Promise<{ items: Do
 }
 
 export async function createAppointment(input: {
-  doctorId: string;
+  doctorId?: string;
   date: string;
   time: string;
   reason: string;
+  specialtyRequest?: string;
+  wantsOnline?: boolean;
 }) {
   try {
     const res = await fetch(`${API_URL}/api/appointments`, {
@@ -199,6 +209,8 @@ export async function createAppointment(input: {
       body: JSON.stringify({
         ...input,
         doctor_id: input.doctorId,
+        specialty_request: input.specialtyRequest,
+        wants_online: input.wantsOnline,
       }),
     });
 
@@ -213,6 +225,32 @@ export async function createAppointment(input: {
     return data;
   } catch {
     return createLocalAppointment(input);
+  }
+}
+
+export async function assignDoctorToAppointment(id: string, doctorId: string) {
+  try {
+    const res = await fetch(`${API_URL}/api/appointments/${id}/assign`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      credentials: "include",
+      body: JSON.stringify({ doctor_id: doctorId }),
+    });
+    if (!res.ok) throw new Error("assign failed");
+    const data = await res.json();
+    const updated = data.item ?? data.appointment ?? null;
+    if (updated) persistAppointment(updated);
+    return data;
+  } catch {
+    const items = readAppointments();
+    const doctor = DOCTORS.find((d) => d.id === doctorId);
+    const next = items.map((item) =>
+      item.id === id
+        ? { ...item, doctor_id: doctorId, doctorName: doctor ? `${doctor.name} - ${doctor.specialty}` : doctorId }
+        : item
+    );
+    writeAppointments(next);
+    return { item: next.find((item) => item.id === id) ?? null };
   }
 }
 
