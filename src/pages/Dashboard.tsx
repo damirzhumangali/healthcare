@@ -9,7 +9,7 @@ import {
   Stethoscope,
   Video,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import { fetchMyMeasurements, readCachedMeasurements, type MeasurementItem } from "../lib/apiMeasurements";
@@ -381,6 +381,11 @@ export default function Dashboard() {
   const currentUser = useMemo(() => readCurrentUser(), []);
   const isAdmin = currentUser?.role === "admin";
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
+
+  // Doctor account → redirect to doctor dashboard
+  if (currentUser?.email === "alixan.baktybaev@gmail.com") {
+    return <Navigate to="/doctor" replace />;
+  }
 
   const t = copy[locale];
   const tele = telemedCopy[locale];
