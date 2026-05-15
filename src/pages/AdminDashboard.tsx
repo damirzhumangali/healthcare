@@ -462,6 +462,7 @@ export default function AdminDashboard() {
   const [status, setStatusFilter] = useState<StatusFilter>("all");
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilter>("all");
   const [items, setItems] = useState<Appointment[]>([]);
+  const [allItems, setAllItems] = useState<Appointment[]>([]);
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [doctors, setDoctors] = useState<DoctorOption[]>(DOCTORS.map((doctor) => ({ ...doctor, active: true })));
   const [patients, setPatients] = useState<AdminPatient[]>([]);
@@ -499,14 +500,16 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      const [appointmentsData, summaryData, doctorsData, patientsData] = await Promise.all([
+      const [appointmentsData, allAppointmentsData, summaryData, doctorsData, patientsData] = await Promise.all([
         fetchAppointments(date || undefined),
+        fetchAppointments(),
         fetchAdminSummary(),
         fetchAdminDoctors(),
         fetchAdminPatients(),
       ]);
 
       setItems(appointmentsData.items ?? []);
+      setAllItems(allAppointmentsData.items ?? []);
       setSummary(summaryData);
       setDoctors(
         doctorsData.items.length > 0
@@ -532,8 +535,8 @@ export default function AdminDashboard() {
   }, [doctorFilter, items, status]);
 
   const unassignedItems = useMemo(
-    () => items.filter((item) => !item.doctor_id && !item.doctorId && item.status === "pending"),
-    [items]
+    () => allItems.filter((item) => !item.doctor_id && !item.doctorId && item.status === "pending"),
+    [allItems]
   );
   const visibleItems = filteredItems;
   const visiblePatients =
