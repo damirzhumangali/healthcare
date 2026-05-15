@@ -211,6 +211,17 @@ export async function createAppointment(input: {
   specialtyRequest?: string;
   wantsOnline?: boolean;
 }) {
+  // Resolve a real doctor_id — backend requires it even for pending requests
+  let resolvedDoctorId = input.doctorId;
+  if (!resolvedDoctorId) {
+    try {
+      const docs = await fetchDoctors();
+      resolvedDoctorId = docs.items[0]?.id;
+    } catch {
+      // ignore, will fall back to localStorage
+    }
+  }
+
   try {
     const res = await fetch(`${API_URL}/api/appointments`, {
       method: "POST",
@@ -218,7 +229,7 @@ export async function createAppointment(input: {
       credentials: "include",
       body: JSON.stringify({
         ...input,
-        doctor_id: input.doctorId || "pending",
+        doctor_id: resolvedDoctorId ?? "",
         time: input.time || "00:00",
         specialty_request: input.specialtyRequest ?? "",
         wants_online: input.wantsOnline ?? false,
