@@ -560,8 +560,6 @@ export default function WardConsultationsPage() {
                       <div className="ward-consult-card__vitals">
                         <span>🌡 {consult.vitals.tempC}°C</span>
                         <span>❤️ {consult.vitals.pulseBpm} уд/мин</span>
-                        <span>🩸 {consult.vitals.systolic}/{consult.vitals.diastolic} мм рт.ст.</span>
-                        <span>O₂ {consult.vitals.spo2}%</span>
                         <span style={{ marginLeft: "auto", color: consult.devices.robotLinked ? "#4ade80" : "#6b7280", fontSize: 11 }}>
                           {consult.devices.robotLinked ? "● Робот подключён" : "○ Робот не подключён"}
                         </span>
