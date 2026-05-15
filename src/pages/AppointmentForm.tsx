@@ -4,7 +4,7 @@ import { ArrowLeft, House } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/Input";
-import { createAppointment, DOCTORS } from "../lib/apiAppointments";
+import { createAppointment } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
 import { getCurrentUser } from "../lib/authStore";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
@@ -12,8 +12,22 @@ import { usePageSeo } from "../lib/seo";
 
 type Locale = AppLocale;
 
-// Unique specialties from DOCTORS — no names exposed to patient
-const SPECIALTIES = [...new Set(DOCTORS.map((d) => d.specialty))];
+// Full specialty list — no doctor names exposed to patient
+const SPECIALTIES = [
+  "Терапевт",
+  "Кардиолог",
+  "Невролог",
+  "Хирург",
+  "Педиатр",
+  "ЛОР",
+  "Офтальмолог",
+  "Стоматолог",
+  "Гинеколог",
+  "Уролог",
+  "Дерматолог",
+  "Эндокринолог",
+  "Ортопед",
+];
 
 const appointmentText = {
   ru: {
