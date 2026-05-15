@@ -25,6 +25,7 @@ import AppointmentForm from "./pages/AppointmentForm";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AimarControl from "./pages/AimarControl";
+import WardConsultationsPage from "./pages/WardConsultationsPage";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import VkAuthCallback from "./pages/VkAuthCallback";
 import NotFound from "./pages/NotFound";
@@ -912,6 +913,14 @@ export default function App() {
         element={
           <RequireAuth>
             <AdminDashboard />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/ward-consults"
+        element={
+          <RequireAuth>
+            <WardConsultationsPage />
           </RequireAuth>
         }
       />
