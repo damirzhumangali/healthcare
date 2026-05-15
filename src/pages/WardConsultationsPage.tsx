@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ClipboardList,
   Cpu,
+  Activity,
   ExternalLink,
   House,
   LayoutDashboard,
@@ -28,6 +29,7 @@ import {
   createManualWardConsultation,
   deleteBedsideConsultation,
   listAllBedsideConsultations,
+  setRealVitals,
   updateBedsideConsultationStage,
   updateMedication,
   type BedsideConsultationView,
@@ -175,6 +177,8 @@ export default function WardConsultationsPage() {
   const [activeCall, setActiveCall] = useState<{ roomId: string; doctorName: string } | null>(null);
   const [medEditId, setMedEditId] = useState<string | null>(null);
   const [medSlots, setMedSlots] = useState<MedicationSlot[]>([emptyMedSlot()]);
+  const [vitalsEditId, setVitalsEditId] = useState<string | null>(null);
+  const [vitalsInput, setVitalsInput] = useState({ tempC: "", hr: "" });
 
   function refresh() {
     setConsults(listAllBedsideConsultations());
@@ -213,6 +217,24 @@ export default function WardConsultationsPage() {
     if (!consult.meetRoomId) return;
     setActiveCall({ roomId: consult.meetRoomId, doctorName: consult.doctorName });
     handleStage(consult.id, "live");
+  }
+
+  function openVitalsEdit(consult: BedsideConsultationView) {
+    setVitalsEditId(consult.id);
+    setVitalsInput({
+      tempC: consult.realTempC != null ? String(consult.realTempC) : "",
+      hr: consult.realHr != null ? String(consult.realHr) : "",
+    });
+  }
+
+  function saveVitals() {
+    if (!vitalsEditId) return;
+    const t = parseFloat(vitalsInput.tempC);
+    const h = parseInt(vitalsInput.hr, 10);
+    if (isNaN(t) || isNaN(h)) return;
+    setRealVitals(vitalsEditId, t, h);
+    setVitalsEditId(null);
+    refresh();
   }
 
   function openMedEdit(consult: BedsideConsultationView) {
@@ -558,8 +580,21 @@ export default function WardConsultationsPage() {
                       </div>
 
                       <div className="ward-consult-card__vitals">
-                        <span>🌡 {consult.vitals.tempC}°C</span>
-                        <span>❤️ {consult.vitals.pulseBpm} уд/мин</span>
+                        <span className={consult.realTempC != null ? "wc-vital--real" : "wc-vital--est"}>
+                          🌡 {consult.vitals.tempC}°C
+                        </span>
+                        <span className={consult.realHr != null ? "wc-vital--real" : "wc-vital--est"}>
+                          ❤️ {consult.vitals.pulseBpm} уд/мин
+                        </span>
+                        <button
+                          className="wc-vitals-btn"
+                          type="button"
+                          title="Ввести реальные показатели"
+                          onClick={() => openVitalsEdit(consult)}
+                        >
+                          <Activity size={12} />
+                          {consult.realTempC != null ? "Обновить" : "Ввести показатели"}
+                        </button>
                         <span style={{ marginLeft: "auto", color: consult.devices.robotLinked ? "#4ade80" : "#6b7280", fontSize: 11 }}>
                           {consult.devices.robotLinked ? "● Робот подключён" : "○ Робот не подключён"}
                         </span>
@@ -652,6 +687,67 @@ export default function WardConsultationsPage() {
           </div>
         </section>
       </main>
+
+      {/* Vitals input modal */}
+      {vitalsEditId ? (
+        <div className="wc-med-overlay">
+          <div className="wc-med-modal" style={{ maxWidth: 360 }}>
+            <div className="wc-med-modal__head">
+              <Activity size={18} style={{ color: "#4ade80" }} />
+              <h3>Реальные показатели пациента</h3>
+              <button type="button" className="wc-jitsi-close" onClick={() => setVitalsEditId(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 16 }}>
+              Введите данные с термометра и пульсоксиметра.
+            </p>
+            <div style={{ display: "grid", gap: 12 }}>
+              <label className="doctor-admin__field">
+                <span>Температура (°C)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="34"
+                  max="42"
+                  placeholder="36.6"
+                  value={vitalsInput.tempC}
+                  onChange={(e) => setVitalsInput((v) => ({ ...v, tempC: e.target.value }))}
+                  autoFocus
+                />
+              </label>
+              <label className="doctor-admin__field">
+                <span>Пульс (уд/мин)</span>
+                <input
+                  type="number"
+                  min="30"
+                  max="220"
+                  placeholder="72"
+                  value={vitalsInput.hr}
+                  onChange={(e) => setVitalsInput((v) => ({ ...v, hr: e.target.value }))}
+                />
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+              <button
+                type="button"
+                className="doctor-admin__refresh--primary"
+                disabled={!vitalsInput.tempC || !vitalsInput.hr}
+                onClick={saveVitals}
+              >
+                Сохранить
+              </button>
+              <button
+                type="button"
+                className="doctor-admin__refresh"
+                onClick={() => setVitalsEditId(null)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Jitsi overlay */}
       {activeCall ? (

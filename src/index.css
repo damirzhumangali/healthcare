@@ -2924,6 +2924,24 @@ button, input{font:inherit}
   color:#f87171;
   background:rgba(248,113,113,.1);
 }
+.wc-vital--real{ color:#4ade80;font-weight:700 }
+.wc-vital--est{ color:#6b7280 }
+.wc-vitals-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  background:transparent;
+  border:1px solid rgba(74,222,128,.3);
+  border-radius:6px;
+  color:#4ade80;
+  font-size:11px;
+  font-weight:600;
+  padding:3px 8px;
+  cursor:pointer;
+  margin-left:auto;
+  transition:background .15s;
+}
+.wc-vitals-btn:hover{ background:rgba(74,222,128,.1) }
 .ward-consult-empty{
   display:flex;
   flex-direction:column;

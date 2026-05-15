@@ -34,6 +34,8 @@ type ConsultationRecord = {
   stage: ConsultationStage;
   meetRoomId?: string;
   medication?: MedicationSlot[];
+  realTempC?: number;
+  realHr?: number;
 };
 
 export type BedsideConsultationView = ConsultationRecord & {
@@ -166,8 +168,8 @@ function reconcileStage(
 
 function enrichConsultation(record: ConsultationRecord): BedsideConsultationView {
   const seed = hashString(record.id);
-  const tempC = Number((36.4 + (seed % 8) * 0.1).toFixed(1));
-  const pulseBpm = 68 + (seed % 18);
+  const tempC = record.realTempC != null ? record.realTempC : Number((36.4 + (seed % 8) * 0.1).toFixed(1));
+  const pulseBpm = record.realHr != null ? record.realHr : 68 + (seed % 18);
   const systolic = 112 + (seed % 17);
   const diastolic = 72 + (seed % 9);
   const spo2 = 96 + (seed % 3);
@@ -285,6 +287,16 @@ export function createManualWardConsultation(params: ManualWardConsultationParam
 
 export function listAllBedsideConsultations(): BedsideConsultationView[] {
   return readConsultations().sort(consultationSort).map(enrichConsultation);
+}
+
+export function setRealVitals(id: string, tempC: number, hr: number) {
+  const items = readConsultations();
+  const next = items.map((item) =>
+    item.id === id ? { ...item, realTempC: tempC, realHr: hr, updatedAt: new Date().toISOString() } : item
+  );
+  writeConsultations(next);
+  const updated = next.find((item) => item.id === id);
+  return updated ? enrichConsultation(updated) : null;
 }
 
 export function updateMedication(id: string, medication: MedicationSlot[]) {
