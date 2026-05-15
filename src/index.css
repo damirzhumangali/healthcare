@@ -1733,6 +1733,12 @@ button, input{font:inherit}
   font-size:18px;
   font-weight:800;
   border-left:4px solid transparent;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.doctor-admin__nav-item--compact{
+  font-size:15px;
 }
 .doctor-admin__nav-item svg{
   color:#d5d8d1;

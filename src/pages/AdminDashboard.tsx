@@ -728,12 +728,12 @@ export default function AdminDashboard() {
             );
           })}
           <button
-            className="doctor-admin__nav-item"
+            className="doctor-admin__nav-item doctor-admin__nav-item--compact"
             type="button"
             onClick={() => nav("/admin/ward-consults")}
           >
             <MonitorSmartphone size={18} />
-            Палатные консультации
+            Онлайн в палатах
           </button>
           <button
             className="doctor-admin__nav-item"
