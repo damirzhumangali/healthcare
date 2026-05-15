@@ -218,9 +218,10 @@ export async function createAppointment(input: {
       credentials: "include",
       body: JSON.stringify({
         ...input,
-        doctor_id: input.doctorId,
-        specialty_request: input.specialtyRequest,
-        wants_online: input.wantsOnline,
+        doctor_id: input.doctorId || "pending",
+        time: input.time || "00:00",
+        specialty_request: input.specialtyRequest ?? "",
+        wants_online: input.wantsOnline ?? false,
       }),
     });
 
