@@ -764,11 +764,11 @@ export default function Dashboard() {
                       <div className="telemed-vitals">
                         <div className="telemed-vital">
                           <span>{t.temp}</span>
-                          <strong>{nextConsultation.vitals.tempC}°C</strong>
+                          <strong>{latestMeasurement?.tempC != null ? `${latestMeasurement.tempC}°C` : "—"}</strong>
                         </div>
                         <div className="telemed-vital">
                           <span>{t.pulse}</span>
-                          <strong>{nextConsultation.vitals.pulseBpm}</strong>
+                          <strong>{latestMeasurement?.hr != null ? latestMeasurement.hr : "—"}</strong>
                         </div>
                       </div>
                       <p className="muted" style={{ margin: "12px 0 0", fontSize: 13 }}>{tele.vitalsHint}</p>
