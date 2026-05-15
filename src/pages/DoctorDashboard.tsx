@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   BedDouble,
   Bot,
@@ -18,7 +18,7 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
-import { hasSession } from "../lib/auth";
+import { hasSession, setCurrentUser, setToken, clearStoredSession } from "../lib/auth";
 import {
   listAllBedsideConsultations,
   updateBedsideConsultationStage,
@@ -28,7 +28,10 @@ import {
 import { API_URL } from "../lib/apiBase";
 import { usePageSeo } from "../lib/seo";
 
-type StoredUser = { id?: string; email?: string; name?: string; role?: string };
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? "";
+const ALLOWED_DOCTOR_EMAIL = "alixan.baktybaev@gmail.com";
+
+type StoredUser = { id?: string; email?: string; name?: string; role?: string; picture?: string };
 type NavSection = "overview" | "patients" | "ward" | "schedule";
 type AiAdvice = {
   status: string;
@@ -40,6 +43,28 @@ type AiAdvice = {
   actions: string[];
 };
 type AiResult = { consultId: string; loading: boolean; data: AiAdvice | null; error: boolean };
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (cfg: { client_id: string; callback: (r: { credential: string }) => void; auto_select?: boolean }) => void;
+          renderButton: (el: HTMLElement, cfg: object) => void;
+        };
+      };
+    };
+  }
+}
+
+function decodeGoogleJwt(token: string): { email?: string; name?: string; picture?: string } {
+  try {
+    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(b64)) as { email?: string; name?: string; picture?: string };
+  } catch {
+    return {};
+  }
+}
 
 function readCurrentUser(): StoredUser | null {
   try {
@@ -134,12 +159,12 @@ export default function DoctorDashboard() {
     robots: "noindex, nofollow",
   });
 
-  const user = useMemo(() => readCurrentUser(), []);
-  const role = user?.role;
-  const ALLOWED_DOCTOR_EMAIL = "alixan.baktybaev@gmail.com";
-  const allowed =
-    user?.email === ALLOWED_DOCTOR_EMAIL ||
-    role === "admin";
+  const [sessionUser, setSessionUser] = useState<StoredUser | null>(() => readCurrentUser());
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const googleBtnRef = useRef<HTMLDivElement | null>(null);
+
+  const user = useMemo(() => sessionUser, [sessionUser]);
+  const allowed = user?.email === ALLOWED_DOCTOR_EMAIL || user?.role === "admin";
   const doctorName = user?.name || user?.email || "Врач";
 
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
@@ -150,6 +175,56 @@ export default function DoctorDashboard() {
   const [err, setErr] = useState<string | null>(null);
   const [activeCall, setActiveCall] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
+
+  // Load Google Identity Services and render sign-in button
+  useEffect(() => {
+    if (sessionUser || !GOOGLE_CLIENT_ID) return;
+
+    let cancelled = false;
+
+    function initGoogle() {
+      if (cancelled || !window.google || !googleBtnRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          const payload = decodeGoogleJwt(response.credential);
+          if (!payload.email) {
+            setGoogleError("Не удалось получить данные аккаунта.");
+            return;
+          }
+          if (payload.email !== ALLOWED_DOCTOR_EMAIL) {
+            setGoogleError(`Аккаунт ${payload.email} не имеет доступа к кабинету врача.`);
+            return;
+          }
+          const u: StoredUser = { email: payload.email, name: payload.name, role: "doctor", picture: payload.picture };
+          setCurrentUser(u);
+          setToken(`google:${payload.email}`);
+          setSessionUser(u);
+          setGoogleError(null);
+        },
+      });
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: "filled_black",
+        size: "large",
+        text: "signin_with",
+        locale: "ru",
+        width: 280,
+      });
+    }
+
+    if (window.google) {
+      initGoogle();
+    } else {
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.defer = true;
+      s.onload = () => { if (!cancelled) initGoogle(); };
+      document.head.appendChild(s);
+    }
+
+    return () => { cancelled = true; };
+  }, [sessionUser, googleBtnRef]);
 
   const loadConsultations = useCallback((d: string) => {
     const all = listAllBedsideConsultations();
@@ -224,15 +299,79 @@ export default function DoctorDashboard() {
   const activeConsults = consultations.filter(c => c.stage === "live" || c.stage === "bedside_ready");
   const completedToday = appointments.filter(a => a.status === "done").length;
 
-  if (!hasSession()) return <Navigate to="/login" replace />;
+  // Not logged in → Google Sign-In screen
+  if (!sessionUser || !hasSession()) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg, #0a0f1a)",
+      }}>
+        <div style={{
+          width: "100%", maxWidth: 400, padding: "40px 36px",
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 24, textAlign: "center",
+        }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: "50%",
+              background: "linear-gradient(135deg, #22d3ee, #6366f1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Stethoscope size={26} color="#0a0f1a" />
+            </div>
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 6px" }}>Кабинет врача</h1>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, margin: "0 0 28px" }}>
+            HealthAssist · Только для авторизованных врачей
+          </p>
 
+          {!GOOGLE_CLIENT_ID ? (
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24", fontSize: 13 }}>
+              Google Sign-In не настроен.<br />Добавьте <code>VITE_GOOGLE_CLIENT_ID</code> в переменные окружения.
+            </div>
+          ) : (
+            <>
+              <div ref={googleBtnRef} style={{ display: "flex", justifyContent: "center", marginBottom: 16 }} />
+              {googleError && (
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", fontSize: 13, textAlign: "left" }}>
+                  {googleError}
+                </div>
+              )}
+            </>
+          )}
+
+          <Link to="/" style={{ display: "block", marginTop: 24, color: "rgba(255,255,255,0.35)", fontSize: 13, textDecoration: "none" }}>
+            ← На главную
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Logged in but wrong account
   if (!allowed) {
     return (
-      <div className="container">
-        <div className="stack" style={{ padding: "64px 0" }}>
-          <h1 className="h2">Нет доступа</h1>
-          <p className="muted">Для кабинета врача нужна роль doctor или admin.</p>
-          <Link to="/" style={{ color: "var(--primary)" }}>← На главную</Link>
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg, #0a0f1a)",
+      }}>
+        <div style={{
+          width: "100%", maxWidth: 400, padding: "40px 36px",
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 24, textAlign: "center",
+        }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>Нет доступа</h1>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, margin: "0 0 20px" }}>
+            Аккаунт <b>{user?.email}</b> не имеет доступа к кабинету врача.
+          </p>
+          <button
+            onClick={() => { clearStoredSession(); setSessionUser(null); }}
+            style={{ padding: "9px 20px", borderRadius: 10, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", cursor: "pointer", fontSize: 14 }}
+          >
+            Выйти и войти другим аккаунтом
+          </button>
         </div>
       </div>
     );
@@ -299,17 +438,26 @@ export default function DoctorDashboard() {
               {loading ? "Загрузка..." : "Обновить"}
             </button>
             <div className="doctor-admin__identity">
-              <div style={{
-                width: 34, height: 34, borderRadius: "50%",
-                background: "linear-gradient(135deg, #22d3ee, #6366f1)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: 800, fontSize: 14, color: "#0a0f1a",
-              }}>
-                {doctorName.charAt(0).toUpperCase()}
-              </div>
+              {user?.picture ? (
+                <img src={user.picture} alt="" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover" }} />
+              ) : (
+                <div style={{
+                  width: 34, height: 34, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #22d3ee, #6366f1)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontWeight: 800, fontSize: 14, color: "#0a0f1a",
+                }}>
+                  {doctorName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <strong style={{ fontSize: 13 }}>{doctorName}</strong>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", display: "block" }}>Врач</span>
+                <button
+                  onClick={() => { clearStoredSession(); setSessionUser(null); }}
+                  style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", background: "none", border: "none", cursor: "pointer", padding: 0, display: "block" }}
+                >
+                  Выйти
+                </button>
               </div>
             </div>
           </div>
