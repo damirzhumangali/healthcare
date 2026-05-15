@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LoaderCircle,
-  MessageSquare,
   MonitorSmartphone,
   Settings,
   SlidersHorizontal,
@@ -27,13 +26,8 @@ import {
   fetchAdminDoctors,
   fetchAdminPatients,
   fetchAdminSummary,
-  acceptAdminTelegramConsultation,
-  fetchAdminTelegramConsultations,
   type AdminPatient,
   type AdminSummary,
-  type AdminTelegramConsultation,
-  type TelegramConsultationStatus,
-  updateAdminTelegramConsultationStatus,
 } from "../lib/apiAdmin";
 import { isAdminAccount } from "../lib/adminAccess";
 import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
@@ -50,7 +44,7 @@ type StoredUser = {
 
 type StatusFilter = AppointmentStatus | "all";
 type DoctorFilter = string | "all";
-type ErrorState = "load" | "statusUpdate" | "serverAuth" | "acceptConsultation" | "acceptNotify" | null;
+type ErrorState = "load" | "statusUpdate" | "serverAuth" | null;
 type Locale = AppLocale;
 
 const adminText = {
@@ -60,7 +54,6 @@ const adminText = {
     navSchedule: "Расписание",
     navAppointments: "Записи",
     navPatients: "Пациенты",
-    navTelegram: "Telegram",
     navSettings: "Настроить BMO",
     navAimar: "Настроить Aimar",
     aimarSubtitle: "Управление замком двери",
@@ -118,25 +111,16 @@ const adminText = {
     loadError: "Не удалось загрузить админ-данные. Проверь backend и VITE_API_BASE_URL.",
     statusUpdateError: "Не удалось изменить статус записи.",
     serverAuthError:
-      "Локальный email/пароль вход работает только как demo. Чтобы увидеть Telegram-заявки и данные сервера, войдите через Google с админ-почтой.",
+      "Локальный email/пароль вход работает только как demo. Войдите через Google с админ-почтой для доступа к данным сервера.",
     patientFallback: "Пациент",
     doctorFallback: "Врач",
     appointmentFallback: "Прием",
     statusOnline: "Онлайн",
     statusConfirmed: "Подтвержден",
     statusWaiting: "Ожидает",
-    telegramInbox: "Telegram-заявки",
-    telegramSubtitle: "Анкеты пациентов из Telegram-бота приходят сюда в реальном времени.",
-    noTelegram: "Пока нет новых анкет из Telegram.",
-    telegramProblem: "Проблема",
-    telegramDays: "Дней",
-    telegramTemperature: "Температура",
-    telegramNoData: "Не указано",
-    telegramMarkReviewed: "Отметить просмотренной",
-    telegramMarkNew: "Вернуть в новые",
     emptyDashboardTitle: "Дашборд пока пуст",
     emptyDashboardText:
-      "Когда появятся записи, пациенты или Telegram-заявки, здесь сразу отобразятся ключевые метрики и последние обновления.",
+      "Когда появятся записи или пациенты, здесь сразу отобразятся ключевые метрики и последние обновления.",
   },
   kk: {
     panelTitle: "Әкімші панелі",
@@ -144,7 +128,6 @@ const adminText = {
     navSchedule: "Кесте",
     navAppointments: "Жазылулар",
     navPatients: "Пациенттер",
-    navTelegram: "Telegram",
     navSettings: "BMO баптау",
     navAimar: "Aimar баптау",
     aimarSubtitle: "Есік құлпын басқару",
@@ -202,25 +185,16 @@ const adminText = {
     loadError: "Әкімші деректерін жүктеу мүмкін болмады. Backend пен VITE_API_BASE_URL тексеріңіз.",
     statusUpdateError: "Жазылу мәртебесін өзгерту мүмкін болмады.",
     serverAuthError:
-      "Жергілікті email/құпиясөз кіруі тек demo режимінде. Сервер деректері мен Telegram өтінімдерін көру үшін Google арқылы әкімші поштасымен кіріңіз.",
+      "Жергілікті email/құпиясөз кіруі тек demo режимінде. Сервер деректерін көру үшін Google арқылы әкімші поштасымен кіріңіз.",
     patientFallback: "Пациент",
     doctorFallback: "Дәрігер",
     appointmentFallback: "Қабылдау",
     statusOnline: "Онлайн",
     statusConfirmed: "Расталды",
     statusWaiting: "Күтіп тұр",
-    telegramInbox: "Telegram өтінімдері",
-    telegramSubtitle: "Telegram-боттағы пациент сауалнамалары осында бірден түседі.",
-    noTelegram: "Telegram-нан өтінімдер әлі жоқ.",
-    telegramProblem: "Мәселе",
-    telegramDays: "Күн",
-    telegramTemperature: "Температура",
-    telegramNoData: "Көрсетілмеген",
-    telegramMarkReviewed: "Қаралды деп белгілеу",
-    telegramMarkNew: "Жаңаға қайтару",
     emptyDashboardTitle: "Басқару тақтасы әзірге бос",
     emptyDashboardText:
-      "Жазылулар, пациенттер немесе Telegram өтінімдері түскенде, негізгі метрикалар мен соңғы жаңартулар осында бірден көрінеді.",
+      "Жазылулар немесе пациенттер түскенде, негізгі метрикалар мен соңғы жаңартулар осында бірден көрінеді.",
   },
   en: {
     panelTitle: "Admin Panel",
@@ -228,7 +202,6 @@ const adminText = {
     navSchedule: "Schedule",
     navAppointments: "Appointments",
     navPatients: "Patients",
-    navTelegram: "Telegram",
     navSettings: "Configure BMO",
     navAimar: "Configure Aimar",
     aimarSubtitle: "Door lock control",
@@ -286,25 +259,16 @@ const adminText = {
     loadError: "Could not load admin data. Check the backend and VITE_API_BASE_URL.",
     statusUpdateError: "Could not change the appointment status.",
     serverAuthError:
-      "Local email/password login works only as a demo. To see Telegram requests and backend data, sign in with Google using an admin email.",
+      "Local email/password login works only as a demo. Sign in with Google using an admin email to access backend data.",
     patientFallback: "Patient",
     doctorFallback: "Doctor",
     appointmentFallback: "Appointment",
     statusOnline: "Online",
     statusConfirmed: "Confirmed",
     statusWaiting: "Waiting",
-    telegramInbox: "Telegram requests",
-    telegramSubtitle: "Patient questionnaires from the Telegram bot appear here automatically.",
-    noTelegram: "No Telegram questionnaires yet.",
-    telegramProblem: "Problem",
-    telegramDays: "Days",
-    telegramTemperature: "Temperature",
-    telegramNoData: "Not provided",
-    telegramMarkReviewed: "Mark reviewed",
-    telegramMarkNew: "Move back to new",
     emptyDashboardTitle: "The dashboard is empty for now",
     emptyDashboardText:
-      "As soon as appointments, patients, or Telegram requests appear, the main metrics and recent updates will show up here.",
+      "As soon as appointments or patients appear, the main metrics and recent updates will show up here.",
   },
 } as const;
 
@@ -428,10 +392,6 @@ function statusTone(status: AppointmentStatus) {
   return "amber";
 }
 
-function consultationTone(status: TelegramConsultationStatus) {
-  return status === "reviewed" ? "green" : "amber";
-}
-
 function appointmentCountLabel(locale: Locale, count: number) {
   if (locale === "kk") return `${count} жазылу`;
   if (locale === "en") return `${count} appointments`;
@@ -461,8 +421,6 @@ export default function AdminDashboard() {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [doctors, setDoctors] = useState<DoctorOption[]>(DOCTORS.map((doctor) => ({ ...doctor, active: true })));
   const [patients, setPatients] = useState<AdminPatient[]>([]);
-  const [consultations, setConsultations] = useState<AdminTelegramConsultation[]>([]);
-  const [acceptForm, setAcceptForm] = useState<{ id: string; value: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
 
@@ -474,7 +432,6 @@ export default function AdminDashboard() {
     { id: "schedule", label: t.navSchedule, icon: CalendarClock },
     { id: "appointments", label: t.navAppointments, icon: ClipboardList },
     { id: "patients", label: t.navPatients, icon: Users },
-    { id: "telegram", label: t.navTelegram, icon: MessageSquare },
   ] as const;
 
   const aimarNavItem = { id: "aimar", label: t.navAimar, icon: Cpu };
@@ -495,12 +452,11 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      const [appointmentsData, summaryData, doctorsData, patientsData, consultationsData] = await Promise.all([
+      const [appointmentsData, summaryData, doctorsData, patientsData] = await Promise.all([
         fetchAppointments(date || undefined),
         fetchAdminSummary(),
         fetchAdminDoctors(),
         fetchAdminPatients(),
-        fetchAdminTelegramConsultations(),
       ]);
 
       setItems(appointmentsData.items ?? []);
@@ -511,7 +467,6 @@ export default function AdminDashboard() {
           : DOCTORS.map((doctor) => ({ ...doctor, active: true }))
       );
       setPatients(patientsData.items ?? []);
-      setConsultations(consultationsData.items ?? []);
     } catch {
       setErr("load");
     } finally {
@@ -547,7 +502,6 @@ export default function AdminDashboard() {
       today: summary?.appointmentsToday ?? visibleItems.length,
       patients: summary?.patients ?? visiblePatients.length,
       pending:
-        summary?.telegramNew ??
         summary?.pending ??
         visibleItems.filter((item) => item.status === "pending").length,
       done: summary?.done ?? visibleItems.filter((item) => item.status === "done").length,
@@ -559,17 +513,15 @@ export default function AdminDashboard() {
     loading &&
     !summary &&
     items.length === 0 &&
-    patients.length === 0 &&
-    consultations.length === 0;
+    patients.length === 0;
   const showEmptyDashboard =
     !isInitialLoading &&
     !loading &&
     visibleItems.length === 0 &&
     patients.length === 0 &&
-    consultations.length === 0 &&
     (summary?.appointmentsToday ?? 0) === 0 &&
     (summary?.patients ?? 0) === 0 &&
-    (summary?.telegramNew ?? summary?.pending ?? 0) === 0 &&
+    (summary?.pending ?? 0) === 0 &&
     (summary?.done ?? 0) === 0;
   const metricCards = [
     { key: "today", label: t.appointmentsToday, value: stats.today, tone: "green", delta: t.todayDelta },
@@ -587,31 +539,6 @@ export default function AdminDashboard() {
       await load();
     } catch {
       setErr("statusUpdate");
-    }
-  }
-
-  async function changeConsultationStatus(id: string, nextStatus: TelegramConsultationStatus) {
-    setErr(null);
-
-    try {
-      await updateAdminTelegramConsultationStatus(id, nextStatus);
-      await load();
-    } catch {
-      setErr("statusUpdate");
-    }
-  }
-
-  async function acceptConsultation(id: string, meetingAtIso: string) {
-    setErr(null);
-
-    try {
-      const result = await acceptAdminTelegramConsultation(id, meetingAtIso);
-      await load();
-      if (!result.notified) {
-        setErr("acceptNotify");
-      }
-    } catch {
-      setErr("acceptConsultation");
     }
   }
 
@@ -637,55 +564,6 @@ export default function AdminDashboard() {
       window.removeEventListener("hashchange", syncActiveSection);
     };
   }, []);
-
-  const ringAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    const audio = new Audio("/Ring.mp3");
-    audio.preload = "auto";
-    audio.volume = 0.7;
-    ringAudioRef.current = audio;
-    return () => {
-      ringAudioRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!allowed) return;
-    if (!hasSession()) return;
-
-    const token = getToken();
-    const url = token
-      ? `${API_URL}/api/admin/telegram-consultations/stream?token=${encodeURIComponent(token)}`
-      : `${API_URL}/api/admin/telegram-consultations/stream`;
-    const source = token
-      ? new EventSource(url)
-      : new EventSource(url, { withCredentials: true });
-
-    source.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === "created" && ringAudioRef.current) {
-          ringAudioRef.current.currentTime = 0;
-          ringAudioRef.current.play().catch(() => {});
-        }
-        if (data.type === "created" || data.type === "accepted" || data.type === "status_changed") {
-          void load();
-        }
-      } catch {
-        // ignore malformed events
-      }
-    };
-
-    source.onerror = () => {
-      // EventSource auto-reconnects; we keep a fallback poll-on-error here
-      // so a permanent failure doesn't leave the dashboard stuck.
-    };
-
-    return () => {
-      source.close();
-    };
-  }, [allowed, load]);
 
   if (!hasSession()) {
     return <Navigate to="/login" replace />;
@@ -1007,151 +885,6 @@ export default function AdminDashboard() {
               )}
             </div>
           </article>
-        </section>
-
-        <section className="doctor-admin__panel doctor-admin__messages" id="telegram">
-          <div className="doctor-admin__panel-head">
-            <div>
-              <h2>{t.telegramInbox}</h2>
-              <p className="doctor-admin__panel-subtitle">{t.telegramSubtitle}</p>
-            </div>
-            {consultations.length > 0 ? <span>{consultations.length}</span> : null}
-          </div>
-
-          <div className="doctor-admin__list">
-            {isInitialLoading ? (
-              <div className="doctor-admin__panel-loading" aria-live="polite">
-                <LoaderCircle className="doctor-admin__spin" size={18} />
-                {t.loading}
-              </div>
-            ) : consultations.length === 0 ? (
-              <p className="doctor-admin__empty">{t.noTelegram}</p>
-            ) : (
-              consultations.map((item) => {
-                const telegramLabel = item.telegram_username
-                  ? `@${item.telegram_username}`
-                  : `ID ${item.chat_id}`;
-                const telegramPerson = [item.telegram_first_name, item.telegram_last_name]
-                  .filter(Boolean)
-                  .join(" ");
-                const wantsConsultation =
-                  item.wants_consultation === 1 || item.wants_consultation === true;
-                const hasMeeting = Boolean(item.meeting_url && item.meeting_at);
-                const isOpen = acceptForm?.id === item.id;
-
-                return (
-                  <div className="doctor-admin__message" key={`${item.id}-telegram`}>
-                    <span
-                      className={`doctor-admin__dot doctor-admin__dot--${item.status === "reviewed" ? "reviewed" : "new"}`}
-                    />
-                    <div
-                      className={`doctor-admin__mini-avatar ${
-                        item.status === "reviewed" ? "doctor-admin__mini-avatar--soft" : ""
-                      }`}
-                    >
-                      {initials(item.patient_name)}
-                    </div>
-                    <div className="doctor-admin__message-content">
-                      <strong>{item.patient_name}</strong>
-                      <p>
-                        {telegramLabel}
-                        {telegramPerson ? ` • ${telegramPerson}` : ""}
-                      </p>
-                      <p>
-                        {t.telegramProblem}: {item.problem}
-                      </p>
-                      <p>
-                        {t.telegramDays}: {item.days || t.telegramNoData} • {t.telegramTemperature}:{" "}
-                        {item.temperature || t.telegramNoData}
-                      </p>
-                      <p>{formatDateTime(item.created_at, locale)}</p>
-
-                      {wantsConsultation && !hasMeeting ? (
-                        <div style={{ marginTop: 6, padding: 6, background: "rgba(245,158,11,0.12)", borderRadius: 6 }}>
-                          <p style={{ margin: 0, color: "#f59e0b", fontWeight: 600 }}>
-                            📹 Запрошена видеоконсультация
-                          </p>
-                          {item.requested_at ? (
-                            <p style={{ margin: "4px 0 0" }}>
-                              Пациент выбрал: <b>{formatDateTime(item.requested_at, locale)}</b>
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      {hasMeeting ? (
-                        <div style={{ marginTop: 8, padding: 8, background: "rgba(16,185,129,0.1)", borderRadius: 6 }}>
-                          <p style={{ margin: 0 }}>
-                            🕐 <b>{formatDateTime(item.meeting_at!, locale)}</b>
-                          </p>
-                          <p style={{ margin: "4px 0 0" }}>
-                            🔗 <a href={item.meeting_url!} target="_blank" rel="noreferrer">{item.meeting_url}</a>
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {isOpen ? (
-                        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <input
-                            type="datetime-local"
-                            value={acceptForm!.value}
-                            onChange={(e) =>
-                              setAcceptForm({ id: item.id, value: e.target.value })
-                            }
-                          />
-                          <button
-                            type="button"
-                            disabled={!acceptForm!.value}
-                            onClick={async () => {
-                              const iso = new Date(acceptForm!.value).toISOString();
-                              await acceptConsultation(item.id, iso);
-                              setAcceptForm(null);
-                            }}
-                          >
-                            Подтвердить и отправить пациенту
-                          </button>
-                          <button type="button" onClick={() => setAcceptForm(null)}>
-                            Отмена
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {wantsConsultation && !hasMeeting && !isOpen ? (
-                        <button
-                          type="button"
-                          className="doctor-admin__status doctor-admin__status--ok"
-                          onClick={() => {
-                            const base = item.requested_at
-                              ? new Date(item.requested_at)
-                              : new Date(Date.now() + 30 * 60 * 1000);
-                            const localIso = new Date(base.getTime() - base.getTimezoneOffset() * 60000)
-                              .toISOString()
-                              .slice(0, 16);
-                            setAcceptForm({ id: item.id, value: localIso });
-                          }}
-                        >
-                          {item.requested_at ? "Принять (время пациента)" : "Принять консультацию"}
-                        </button>
-                      ) : null}
-                      <button
-                        className={`doctor-admin__status doctor-admin__status--${consultationTone(item.status)}`}
-                        type="button"
-                        onClick={() =>
-                          changeConsultationStatus(
-                            item.id,
-                            item.status === "reviewed" ? "new" : "reviewed"
-                          )
-                        }
-                      >
-                        {item.status === "reviewed" ? t.telegramMarkNew : t.telegramMarkReviewed}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
         </section>
 
         <section className="doctor-admin__panel doctor-admin__records" id="appointments">
