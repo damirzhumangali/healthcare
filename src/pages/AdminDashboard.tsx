@@ -13,6 +13,7 @@ import {
   Settings,
   SlidersHorizontal,
   Users,
+  Video,
 } from "lucide-react";
 import {
   DOCTORS,
@@ -129,6 +130,9 @@ const adminText = {
     assignBtn: "Назначить",
     wantsOnlineLabel: "Онлайн",
     assignedOk: "Врач назначен.",
+    freeDoctor: "Свободен",
+    busyDoctor: "Занят",
+    startMeeting: "Начать встречу",
   },
   kk: {
     panelTitle: "Әкімші панелі",
@@ -210,6 +214,9 @@ const adminText = {
     assignBtn: "Тағайындау",
     wantsOnlineLabel: "Онлайн",
     assignedOk: "Дәрігер тағайындалды.",
+    freeDoctor: "Бос",
+    busyDoctor: "Бос емес",
+    startMeeting: "Кездесу бастау",
   },
   en: {
     panelTitle: "Admin Panel",
@@ -291,6 +298,9 @@ const adminText = {
     assignBtn: "Assign",
     wantsOnlineLabel: "Online",
     assignedOk: "Doctor assigned.",
+    freeDoctor: "Free",
+    busyDoctor: "Busy",
+    startMeeting: "Start meeting",
   },
 } as const;
 
@@ -418,6 +428,18 @@ function appointmentCountLabel(locale: Locale, count: number) {
   if (locale === "kk") return `${count} жазылу`;
   if (locale === "en") return `${count} appointments`;
   return `${count} записей`;
+}
+
+function getBusyDoctorIds(date: string, appointments: Appointment[]): Set<string> {
+  return new Set(
+    appointments
+      .filter((a) => a.date === date && (a.doctor_id || a.doctorId))
+      .map((a) => (a.doctor_id || a.doctorId) as string)
+  );
+}
+
+function jitsiRoomUrl(appointmentId: string) {
+  return `https://meet.jit.si/healthassist-${appointmentId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
 }
 
 export default function AdminDashboard() {
@@ -867,67 +889,100 @@ export default function AdminDashboard() {
             <div className="doctor-admin__record-list">
               {unassignedItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback);
-                const selectedDoctorId = assignMap[item.id] ?? (doctors[0]?.id ?? "");
                 const isOnline = item.wants_online || item.wantsOnline;
+                const busyIds = getBusyDoctorIds(item.date, items);
+                const freeDocs = doctors.filter((d) => !busyIds.has(d.id));
+                const busyDocs = doctors.filter((d) => busyIds.has(d.id));
+                const defaultDoctorId = freeDocs[0]?.id ?? doctors[0]?.id ?? "";
+                const selectedDoctorId = assignMap[item.id] ?? defaultDoctorId;
+                const specialtyNeeded = item.specialty_request || item.specialtyRequest;
+
                 return (
                   <div
                     key={`req-${item.id}`}
-                    className="doctor-admin__record"
-                    style={{ borderLeft: "3px solid #f59e0b" }}
+                    style={{
+                      borderRadius: 12,
+                      border: "1px solid rgba(251,191,36,0.25)",
+                      borderLeft: "4px solid #f59e0b",
+                      background: "rgba(251,191,36,0.04)",
+                      padding: "16px 18px",
+                      marginBottom: 10,
+                      display: "flex", flexDirection: "column", gap: 12,
+                    }}
                   >
-                    <div className="doctor-admin__record-date">
-                      <strong>{item.date}</strong>
-                      <span>{item.time}</span>
+                    {/* Top row: patient info */}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      <div className="doctor-admin__mini-avatar" style={{ flexShrink: 0 }}>{initials(name)}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                          {item.date} · {t.patientFallback}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                          {specialtyNeeded ? (
+                            <span style={{
+                              background: "rgba(99,102,241,0.18)", color: "#a5b4fc",
+                              borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 700,
+                            }}>
+                              {specialtyNeeded}
+                            </span>
+                          ) : null}
+                          {isOnline ? (
+                            <span style={{
+                              background: "rgba(34,211,238,0.15)", color: "#22d3ee",
+                              borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 700,
+                            }}>
+                              {t.wantsOnlineLabel}
+                            </span>
+                          ) : null}
+                        </div>
+                        {item.reason ? (
+                          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 6, fontStyle: "italic" }}>
+                            {item.reason}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
-                    <div className="doctor-admin__record-main">
-                      <strong>{name}</strong>
-                      {(item.specialty_request || item.specialtyRequest) ? (
-                        <span style={{
-                          display: "inline-block", marginBottom: 2,
-                          background: "rgba(99,102,241,0.15)", color: "#818cf8",
-                          borderRadius: 6, padding: "1px 8px", fontSize: 11, fontWeight: 700,
-                        }}>
-                          {item.specialty_request || item.specialtyRequest}
-                        </span>
-                      ) : null}
-                      <small>{item.reason || t.appointmentFallback}</small>
-                      {isOnline ? (
-                        <span style={{
-                          display: "inline-block", marginTop: 3,
-                          background: "rgba(34,211,238,0.15)", color: "#22d3ee",
-                          borderRadius: 6, padding: "1px 8px", fontSize: 11, fontWeight: 700,
-                        }}>
-                          {t.wantsOnlineLabel}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="doctor-admin__record-actions" style={{ flexShrink: 0, flexWrap: "wrap", gap: 8 }}>
+
+                    {/* Bottom row: assign controls */}
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
+                      paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)",
+                    }}>
                       <select
                         className="doctor-admin__select"
                         value={selectedDoctorId}
-                        onChange={(e) =>
-                          setAssignMap((prev) => ({ ...prev, [item.id]: e.target.value }))
-                        }
-                        style={{ minWidth: 160 }}
+                        onChange={(e) => setAssignMap((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                        style={{ flex: "1 1 180px", minWidth: 180 }}
                       >
-                        {doctors.map((doc) => (
-                          <option key={doc.id} value={doc.id}>
-                            {doc.name} — {doc.specialty}
-                          </option>
-                        ))}
+                        {freeDocs.length > 0 ? (
+                          <optgroup label={`✓ ${t.freeDoctor}`}>
+                            {freeDocs.map((doc) => (
+                              <option key={doc.id} value={doc.id}>
+                                {doc.name} — {doc.specialty}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null}
+                        {busyDocs.length > 0 ? (
+                          <optgroup label={`✗ ${t.busyDoctor}`}>
+                            {busyDocs.map((doc) => (
+                              <option key={doc.id} value={doc.id}>
+                                {doc.name} — {doc.specialty}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null}
                       </select>
                       <input
                         type="time"
                         value={assignTimeMap[item.id] ?? "09:00"}
-                        onChange={(e) =>
-                          setAssignTimeMap((prev) => ({ ...prev, [item.id]: e.target.value }))
-                        }
+                        onChange={(e) => setAssignTimeMap((prev) => ({ ...prev, [item.id]: e.target.value }))}
                         style={{
                           background: "rgba(255,255,255,0.07)",
                           border: "1px solid rgba(255,255,255,0.15)",
                           borderRadius: 8, padding: "6px 10px",
-                          color: "white", fontSize: 13, width: 100,
+                          color: "white", fontSize: 13, width: 110,
                         }}
                       />
                       <button
@@ -937,12 +992,22 @@ export default function AdminDashboard() {
                         style={{
                           background: "rgba(34,211,153,0.15)", color: "#34d399",
                           border: "1px solid rgba(34,211,153,0.35)",
-                          borderRadius: 8, padding: "6px 16px",
+                          borderRadius: 8, padding: "7px 18px",
                           fontWeight: 700, cursor: "pointer", fontSize: 13,
+                          opacity: assigningId === item.id ? 0.6 : 1,
                         }}
                       >
                         {assigningId === item.id ? "..." : t.assignBtn}
                       </button>
+                      {freeDocs.length === 0 ? (
+                        <span style={{ fontSize: 12, color: "#f59e0b" }}>
+                          ⚠ Все врачи заняты в этот день
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: "#34d399" }}>
+                          ✓ {freeDocs.length} {t.freeDoctor.toLowerCase()}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -1052,23 +1117,60 @@ export default function AdminDashboard() {
             ) : (
               visibleItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback);
+                const isOnline = item.wants_online || item.wantsOnline;
 
                 return (
                   <div className="doctor-admin__record" key={`${item.id}-record`}>
                     <div className="doctor-admin__record-date">
                       <strong>{item.date}</strong>
-                      <span>{item.time}</span>
+                      <span>{item.time || "—"}</span>
                     </div>
                     <div className="doctor-admin__mini-avatar">{initials(name)}</div>
                     <div className="doctor-admin__record-main">
                       <strong>{name}</strong>
                       <span>{doctorLabel(item, doctors, t.doctorFallback)}</span>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                        {isOnline ? (
+                          <span style={{
+                            background: "rgba(34,211,238,0.15)", color: "#22d3ee",
+                            borderRadius: 5, padding: "1px 7px", fontSize: 11, fontWeight: 700,
+                          }}>
+                            {t.wantsOnlineLabel}
+                          </span>
+                        ) : null}
+                        {(item.specialty_request || item.specialtyRequest) ? (
+                          <span style={{
+                            background: "rgba(99,102,241,0.15)", color: "#a5b4fc",
+                            borderRadius: 5, padding: "1px 7px", fontSize: 11, fontWeight: 700,
+                          }}>
+                            {item.specialty_request || item.specialtyRequest}
+                          </span>
+                        ) : null}
+                      </div>
                       <small>{item.reason || t.appointmentFallback}</small>
                     </div>
                     <div className="doctor-admin__record-actions">
                       <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
                         {statusLabel(item.status, locale)}
                       </span>
+                      {isOnline ? (
+                        <a
+                          href={jitsiRoomUrl(item.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: "rgba(34,211,238,0.15)", color: "#22d3ee",
+                            border: "1px solid rgba(34,211,238,0.35)",
+                            borderRadius: 8, padding: "5px 12px",
+                            fontWeight: 700, fontSize: 12, textDecoration: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Video size={13} />
+                          {t.startMeeting}
+                        </a>
+                      ) : null}
                       <button
                         type="button"
                         disabled={item.status === "pending"}
