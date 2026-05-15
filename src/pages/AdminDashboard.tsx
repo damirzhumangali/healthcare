@@ -446,6 +446,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
   const [assignMap, setAssignMap] = useState<Record<string, string>>({});
+  const [assignTimeMap, setAssignTimeMap] = useState<Record<string, string>>({});
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
 
@@ -573,9 +574,10 @@ export default function AdminDashboard() {
   async function assignDoctor(id: string) {
     const doctorId = assignMap[id] || doctors[0]?.id;
     if (!doctorId) return;
+    const time = assignTimeMap[id] || "09:00";
     setAssigningId(id);
     try {
-      await assignDoctorToAppointment(id, doctorId);
+      await assignDoctorToAppointment(id, doctorId, time);
       await load();
     } catch {
       setErr("statusUpdate");
@@ -900,7 +902,7 @@ export default function AdminDashboard() {
                         </span>
                       ) : null}
                     </div>
-                    <div className="doctor-admin__record-actions" style={{ flexShrink: 0 }}>
+                    <div className="doctor-admin__record-actions" style={{ flexShrink: 0, flexWrap: "wrap", gap: 8 }}>
                       <select
                         className="doctor-admin__select"
                         value={selectedDoctorId}
@@ -915,6 +917,19 @@ export default function AdminDashboard() {
                           </option>
                         ))}
                       </select>
+                      <input
+                        type="time"
+                        value={assignTimeMap[item.id] ?? "09:00"}
+                        onChange={(e) =>
+                          setAssignTimeMap((prev) => ({ ...prev, [item.id]: e.target.value }))
+                        }
+                        style={{
+                          background: "rgba(255,255,255,0.07)",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: 8, padding: "6px 10px",
+                          color: "white", fontSize: 13, width: 100,
+                        }}
+                      />
                       <button
                         type="button"
                         disabled={assigningId === item.id}
