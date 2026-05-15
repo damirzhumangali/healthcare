@@ -1052,6 +1052,7 @@ export default function AdminDashboard() {
               visibleItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback);
                 const isOnline = item.wants_online || item.wantsOnline;
+                const hasDoctor = Boolean(item.doctor_id || item.doctorId);
 
                 return (
                   <div className="doctor-admin__record" key={`${item.id}-record`}>
@@ -1062,7 +1063,10 @@ export default function AdminDashboard() {
                     <div className="doctor-admin__mini-avatar">{initials(name)}</div>
                     <div className="doctor-admin__record-main">
                       <strong>{name}</strong>
-                      <span>{doctorLabel(item, doctors, t.doctorFallback)}</span>
+                      {hasDoctor
+                        ? <span>{doctorLabel(item, doctors, t.doctorFallback)}</span>
+                        : <span style={{ color: "#f59e0b", fontSize: 12 }}>⚠ Врач не назначен</span>
+                      }
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                         {isOnline ? (
                           <span style={{
@@ -1087,7 +1091,7 @@ export default function AdminDashboard() {
                       <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
                         {statusLabel(item.status, locale)}
                       </span>
-                      {isOnline ? (
+                      {isOnline && hasDoctor ? (
                         <a
                           href={jitsiRoomUrl(item.id)}
                           target="_blank"
@@ -1098,34 +1102,51 @@ export default function AdminDashboard() {
                             border: "1px solid rgba(34,211,238,0.35)",
                             borderRadius: 8, padding: "5px 12px",
                             fontWeight: 700, fontSize: 12, textDecoration: "none",
-                            cursor: "pointer",
                           }}
                         >
                           <Video size={13} />
                           {t.startMeeting}
                         </a>
                       ) : null}
-                      <button
-                        type="button"
-                        disabled={item.status === "pending"}
-                        onClick={() => changeStatus(item.id, "pending")}
-                      >
-                        {t.actionPending}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={item.status === "active"}
-                        onClick={() => changeStatus(item.id, "active")}
-                      >
-                        {t.actionAccept}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={item.status === "done"}
-                        onClick={() => changeStatus(item.id, "done")}
-                      >
-                        {t.actionComplete}
-                      </button>
+                      {/* If no doctor → navigate to assign page; else → status controls */}
+                      {!hasDoctor ? (
+                        <button
+                          type="button"
+                          onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                          style={{
+                            background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                            color: "#0a1628", border: "none",
+                            borderRadius: 8, padding: "6px 16px",
+                            fontWeight: 800, cursor: "pointer", fontSize: 13,
+                          }}
+                        >
+                          {t.assignBtn}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={item.status === "pending"}
+                            onClick={() => changeStatus(item.id, "pending")}
+                          >
+                            {t.actionPending}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={item.status === "active"}
+                            onClick={() => changeStatus(item.id, "active")}
+                          >
+                            {t.actionAccept}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={item.status === "done"}
+                            onClick={() => changeStatus(item.id, "done")}
+                          >
+                            {t.actionComplete}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
