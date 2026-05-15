@@ -13,8 +13,37 @@ import {
 } from "../lib/devicePairing";
 import { getCurrentUser, hasSession, logout } from "../lib/auth";
 import { usePageSeo } from "../lib/seo";
+import { API_URL } from "../lib/apiBase";
 
 type Locale = "ru" | "kk" | "en";
+
+type AiAdvice = {
+  status: string;
+  summary: string;
+  concerns: string[];
+  doctor: string;
+  doctor_urgency: string;
+  medications: Array<{ drug: string; compartment: string | null; dosage: string; available_in_robot: boolean; reason: string }>;
+  actions: string[];
+};
+
+function localizeStatus(status: string, loc: Locale) {
+  const map: Record<string, Record<Locale, string>> = {
+    "норма":    { ru: "Норма",    kk: "Норма",     en: "Normal" },
+    "внимание": { ru: "Внимание", kk: "Назар",     en: "Attention" },
+    "критично": { ru: "Критично", kk: "Маңызды",   en: "Critical" },
+  };
+  return map[status]?.[loc] ?? status;
+}
+
+function localizeUrgency(urgency: string, loc: Locale) {
+  const map: Record<string, Record<Locale, string>> = {
+    "срочно":         { ru: "срочно",         kk: "шұғыл",        en: "urgent" },
+    "в течение дня":  { ru: "в течение дня",  kk: "күні ішінде",  en: "within the day" },
+    "плановый":       { ru: "плановый",       kk: "жоспарлы",     en: "scheduled" },
+  };
+  return map[urgency]?.[loc] ?? urgency;
+}
 
 const copy = {
   ru: {
@@ -64,6 +93,14 @@ const copy = {
     sessionError:
       "Не получилось получить актуальные данные станции. Проверь backend и активную device-session.",
     sessionEndError: "Не получилось завершить сеанс. Попробуйте еще раз.",
+    aiAnalysis: "Анализ ИИ",
+    aiDoctor: "Врач",
+    aiMeds: "Лекарства",
+    aiActions: "Действия",
+    aiCompartment: "Ячейка",
+    aiAnalyzing: "Анализирую показатели...",
+    aiError: "Не удалось получить анализ ИИ",
+    aiNoMeds: "Препараты не требуются",
   },
   kk: {
     kicker: "QR → СТАНЦИЯ",
@@ -112,6 +149,14 @@ const copy = {
     sessionError:
       "Станцияның өзекті деректерін алу мүмкін болмады. Backend пен active device-session тексеріңіз.",
     sessionEndError: "Сеансты аяқтау мүмкін болмады. Қайтадан көріңіз.",
+    aiAnalysis: "ЖИ талдауы",
+    aiDoctor: "Дәрігер",
+    aiMeds: "Дәрілер",
+    aiActions: "Іс-әрекеттер",
+    aiCompartment: "Ұяшық",
+    aiAnalyzing: "Көрсеткіштер талданып жатыр...",
+    aiError: "ЖИ талдауын алу мүмкін болмады",
+    aiNoMeds: "Дәрілер қажет емес",
   },
   en: {
     kicker: "QR → STATION",
@@ -160,6 +205,14 @@ const copy = {
     sessionError:
       "Could not load current station data. Check the backend and active device session.",
     sessionEndError: "Could not end the session. Try again.",
+    aiAnalysis: "AI Analysis",
+    aiDoctor: "Doctor",
+    aiMeds: "Medications",
+    aiActions: "Actions",
+    aiCompartment: "Compartment",
+    aiAnalyzing: "Analyzing readings...",
+    aiError: "Could not get AI analysis",
+    aiNoMeds: "No medications required",
   },
 } as const;
 
@@ -267,6 +320,10 @@ export default function ScanDevice() {
   const [err, setErr] = useState<string | null>(null);
   const [qrSecondsLeft, setQrSecondsLeft] = useState<number | null>(null);
   const [qrSize, setQrSize] = useState(getQrSize);
+  const [aiAdvice, setAiAdvice] = useState<AiAdvice | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiHasError, setAiHasError] = useState(false);
+  const [analyzedMeasurementId, setAnalyzedMeasurementId] = useState<string | null>(null);
 
   const stationLoginMode =
     new URLSearchParams(location.search).get("stationLogin") === "1";
@@ -511,6 +568,36 @@ export default function ScanDevice() {
     return () => window.clearInterval(timer);
   }, [pairing?.expiresAt, pairing?.status, deviceSession]);
 
+  useEffect(() => {
+    if (!latestMeasurement?.tempC || !latestMeasurement?.hr) return;
+    if (latestMeasurement.id === analyzedMeasurementId) return;
+
+    setAiLoading(true);
+    setAiHasError(false);
+    setAiAdvice(null);
+
+    const measurementId = latestMeasurement.id;
+    fetch(`${API_URL}/api/ai/vitals-advice`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tempC: latestMeasurement.tempC,
+        hr: latestMeasurement.hr,
+        systolic: latestMeasurement.systolic ?? null,
+        diastolic: latestMeasurement.diastolic ?? null,
+        spo2: latestMeasurement.spo2 ?? null,
+        medication: [],
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setAiAdvice(data.advice ?? null);
+        setAnalyzedMeasurementId(measurementId);
+      })
+      .catch(() => setAiHasError(true))
+      .finally(() => setAiLoading(false));
+  }, [latestMeasurement?.id]);
+
   async function handleCreatePairing(forceNew = false) {
     setPairingError(null);
     setErr(null);
@@ -672,6 +759,94 @@ export default function ScanDevice() {
                     </p>
                   )}
                 </div>
+
+                {/* ── AI Advice Panel ── */}
+                {aiLoading && (
+                  <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, textAlign: "center", padding: "14px 0", letterSpacing: "0.02em" }}>
+                    <span style={{ marginRight: 8 }}>⏳</span>{t.aiAnalyzing}
+                  </div>
+                )}
+                {aiHasError && !aiLoading && (
+                  <div className="alert">{t.aiError}</div>
+                )}
+                {aiAdvice && !aiLoading && (() => {
+                  const isCritical = aiAdvice.status === "критично";
+                  const isWarn = aiAdvice.status === "внимание";
+                  const color = isCritical ? "#f87171" : isWarn ? "#fbbf24" : "#34d399";
+                  const bg = isCritical ? "rgba(248,113,113,0.08)" : isWarn ? "rgba(251,191,36,0.08)" : "rgba(52,211,153,0.07)";
+                  return (
+                    <div style={{ borderRadius: 16, border: `1.5px solid ${color}`, padding: "16px 18px", background: bg }}>
+                      {/* Header */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "rgba(255,255,255,0.45)" }}>
+                          {t.aiAnalysis}
+                        </span>
+                        <span style={{ padding: "3px 12px", borderRadius: 20, fontSize: 12, fontWeight: 800, background: color, color: "#0a0f1a" }}>
+                          {localizeStatus(aiAdvice.status, locale)}
+                        </span>
+                      </div>
+
+                      {/* Summary */}
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", margin: "0 0 12px", lineHeight: 1.55 }}>
+                        {aiAdvice.summary}
+                      </p>
+
+                      {/* Doctor */}
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 12, alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>{t.aiDoctor}:</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "white" }}>{aiAdvice.doctor}</span>
+                        <span style={{
+                          fontSize: 11, padding: "2px 9px", borderRadius: 10, fontWeight: 600,
+                          background: isCritical ? "rgba(248,113,113,0.22)" : isWarn ? "rgba(251,191,36,0.22)" : "rgba(52,211,153,0.15)",
+                          color,
+                        }}>
+                          {localizeUrgency(aiAdvice.doctor_urgency, locale)}
+                        </span>
+                      </div>
+
+                      {/* Medications */}
+                      {aiAdvice.medications.length > 0 ? (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 7, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>
+                            {t.aiMeds}
+                          </div>
+                          {aiAdvice.medications.map((med, i) => (
+                            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 10px", marginBottom: 4, borderRadius: 9, background: "rgba(255,255,255,0.05)", flexWrap: "wrap" as const }}>
+                              {med.compartment ? (
+                                <span style={{ background: "#22d3ee", color: "#0a0f1a", fontWeight: 800, fontSize: 11, borderRadius: 6, padding: "2px 8px", minWidth: 28, textAlign: "center" as const }}>
+                                  {med.compartment}
+                                </span>
+                              ) : (
+                                <span style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)", fontWeight: 600, fontSize: 11, borderRadius: 6, padding: "2px 8px" }}>
+                                  —
+                                </span>
+                              )}
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "white" }}>{med.drug}</span>
+                              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>{med.dosage}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>{t.aiNoMeds}</p>
+                      )}
+
+                      {/* Actions */}
+                      {aiAdvice.actions.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 7, textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>
+                            {t.aiActions}
+                          </div>
+                          {aiAdvice.actions.map((action, i) => (
+                            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5, fontSize: 13 }}>
+                              <span style={{ color, minWidth: 12, marginTop: 1 }}>•</span>
+                              <span style={{ color: "rgba(255,255,255,0.8)", lineHeight: 1.45 }}>{action}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {err ? <div className="alert">{err}</div> : null}
 
