@@ -1,4 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  BedDouble,
+  Bot,
+  CalendarClock,
+  HeartPulse,
+  Mic,
+  Package,
+  Stethoscope,
+  Video,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
@@ -9,6 +19,11 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
+import {
+  syncBedsideConsultations,
+  type BedsideConsultationView,
+  type ConsultationStage,
+} from "../lib/onlineConsultations";
 import { createNewMyTicket, getMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 import { useAppPreferences } from "../lib/appPreferences";
 
@@ -181,6 +196,114 @@ const copy = {
   },
 } as const;
 
+const telemedCopy = {
+  ru: {
+    eyebrow: "AIMAR Ward Link",
+    title: "Онлайн-консультация в палате",
+    emptyTitle: "Палатная онлайн-сессия появится здесь",
+    emptyText:
+      "Как только врач назначит дистанционный осмотр, система покажет время, врача, палату и готовность терминала у кровати.",
+    automation:
+      "Пациенту не нужно идти в кабинет: робот или терминал сам приедет к кровати, включит связь и передаст врачу показатели.",
+    doctor: "Врач",
+    schedule: "Время",
+    location: "Палата",
+    robot: "Терминал",
+    deviceReadiness: "Готовность у кровати",
+    liveMetrics: "Данные в реальном времени",
+    timeline: "Как это пройдет",
+    vitalsHint:
+      "Пульс, температура, давление и SpO₂ уходят врачу автоматически, без ручного ввода со стороны пациента.",
+    camera: "Камера врача",
+    audio: "Микрофон и динамик",
+    monitoring: "Мониторинг",
+    medication: "Выдача лекарства",
+    bookVisit: "Назначить консультацию",
+    robotOnline: "связь с AIMAR готова",
+    pending: "ожидает активации",
+    stageScheduled: "Назначено",
+    stageRobot: "Робот едет",
+    stageReady: "У кровати",
+    stageLive: "Идёт онлайн",
+    stageCompleted: "Сохранено",
+    stageScheduledDesc: "Система знает врача, время и палату пациента.",
+    stageRobotDesc: "Терминал сам направляется к нужной кровати.",
+    stageReadyDesc: "Экран, камера и звук готовы к разговору.",
+    stageLiveDesc: "Врач видит пациента и показатели в одном окне.",
+    stageCompletedDesc: "Итоги, назначения и лекарства попадут в историю.",
+  },
+  kk: {
+    eyebrow: "AIMAR Ward Link",
+    title: "Палатадағы онлайн кеңес",
+    emptyTitle: "Палаталық онлайн сессия осында көрінеді",
+    emptyText:
+      "Дәрігер қашықтан қарауды тағайындаған кезде, жүйе уақытты, дәрігерді, палатаны және терминал дайындығын көрсетеді.",
+    automation:
+      "Пациентке кабинетке барудың қажеті жоқ: робот немесе терминал кереуетке өзі келіп, байланысты қосып, көрсеткіштерді дәрігерге жібереді.",
+    doctor: "Дәрігер",
+    schedule: "Уақыты",
+    location: "Палата",
+    robot: "Терминал",
+    deviceReadiness: "Кереует жанындағы дайындық",
+    liveMetrics: "Нақты уақыттағы деректер",
+    timeline: "Қалай өтеді",
+    vitalsHint:
+      "Пульс, температура, қысым және SpO₂ пациент ештеңе енгізбей-ақ дәрігерге автоматты түрде жіберіледі.",
+    camera: "Дәрігер камерасы",
+    audio: "Микрофон мен динамик",
+    monitoring: "Мониторинг",
+    medication: "Дәрі беру",
+    bookVisit: "Кеңес тағайындау",
+    robotOnline: "AIMAR байланысы дайын",
+    pending: "іске қосуды күтуде",
+    stageScheduled: "Тағайындалды",
+    stageRobot: "Робот келе жатыр",
+    stageReady: "Кереует жанында",
+    stageLive: "Онлайн жүріп жатыр",
+    stageCompleted: "Сақталды",
+    stageScheduledDesc: "Жүйе дәрігерді, уақытты және палатаны біледі.",
+    stageRobotDesc: "Терминал қажетті кереуетке өзі барады.",
+    stageReadyDesc: "Экран, камера және дыбыс сөйлесуге дайын.",
+    stageLiveDesc: "Дәрігер науқас пен көрсеткіштерді бір терезеде көреді.",
+    stageCompletedDesc: "Қорытынды, тағайындаулар және дәрілер тарихқа сақталады.",
+  },
+  en: {
+    eyebrow: "AIMAR Ward Link",
+    title: "Bedside online consultation",
+    emptyTitle: "Your bedside session will appear here",
+    emptyText:
+      "As soon as a doctor schedules a remote bedside review, this panel will show the time, doctor, ward, and terminal readiness.",
+    automation:
+      "The patient does not need to move: a robot or bedside terminal comes to the bed, opens the call, and streams vitals to the doctor.",
+    doctor: "Doctor",
+    schedule: "Schedule",
+    location: "Ward",
+    robot: "Terminal",
+    deviceReadiness: "Bedside readiness",
+    liveMetrics: "Live vitals",
+    timeline: "How it will work",
+    vitalsHint:
+      "Pulse, temperature, blood pressure, and SpO₂ are sent to the doctor automatically without patient input.",
+    camera: "Doctor camera",
+    audio: "Mic and speaker",
+    monitoring: "Monitoring",
+    medication: "Medication handoff",
+    bookVisit: "Schedule consult",
+    robotOnline: "AIMAR link ready",
+    pending: "waiting for activation",
+    stageScheduled: "Scheduled",
+    stageRobot: "Robot en route",
+    stageReady: "At bedside",
+    stageLive: "Live now",
+    stageCompleted: "Saved",
+    stageScheduledDesc: "The system knows the doctor, time, and patient ward.",
+    stageRobotDesc: "The terminal drives itself to the correct bed.",
+    stageReadyDesc: "Screen, camera, and audio are ready for the visit.",
+    stageLiveDesc: "The doctor sees the patient and vitals in one view.",
+    stageCompletedDesc: "Results, orders, and meds are archived automatically.",
+  },
+} as const;
+
 function fmtDate(iso: string) {
   try {
     return new Date(iso).toLocaleString();
@@ -220,6 +343,38 @@ function appointmentStatusClass(status: AppointmentStatus) {
   return "badge--danger";
 }
 
+function consultationBadgeClass(stage: ConsultationStage) {
+  if (stage === "live" || stage === "completed") return "badge--ok";
+  if (stage === "bedside_ready") return "badge--ok";
+  return "badge--warn";
+}
+
+function scheduleMs(date: string, time: string) {
+  const value = Date.parse(`${date}T${time}:00`);
+  return Number.isNaN(value) ? Number.MAX_SAFE_INTEGER : value;
+}
+
+function pickPrimaryAppointment(items: Appointment[]) {
+  if (items.length === 0) return null;
+  const now = Date.now();
+  const future = items
+    .filter((item) => scheduleMs(item.date, item.time) >= now - 60 * 60 * 1000)
+    .sort((a, b) => scheduleMs(a.date, a.time) - scheduleMs(b.date, b.time));
+  return future[0] ?? items[items.length - 1] ?? null;
+}
+
+function pickPrimaryConsultation(items: BedsideConsultationView[]) {
+  if (items.length === 0) return null;
+  const now = Date.now();
+  const liveOrReady = items.filter((item) => item.stage === "live" || item.stage === "bedside_ready");
+  if (liveOrReady.length > 0) return liveOrReady[0];
+
+  const future = items
+    .filter((item) => item.stage !== "completed" && scheduleMs(item.date, item.time) >= now - 60 * 60 * 1000)
+    .sort((a, b) => scheduleMs(a.date, a.time) - scheduleMs(b.date, b.time));
+  return future[0] ?? items[items.length - 1] ?? null;
+}
+
 export default function Dashboard() {
   const nav = useNavigate();
   const { locale } = useAppPreferences();
@@ -228,16 +383,19 @@ export default function Dashboard() {
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
 
   const t = copy[locale];
+  const tele = telemedCopy[locale];
 
   const [items, setItems] = useState<MeasurementItem[]>(() => readCachedMeasurements());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [consultations, setConsultations] = useState<BedsideConsultationView[]>([]);
   const [loading, setLoading] = useState(true);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
   const [showAllMeasurements, setShowAllMeasurements] = useState(false);
   const latestMeasurement = items[0] ?? null;
-  const nextAppointment = appointments[0] ?? null;
+  const nextAppointment = pickPrimaryAppointment(appointments);
+  const nextConsultation = pickPrimaryConsultation(consultations);
 
   const refreshTicket = useCallback(() => {
     const currentTicket = getMyTicket();
@@ -293,6 +451,56 @@ export default function Dashboard() {
 
     return () => window.clearInterval(timer);
   }, [load, loadAppointments, refreshTicket]);
+
+  useEffect(() => {
+    setConsultations(syncBedsideConsultations(appointments));
+  }, [appointments]);
+
+  function consultationStageLabel(stage: ConsultationStage) {
+    if (stage === "robot_en_route") return tele.stageRobot;
+    if (stage === "bedside_ready") return tele.stageReady;
+    if (stage === "live") return tele.stageLive;
+    if (stage === "completed") return tele.stageCompleted;
+    return tele.stageScheduled;
+  }
+
+  function consultationTimeline() {
+    return [
+      {
+        key: "scheduled" as const,
+        label: tele.stageScheduled,
+        desc: tele.stageScheduledDesc,
+      },
+      {
+        key: "robot_en_route" as const,
+        label: tele.stageRobot,
+        desc: tele.stageRobotDesc,
+      },
+      {
+        key: "bedside_ready" as const,
+        label: tele.stageReady,
+        desc: tele.stageReadyDesc,
+      },
+      {
+        key: "live" as const,
+        label: tele.stageLive,
+        desc: tele.stageLiveDesc,
+      },
+      {
+        key: "completed" as const,
+        label: tele.stageCompleted,
+        desc: tele.stageCompletedDesc,
+      },
+    ];
+  }
+
+  const stageRank: Record<ConsultationStage, number> = {
+    scheduled: 0,
+    robot_en_route: 1,
+    bedside_ready: 2,
+    live: 3,
+    completed: 4,
+  };
 
   return (
     <div className="container dashboard-page">
@@ -451,6 +659,155 @@ export default function Dashboard() {
         {/* Main — History + Appointments */}
         <div className="dashboard-main">
           <Card>
+            <div className="stack telemed-card telemed-card--patient">
+              <div className="telemed-card__top">
+                <div>
+                  <div className="telemed-card__eyebrow">{tele.eyebrow}</div>
+                  <h2 className="h2" style={{ margin: 0 }}>{tele.title}</h2>
+                  <p className="muted" style={{ margin: "8px 0 0" }}>
+                    {nextConsultation ? tele.automation : tele.emptyText}
+                  </p>
+                </div>
+                {nextConsultation ? (
+                  <span className={`badge ${consultationBadgeClass(nextConsultation.stage)}`}>
+                    <span className="badge__dot" />
+                    {consultationStageLabel(nextConsultation.stage)}
+                  </span>
+                ) : null}
+              </div>
+
+              {!nextConsultation ? (
+                <div className="telemed-empty">
+                  <div>
+                    <strong>{tele.emptyTitle}</strong>
+                    <p className="muted" style={{ margin: "8px 0 0" }}>{tele.emptyText}</p>
+                  </div>
+                  <Button onClick={() => nav("/appointments/new")}>{tele.bookVisit}</Button>
+                </div>
+              ) : (
+                <>
+                  <div className="telemed-grid">
+                    <div className="telemed-stat">
+                      <div className="telemed-stat__icon"><Stethoscope size={18} /></div>
+                      <span className="telemed-stat__label">{tele.doctor}</span>
+                      <strong className="telemed-stat__value">{nextConsultation.doctorName}</strong>
+                      <span className="telemed-stat__meta">{nextConsultation.specialty}</span>
+                    </div>
+                    <div className="telemed-stat">
+                      <div className="telemed-stat__icon"><CalendarClock size={18} /></div>
+                      <span className="telemed-stat__label">{tele.schedule}</span>
+                      <strong className="telemed-stat__value">{nextConsultation.date} • {nextConsultation.time}</strong>
+                      <span className="telemed-stat__meta">{nextConsultation.notes}</span>
+                    </div>
+                    <div className="telemed-stat">
+                      <div className="telemed-stat__icon"><BedDouble size={18} /></div>
+                      <span className="telemed-stat__label">{tele.location}</span>
+                      <strong className="telemed-stat__value">{nextConsultation.wardLabel}</strong>
+                      <span className="telemed-stat__meta">{nextConsultation.bedLabel}</span>
+                    </div>
+                    <div className="telemed-stat">
+                      <div className="telemed-stat__icon"><Bot size={18} /></div>
+                      <span className="telemed-stat__label">{tele.robot}</span>
+                      <strong className="telemed-stat__value">{nextConsultation.robotUnit}</strong>
+                      <span className="telemed-stat__meta">
+                        {nextConsultation.devices.robotLinked ? tele.robotOnline : tele.pending}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="telemed-body">
+                    <div className="telemed-panel">
+                      <div className="telemed-panel__title">{tele.deviceReadiness}</div>
+                      <div className="telemed-device-grid">
+                        {[
+                          {
+                            key: "camera",
+                            label: tele.camera,
+                            icon: <Video size={16} />,
+                            ready: nextConsultation.devices.cameraReady,
+                          },
+                          {
+                            key: "audio",
+                            label: tele.audio,
+                            icon: <Mic size={16} />,
+                            ready: nextConsultation.devices.audioReady,
+                          },
+                          {
+                            key: "monitoring",
+                            label: tele.monitoring,
+                            icon: <HeartPulse size={16} />,
+                            ready: nextConsultation.devices.monitoringReady,
+                          },
+                          {
+                            key: "medication",
+                            label: tele.medication,
+                            icon: <Package size={16} />,
+                            ready: nextConsultation.devices.medicationReady,
+                          },
+                        ].map((device) => (
+                          <div
+                            key={device.key}
+                            className={`telemed-device ${device.ready ? "telemed-device--ready" : "telemed-device--pending"}`}
+                          >
+                            <span className="telemed-device__icon">{device.icon}</span>
+                            <span>
+                              <strong>{device.label}</strong>
+                              <small>{device.ready ? tele.robotOnline : tele.pending}</small>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="telemed-panel">
+                      <div className="telemed-panel__title">{tele.liveMetrics}</div>
+                      <div className="telemed-vitals">
+                        <div className="telemed-vital">
+                          <span>{t.temp}</span>
+                          <strong>{nextConsultation.vitals.tempC}°C</strong>
+                        </div>
+                        <div className="telemed-vital">
+                          <span>{t.pulse}</span>
+                          <strong>{nextConsultation.vitals.pulseBpm}</strong>
+                        </div>
+                        <div className="telemed-vital">
+                          <span>{t.pressure}</span>
+                          <strong>{nextConsultation.vitals.systolic}/{nextConsultation.vitals.diastolic}</strong>
+                        </div>
+                        <div className="telemed-vital">
+                          <span>{t.spo2}</span>
+                          <strong>{nextConsultation.vitals.spo2}%</strong>
+                        </div>
+                      </div>
+                      <p className="muted" style={{ margin: "12px 0 0", fontSize: 13 }}>{tele.vitalsHint}</p>
+                    </div>
+                  </div>
+
+                  <div className="telemed-timeline-wrap">
+                    <div className="telemed-panel__title">{tele.timeline}</div>
+                    <div className="telemed-timeline">
+                      {consultationTimeline().map((step) => {
+                        const active = step.key === nextConsultation.stage;
+                        const done = stageRank[nextConsultation.stage] > stageRank[step.key];
+                        return (
+                          <div
+                            key={step.key}
+                            className={`telemed-step ${active ? "telemed-step--active" : ""} ${done ? "telemed-step--done" : ""}`}
+                          >
+                            <div className="telemed-step__marker" />
+                            <strong>{step.label}</strong>
+                            <span>{step.desc}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+
+          <Card>
             <div className="stack">
               <div>
                 <h2 className="h2" style={{ margin: 0 }}>{t.myAppointments}</h2>
@@ -482,49 +839,49 @@ export default function Dashboard() {
             </div>
           </Card>
 
-        <Card>
-          <div className="stack">
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className="h2" style={{ margin: 0 }}>{t.history}</h2>
-              {items.length > 3 && (
-                <button
-                  onClick={() => setShowAllMeasurements((p) => !p)}
-                  style={{ fontSize: 13, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                >
-                  {showAllMeasurements ? t.showLess : t.showAll} ({items.length})
-                </button>
+          <Card>
+            <div className="stack">
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                <h2 className="h2" style={{ margin: 0 }}>{t.history}</h2>
+                {items.length > 3 && (
+                  <button
+                    onClick={() => setShowAllMeasurements((p) => !p)}
+                    style={{ fontSize: 13, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {showAllMeasurements ? t.showLess : t.showAll} ({items.length})
+                  </button>
+                )}
+              </div>
+
+              {loading ? (
+                <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
+              ) : items.length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  {t.noMeasurements}
+                </p>
+              ) : (
+                <div style={{ display: "grid", gap: 10 }}>
+                  {(showAllMeasurements ? items : items.slice(0, 3)).map((m) => (
+                    <Link key={m.id} to={`/app/measurements/${m.id}`} style={{ textDecoration: "none" }}>
+                      <div className="dashboard-list-item dashboard-list-item--measure">
+                        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                          {fmtDate(m.createdAt)} · {t.device}: {m.deviceId}
+                        </div>
+                        <div className="dashboard-measure-row">
+                          <span><b>{m.tempC}°C</b> <span className="muted">{t.temp}</span></span>
+                          <span><b>{m.hr}</b> <span className="muted">{t.pulse}</span></span>
+                          <span><b>{m.systolic}/{m.diastolic}</b> <span className="muted">{t.pressure}</span></span>
+                          <span><b>{m.spo2}%</b> <span className="muted">{t.spo2}</span></span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
-
-            {loading ? (
-              <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
-            ) : items.length === 0 ? (
-              <p className="muted" style={{ margin: 0 }}>
-                {t.noMeasurements}
-              </p>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {(showAllMeasurements ? items : items.slice(0, 3)).map((m) => (
-                  <Link key={m.id} to={`/app/measurements/${m.id}`} style={{ textDecoration: "none" }}>
-                    <div className="dashboard-list-item dashboard-list-item--measure">
-                      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                        {fmtDate(m.createdAt)} · {t.device}: {m.deviceId}
-                      </div>
-                      <div className="dashboard-measure-row">
-                        <span><b>{m.tempC}°C</b> <span className="muted">{t.temp}</span></span>
-                        <span><b>{m.hr}</b> <span className="muted">{t.pulse}</span></span>
-                        <span><b>{m.systolic}/{m.diastolic}</b> <span className="muted">{t.pressure}</span></span>
-                        <span><b>{m.spo2}%</b> <span className="muted">{t.spo2}</span></span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
-  </div>
   );
 }

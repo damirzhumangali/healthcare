@@ -9,9 +9,14 @@ import {
   LayoutDashboard,
   LoaderCircle,
   MessageSquare,
+  MonitorSmartphone,
+  PhoneCall,
+  Plus,
   Settings,
   SlidersHorizontal,
+  Trash2,
   Users,
+  Video,
 } from "lucide-react";
 import {
   DOCTORS,
@@ -33,6 +38,14 @@ import {
   type TelegramConsultationStatus,
   updateAdminTelegramConsultationStatus,
 } from "../lib/apiAdmin";
+import {
+  createManualWardConsultation,
+  deleteBedsideConsultation,
+  listAllBedsideConsultations,
+  updateBedsideConsultationStage,
+  type BedsideConsultationView,
+  type ConsultationStage,
+} from "../lib/onlineConsultations";
 import { isAdminAccount } from "../lib/adminAccess";
 import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
 import { getToken, hasSession, setCurrentUser, setToken } from "../lib/auth";
@@ -464,6 +477,59 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
 
+  const [wardConsults, setWardConsults] = useState<BedsideConsultationView[]>(() => listAllBedsideConsultations());
+  const [wardForm, setWardForm] = useState<{
+    patientName: string;
+    wardLabel: string;
+    bedLabel: string;
+    doctorId: string;
+    date: string;
+    time: string;
+    notes: string;
+  }>({
+    patientName: "",
+    wardLabel: "",
+    bedLabel: "",
+    doctorId: "",
+    date: new Date().toISOString().slice(0, 10),
+    time: "",
+    notes: "",
+  });
+  const [wardFormOpen, setWardFormOpen] = useState(false);
+
+  function refreshWardConsults() {
+    setWardConsults(listAllBedsideConsultations());
+  }
+
+  function handleCreateWardConsult() {
+    if (!wardForm.patientName || !wardForm.wardLabel || !wardForm.doctorId || !wardForm.date || !wardForm.time) return;
+    const doc = doctors.find((d) => d.id === wardForm.doctorId) || DOCTORS.find((d) => d.id === wardForm.doctorId);
+    createManualWardConsultation({
+      patientName: wardForm.patientName,
+      wardLabel: wardForm.wardLabel,
+      bedLabel: wardForm.bedLabel || "Койка 1",
+      doctorId: wardForm.doctorId,
+      doctorName: doc?.name || wardForm.doctorId,
+      specialty: doc?.specialty || "Онлайн-консультация",
+      date: wardForm.date,
+      time: wardForm.time,
+      notes: wardForm.notes,
+    });
+    setWardForm({ patientName: "", wardLabel: "", bedLabel: "", doctorId: "", date: new Date().toISOString().slice(0, 10), time: "", notes: "" });
+    setWardFormOpen(false);
+    refreshWardConsults();
+  }
+
+  function handleWardStage(id: string, stage: ConsultationStage) {
+    updateBedsideConsultationStage(id, stage);
+    refreshWardConsults();
+  }
+
+  function handleDeleteWardConsult(id: string) {
+    deleteBedsideConsultation(id);
+    refreshWardConsults();
+  }
+
   const t = adminText[locale];
   const displayName = user?.name || user?.email || t.defaultAdminName;
   const navItems = [
@@ -471,6 +537,7 @@ export default function AdminDashboard() {
     { id: "schedule", label: t.navSchedule, icon: CalendarClock },
     { id: "appointments", label: t.navAppointments, icon: ClipboardList },
     { id: "patients", label: t.navPatients, icon: Users },
+    { id: "ward-consults", label: "Палатные консультации", icon: MonitorSmartphone },
     { id: "telegram", label: t.navTelegram, icon: MessageSquare },
   ] as const;
 
@@ -683,6 +750,11 @@ export default function AdminDashboard() {
       source.close();
     };
   }, [allowed, load]);
+
+  useEffect(() => {
+    const interval = setInterval(refreshWardConsults, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!hasSession()) {
     return <Navigate to="/login" replace />;
@@ -1192,6 +1264,252 @@ export default function AdminDashboard() {
                         onClick={() => changeStatus(item.id, "done")}
                       >
                         {t.actionComplete}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* ─── ПАЛАТНЫЕ ОНЛАЙН-КОНСУЛЬТАЦИИ ─── */}
+        <section className="doctor-admin__panel doctor-admin__ward-consults" id="ward-consults">
+          <div className="doctor-admin__panel-head">
+            <div>
+              <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <MonitorSmartphone size={20} style={{ color: "#60a5fa" }} />
+                Палатные онлайн-консультации
+              </h2>
+              <p className="doctor-admin__panel-subtitle">
+                Назначьте дистанционный осмотр прямо у кровати пациента — врач подключается по видеосвязи через терминал AIMAR.
+              </p>
+            </div>
+            <button
+              className="doctor-admin__refresh doctor-admin__refresh--primary"
+              type="button"
+              onClick={() => setWardFormOpen((v) => !v)}
+            >
+              <Plus size={16} />
+              Назначить консультацию
+            </button>
+          </div>
+
+          {wardFormOpen ? (
+            <div className="ward-consult-form">
+              <h3>Новая палатная консультация</h3>
+              <div className="ward-consult-form__grid">
+                <label className="doctor-admin__field">
+                  <span>Пациент (ФИО)</span>
+                  <input
+                    type="text"
+                    placeholder="Иванов Иван Иванович"
+                    value={wardForm.patientName}
+                    onChange={(e) => setWardForm((f) => ({ ...f, patientName: e.target.value }))}
+                  />
+                </label>
+                <label className="doctor-admin__field">
+                  <span>Палата</span>
+                  <input
+                    type="text"
+                    placeholder="Палата 301"
+                    value={wardForm.wardLabel}
+                    onChange={(e) => setWardForm((f) => ({ ...f, wardLabel: e.target.value }))}
+                  />
+                </label>
+                <label className="doctor-admin__field">
+                  <span>Койка</span>
+                  <input
+                    type="text"
+                    placeholder="Койка 2"
+                    value={wardForm.bedLabel}
+                    onChange={(e) => setWardForm((f) => ({ ...f, bedLabel: e.target.value }))}
+                  />
+                </label>
+                <label className="doctor-admin__field">
+                  <span>Врач</span>
+                  <select
+                    className="doctor-admin__select"
+                    value={wardForm.doctorId}
+                    onChange={(e) => setWardForm((f) => ({ ...f, doctorId: e.target.value }))}
+                  >
+                    <option value="">— Выберите врача —</option>
+                    {(doctors.length > 0 ? doctors : DOCTORS).map((d) => (
+                      <option key={d.id} value={d.id}>{d.name} — {d.specialty}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="doctor-admin__field">
+                  <span>Дата</span>
+                  <input
+                    type="date"
+                    value={wardForm.date}
+                    onChange={(e) => setWardForm((f) => ({ ...f, date: e.target.value }))}
+                  />
+                </label>
+                <label className="doctor-admin__field">
+                  <span>Время начала</span>
+                  <input
+                    type="time"
+                    value={wardForm.time}
+                    onChange={(e) => setWardForm((f) => ({ ...f, time: e.target.value }))}
+                  />
+                </label>
+                <label className="doctor-admin__field ward-consult-form__notes">
+                  <span>Примечание (необязательно)</span>
+                  <input
+                    type="text"
+                    placeholder="Плановый осмотр, постоперационный контроль..."
+                    value={wardForm.notes}
+                    onChange={(e) => setWardForm((f) => ({ ...f, notes: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="ward-consult-form__actions">
+                <button
+                  className="doctor-admin__refresh doctor-admin__refresh--primary"
+                  type="button"
+                  disabled={!wardForm.patientName || !wardForm.wardLabel || !wardForm.doctorId || !wardForm.date || !wardForm.time}
+                  onClick={handleCreateWardConsult}
+                >
+                  <Video size={16} />
+                  Создать и назначить
+                </button>
+                <button
+                  className="doctor-admin__refresh"
+                  type="button"
+                  onClick={() => setWardFormOpen(false)}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="ward-consult-list">
+            {wardConsults.length === 0 ? (
+              <p className="doctor-admin__empty">
+                Пока нет назначенных палатных консультаций. Нажмите «Назначить консультацию», чтобы создать первую.
+              </p>
+            ) : (
+              wardConsults.map((consult) => {
+                const scheduledMs = Date.parse(`${consult.date}T${consult.time}:00`);
+                const delta = scheduledMs - Date.now();
+                const minutesUntil = Math.round(delta / 60000);
+                const isLive = consult.stage === "live";
+                const isDone = consult.stage === "completed";
+                const canStart = consult.stage !== "completed" && (delta <= 5 * 60_000 || isLive);
+
+                const stageLabels: Record<ConsultationStage, string> = {
+                  scheduled: "Запланировано",
+                  robot_en_route: "Робот едет",
+                  bedside_ready: "У кровати",
+                  live: "🔴 Онлайн",
+                  completed: "Завершено",
+                };
+                const stageTones: Record<ConsultationStage, string> = {
+                  scheduled: "amber",
+                  robot_en_route: "blue",
+                  bedside_ready: "blue",
+                  live: "ok",
+                  completed: "green",
+                };
+
+                return (
+                  <div className={`ward-consult-card ${isLive ? "ward-consult-card--live" : ""} ${isDone ? "ward-consult-card--done" : ""}`} key={consult.id}>
+                    <div className="ward-consult-card__header">
+                      <div className="ward-consult-card__id">
+                        <MonitorSmartphone size={16} style={{ color: isLive ? "#4ade80" : "#60a5fa" }} />
+                        <strong>{consult.wardLabel}</strong>
+                        <span>·</span>
+                        <span>{consult.bedLabel}</span>
+                        <span>·</span>
+                        <span>{consult.robotUnit}</span>
+                      </div>
+                      <span className={`doctor-admin__status doctor-admin__status--${stageTones[consult.stage]}`}>
+                        {stageLabels[consult.stage]}
+                      </span>
+                    </div>
+
+                    <div className="ward-consult-card__body">
+                      <div className="ward-consult-card__patient">
+                        <div className="doctor-admin__mini-avatar">{consult.patientName.slice(0, 2).toUpperCase()}</div>
+                        <div>
+                          <strong>{consult.patientName}</strong>
+                          <span>{consult.notes}</span>
+                        </div>
+                      </div>
+                      <div className="ward-consult-card__meta">
+                        <div className="ward-consult-card__doctor">
+                          <Video size={14} />
+                          <span>{consult.doctorName}</span>
+                          <small>{consult.specialty}</small>
+                        </div>
+                        <div className="ward-consult-card__time">
+                          <CalendarClock size={14} />
+                          <strong>{consult.date} {consult.time}</strong>
+                          {!isDone && delta > 0 ? (
+                            <small style={{ color: minutesUntil <= 10 ? "#f59e0b" : "#9ca3af" }}>
+                              {minutesUntil <= 60
+                                ? `через ${minutesUntil} мин`
+                                : `через ${Math.floor(minutesUntil / 60)} ч ${minutesUntil % 60} мин`}
+                            </small>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="ward-consult-card__vitals">
+                        <span>🌡 {consult.vitals.tempC}°C</span>
+                        <span>❤️ {consult.vitals.pulseBpm} уд/мин</span>
+                        <span>🩸 {consult.vitals.systolic}/{consult.vitals.diastolic}</span>
+                        <span>O₂ {consult.vitals.spo2}%</span>
+                      </div>
+                    </div>
+
+                    <div className="ward-consult-card__actions">
+                      {consult.stage === "scheduled" ? (
+                        <button
+                          className="doctor-admin__status doctor-admin__status--blue"
+                          type="button"
+                          onClick={() => handleWardStage(consult.id, "robot_en_route")}
+                        >
+                          Отправить робота
+                        </button>
+                      ) : null}
+                      {consult.stage === "robot_en_route" ? (
+                        <button
+                          className="doctor-admin__status doctor-admin__status--blue"
+                          type="button"
+                          onClick={() => handleWardStage(consult.id, "bedside_ready")}
+                        >
+                          У кровати
+                        </button>
+                      ) : null}
+                      {(consult.stage === "bedside_ready" || canStart) && !isLive && !isDone ? (
+                        <button
+                          className="doctor-admin__status doctor-admin__status--ok ward-consult-card__call-btn"
+                          type="button"
+                          onClick={() => handleWardStage(consult.id, "live")}
+                        >
+                          <PhoneCall size={14} />
+                          Начать звонок
+                        </button>
+                      ) : null}
+                      {isLive ? (
+                        <button
+                          className="doctor-admin__status doctor-admin__status--green"
+                          type="button"
+                          onClick={() => handleWardStage(consult.id, "completed")}
+                        >
+                          Завершить и сохранить
+                        </button>
+                      ) : null}
+                      <button
+                        className="ward-consult-card__delete"
+                        type="button"
+                        title="Удалить"
+                        onClick={() => handleDeleteWardConsult(consult.id)}
+                      >
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>

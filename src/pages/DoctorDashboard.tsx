@@ -1,4 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  BedDouble,
+  Bot,
+  CalendarClock,
+  HeartPulse,
+  Mic,
+  Package,
+  Stethoscope,
+  Video,
+} from "lucide-react";
 import { Navigate } from "react-router-dom";
 import Button from "../components/Button";
 import Card from "../components/Card";
@@ -10,6 +20,12 @@ import {
   type AppointmentStatus,
 } from "../lib/apiAppointments";
 import { hasSession } from "../lib/auth";
+import {
+  syncBedsideConsultations,
+  updateBedsideConsultationStage,
+  type BedsideConsultationView,
+  type ConsultationStage,
+} from "../lib/onlineConsultations";
 import { usePageSeo } from "../lib/seo";
 
 type StoredUser = {
@@ -54,6 +70,19 @@ function statusClass(status: AppointmentStatus) {
   return "badge--danger";
 }
 
+function consultationStatusLabel(stage: ConsultationStage) {
+  if (stage === "robot_en_route") return "Робот в пути";
+  if (stage === "bedside_ready") return "У кровати";
+  if (stage === "live") return "Связь активна";
+  if (stage === "completed") return "Сохранено";
+  return "Назначено";
+}
+
+function consultationStatusClass(stage: ConsultationStage) {
+  if (stage === "live" || stage === "completed" || stage === "bedside_ready") return "badge--ok";
+  return "badge--warn";
+}
+
 export default function DoctorDashboard() {
   usePageSeo({
     title: "Кабинет врача — HealthAssist",
@@ -68,6 +97,7 @@ export default function DoctorDashboard() {
   const allowed = role === "doctor" || role === "admin";
   const [date, setDate] = useState(today());
   const [items, setItems] = useState<Appointment[]>([]);
+  const [consultations, setConsultations] = useState<BedsideConsultationView[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -76,7 +106,9 @@ export default function DoctorDashboard() {
     setLoading(true);
     try {
       const data = await fetchAppointments(date);
-      setItems(data.items ?? []);
+      const appointmentItems = data.items ?? [];
+      setItems(appointmentItems);
+      setConsultations(syncBedsideConsultations(appointmentItems));
     } catch {
       setErr("Не удалось загрузить записи. Проверь backend и VITE_API_BASE_URL.");
     } finally {
@@ -91,6 +123,22 @@ export default function DoctorDashboard() {
       await load();
     } catch {
       setErr("Не удалось изменить статус записи.");
+    }
+  }
+
+  async function setConsultationStage(session: BedsideConsultationView, stage: ConsultationStage) {
+    setErr(null);
+    try {
+      updateBedsideConsultationStage(session.id, stage);
+      if (stage === "live") {
+        await updateAppointmentStatus(session.appointmentId, "active");
+      }
+      if (stage === "completed") {
+        await updateAppointmentStatus(session.appointmentId, "done");
+      }
+      await load();
+    } catch {
+      setErr("Не удалось изменить статус онлайн-консультации.");
     }
   }
 
@@ -139,6 +187,175 @@ export default function DoctorDashboard() {
         </div>
 
         {err ? <div className="alert">{err}</div> : null}
+
+        <Card>
+          <div className="stack telemed-card">
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 className="h2" style={{ margin: 0 }}>Онлайн-консультации в палатах</h2>
+                <p className="muted" style={{ margin: "6px 0 0" }}>
+                  Один поток для врача: время, палата, робот, разговор и телеметрия пациента.
+                </p>
+              </div>
+              <Button variant="ghost" onClick={load} disabled={loading}>
+                {loading ? "Загрузка..." : "Обновить"}
+              </Button>
+            </div>
+
+            {loading ? (
+              <p className="muted" style={{ margin: 0 }}>Загрузка...</p>
+            ) : consultations.length === 0 ? (
+              <p className="muted" style={{ margin: 0 }}>
+                На эту дату нет палатных онлайн-консультаций.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: 12 }}>
+                {consultations.map((session) => (
+                  <div key={session.id} className="dashboard-list-item telemed-session">
+                    <div className="telemed-session__top">
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 16 }}>
+                          {session.time} - {session.patientName}
+                        </div>
+                        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                          {session.doctorName} • {session.notes}
+                        </div>
+                      </div>
+                      <span className={`badge ${consultationStatusClass(session.stage)}`}>
+                        <span className="badge__dot" />
+                        {consultationStatusLabel(session.stage)}
+                      </span>
+                    </div>
+
+                    <div className="telemed-grid telemed-grid--compact">
+                      <div className="telemed-stat telemed-stat--compact">
+                        <div className="telemed-stat__icon"><CalendarClock size={18} /></div>
+                        <span className="telemed-stat__label">Время</span>
+                        <strong className="telemed-stat__value">{session.date} • {session.time}</strong>
+                        <span className="telemed-stat__meta">Назначение врача</span>
+                      </div>
+                      <div className="telemed-stat telemed-stat--compact">
+                        <div className="telemed-stat__icon"><BedDouble size={18} /></div>
+                        <span className="telemed-stat__label">Палата</span>
+                        <strong className="telemed-stat__value">{session.wardLabel}</strong>
+                        <span className="telemed-stat__meta">{session.bedLabel}</span>
+                      </div>
+                      <div className="telemed-stat telemed-stat--compact">
+                        <div className="telemed-stat__icon"><Bot size={18} /></div>
+                        <span className="telemed-stat__label">Терминал</span>
+                        <strong className="telemed-stat__value">{session.robotUnit}</strong>
+                        <span className="telemed-stat__meta">
+                          {session.devices.robotLinked ? "маршрут активен" : "ожидает команды"}
+                        </span>
+                      </div>
+                      <div className="telemed-stat telemed-stat--compact">
+                        <div className="telemed-stat__icon"><Stethoscope size={18} /></div>
+                        <span className="telemed-stat__label">Врач</span>
+                        <strong className="telemed-stat__value">{session.doctorName}</strong>
+                        <span className="telemed-stat__meta">{session.specialty}</span>
+                      </div>
+                    </div>
+
+                    <div className="telemed-body telemed-body--doctor">
+                      <div className="telemed-panel">
+                        <div className="telemed-panel__title">Готовность канала связи</div>
+                        <div className="telemed-device-grid">
+                          {[
+                            {
+                              key: "video",
+                              label: "Камера",
+                              icon: <Video size={16} />,
+                              ready: session.devices.cameraReady,
+                            },
+                            {
+                              key: "audio",
+                              label: "Микрофон",
+                              icon: <Mic size={16} />,
+                              ready: session.devices.audioReady,
+                            },
+                            {
+                              key: "monitor",
+                              label: "Показатели",
+                              icon: <HeartPulse size={16} />,
+                              ready: session.devices.monitoringReady,
+                            },
+                            {
+                              key: "meds",
+                              label: "Лекарства",
+                              icon: <Package size={16} />,
+                              ready: session.devices.medicationReady,
+                            },
+                          ].map((device) => (
+                            <div
+                              key={device.key}
+                              className={`telemed-device ${device.ready ? "telemed-device--ready" : "telemed-device--pending"}`}
+                            >
+                              <span className="telemed-device__icon">{device.icon}</span>
+                              <span>
+                                <strong>{device.label}</strong>
+                                <small>{device.ready ? "готово" : "ожидает"}</small>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="telemed-panel">
+                        <div className="telemed-panel__title">Показатели пациента</div>
+                        <div className="telemed-vitals">
+                          <div className="telemed-vital">
+                            <span>Темп</span>
+                            <strong>{session.vitals.tempC}°C</strong>
+                          </div>
+                          <div className="telemed-vital">
+                            <span>Пульс</span>
+                            <strong>{session.vitals.pulseBpm}</strong>
+                          </div>
+                          <div className="telemed-vital">
+                            <span>Давление</span>
+                            <strong>{session.vitals.systolic}/{session.vitals.diastolic}</strong>
+                          </div>
+                          <div className="telemed-vital">
+                            <span>SpO₂</span>
+                            <strong>{session.vitals.spo2}%</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="row telemed-session__actions" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        После завершения звонка итог и назначение автоматически сохраняются в историю пациента.
+                      </span>
+                      <div className="row" style={{ gap: 8 }}>
+                        {session.stage === "scheduled" ? (
+                          <Button variant="ghost" onClick={() => void setConsultationStage(session, "robot_en_route")}>
+                            Отправить робота
+                          </Button>
+                        ) : null}
+                        {session.stage === "robot_en_route" ? (
+                          <Button variant="ghost" onClick={() => void setConsultationStage(session, "bedside_ready")}>
+                            У кровати
+                          </Button>
+                        ) : null}
+                        {session.stage === "bedside_ready" ? (
+                          <Button onClick={() => void setConsultationStage(session, "live")}>
+                            Начать связь
+                          </Button>
+                        ) : null}
+                        {session.stage === "live" ? (
+                          <Button onClick={() => void setConsultationStage(session, "completed")}>
+                            Завершить и сохранить
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
 
         <Card>
           <div className="stack">

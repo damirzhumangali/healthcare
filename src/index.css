@@ -902,6 +902,228 @@ button, input{font:inherit}
   margin-left:2px;
 }
 
+.telemed-card{
+  gap:18px;
+}
+.telemed-card__top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.telemed-card__eyebrow{
+  margin-bottom:10px;
+  color:#8fd7ff;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+.telemed-empty{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px;
+  border:1px dashed rgba(143,215,255,.28);
+  border-radius:20px;
+  background:linear-gradient(180deg, rgba(34,211,238,.06), rgba(52,211,153,.03));
+}
+.telemed-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+.telemed-grid--compact{
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+}
+.telemed-stat{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-height:132px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025)),
+    radial-gradient(circle at top right, rgba(79,140,255,.12), transparent 34%);
+}
+.telemed-stat--compact{
+  min-height:118px;
+}
+.telemed-stat__icon{
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  background:rgba(79,140,255,.12);
+  color:#9edcff;
+}
+.telemed-stat__label{
+  color:#9fb0c8;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.telemed-stat__value{
+  font-size:17px;
+  font-weight:800;
+  line-height:1.35;
+}
+.telemed-stat__meta{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+}
+.telemed-body{
+  display:grid;
+  grid-template-columns:minmax(0, 1.1fr) minmax(300px, .9fr);
+  gap:14px;
+}
+.telemed-body--doctor{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+.telemed-panel{
+  padding:16px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  background:rgba(255,255,255,.03);
+}
+.telemed-panel__title{
+  margin-bottom:12px;
+  color:#dfe9f6;
+  font-size:14px;
+  font-weight:800;
+}
+.telemed-device-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.telemed-device{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px 13px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(6,13,22,.26);
+}
+.telemed-device--ready{
+  border-color:rgba(96,220,165,.22);
+  background:rgba(96,220,165,.08);
+}
+.telemed-device--pending{
+  opacity:.84;
+}
+.telemed-device__icon{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:rgba(255,255,255,.07);
+  color:#d9eaff;
+  flex:0 0 auto;
+}
+.telemed-device strong,
+.telemed-device small{
+  display:block;
+}
+.telemed-device strong{
+  font-size:13px;
+}
+.telemed-device small{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:11px;
+}
+.telemed-vitals{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+.telemed-vital{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:12px 13px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(6,13,22,.24);
+}
+.telemed-vital span{
+  color:#9fb0c8;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.telemed-vital strong{
+  font-size:19px;
+  line-height:1.2;
+}
+.telemed-timeline-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.telemed-timeline{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:10px;
+}
+.telemed-step{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-height:120px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.025);
+}
+.telemed-step--active{
+  border-color:rgba(34,211,238,.28);
+  background:linear-gradient(180deg, rgba(34,211,238,.12), rgba(79,140,255,.06));
+}
+.telemed-step--done{
+  border-color:rgba(96,220,165,.24);
+  background:rgba(96,220,165,.08);
+}
+.telemed-step__marker{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#4f8cff;
+  box-shadow:0 0 0 6px rgba(79,140,255,.16);
+}
+.telemed-step strong{
+  font-size:14px;
+}
+.telemed-step span{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.telemed-session{
+  gap:14px;
+}
+.telemed-session__top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+.telemed-session__actions{
+  gap:14px;
+  margin-top:14px;
+}
+
 .language-switcher{
   display:flex;
   border:1px solid var(--border);
@@ -1039,6 +1261,17 @@ button, input{font:inherit}
 @media (max-width: 1179px){
   .dashboard-page{
     padding-top:24px;
+  }
+  .telemed-grid,
+  .telemed-grid--compact{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+  .telemed-body,
+  .telemed-body--doctor{
+    grid-template-columns:1fr;
+  }
+  .telemed-timeline{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
   }
   .patient-hero{
     grid-template-columns:1fr;
@@ -1249,6 +1482,34 @@ button, input{font:inherit}
   }
   .dashboard-measure-row .muted{
     font-size: 11px;
+  }
+  .telemed-card__top,
+  .telemed-session__top,
+  .telemed-session__actions,
+  .telemed-empty{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .telemed-grid,
+  .telemed-grid--compact,
+  .telemed-device-grid,
+  .telemed-vitals,
+  .telemed-timeline{
+    grid-template-columns:1fr;
+  }
+  .telemed-stat{
+    min-height:auto;
+    padding:13px;
+    border-radius:16px;
+  }
+  .telemed-panel{
+    padding:13px;
+    border-radius:16px;
+  }
+  .telemed-step{
+    min-height:auto;
+    padding:13px;
+    border-radius:16px;
   }
   .badge{
     gap: 6px;
@@ -2486,4 +2747,174 @@ button, input{font:inherit}
   .nf__inner{ max-width:100% }
   .nf__robot-wrap{ width:clamp(120px,40vw,180px) }
   .nf__code{ letter-spacing:-3px }
+}
+
+/* ── Ward online consultations (admin panel) ─────────────────────────── */
+.doctor-admin__ward-consults{
+  margin-bottom:20px;
+}
+.doctor-admin__refresh--primary{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:#1d4ed8;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  padding:0 18px;
+  height:40px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:background .15s;
+}
+.doctor-admin__refresh--primary:hover{ background:#1e40af }
+.doctor-admin__status--blue{
+  background:#dbeafe;
+  color:#1e3a8a;
+}
+
+/* Create form */
+.ward-consult-form{
+  background:#181e2e;
+  border:1px solid rgba(96,165,250,.25);
+  border-radius:10px;
+  padding:20px 24px 24px;
+  margin-bottom:20px;
+}
+.ward-consult-form h3{
+  font-size:15px;
+  font-weight:700;
+  color:#93c5fd;
+  margin:0 0 16px;
+}
+.ward-consult-form__grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:14px 18px;
+  margin-bottom:16px;
+}
+.ward-consult-form__notes{
+  grid-column:1/-1;
+}
+.ward-consult-form__actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* Consultation card list */
+.ward-consult-list{
+  display:grid;
+  gap:14px;
+}
+.ward-consult-card{
+  background:#181a17;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+  padding:16px 18px;
+  transition:border-color .2s;
+}
+.ward-consult-card--live{
+  border-color:rgba(74,222,128,.45);
+  background:#0d1a10;
+  box-shadow:0 0 0 1px rgba(74,222,128,.2);
+}
+.ward-consult-card--done{
+  opacity:.65;
+}
+.ward-consult-card__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.ward-consult-card__id{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:14px;
+  color:#d1d5db;
+}
+.ward-consult-card__id strong{ color:#f4f4ef }
+.ward-consult-card__body{
+  display:grid;
+  gap:10px;
+}
+.ward-consult-card__patient{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+.ward-consult-card__patient > div{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.ward-consult-card__patient strong{ color:#f4f4ef;font-size:15px }
+.ward-consult-card__patient span{ color:#9ca3af;font-size:12px }
+.ward-consult-card__meta{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.ward-consult-card__doctor,
+.ward-consult-card__time{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:13px;
+  color:#d1d5db;
+}
+.ward-consult-card__doctor svg,
+.ward-consult-card__time svg{ color:#60a5fa;flex-shrink:0 }
+.ward-consult-card__doctor small,
+.ward-consult-card__time small{ color:#6b7280 }
+.ward-consult-card__vitals{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  font-size:12px;
+  color:#9ca3af;
+  padding:8px 10px;
+  background:rgba(255,255,255,.04);
+  border-radius:6px;
+}
+.ward-consult-card__actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.ward-consult-card__call-btn{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  animation:pulse-border 1.6s ease-in-out infinite;
+}
+@keyframes pulse-border{
+  0%,100%{ box-shadow:0 0 0 0 rgba(74,222,128,.4) }
+  50%{ box-shadow:0 0 0 6px rgba(74,222,128,0) }
+}
+.ward-consult-card__delete{
+  margin-left:auto;
+  background:transparent;
+  border:none;
+  color:#6b7280;
+  cursor:pointer;
+  padding:6px;
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  transition:color .15s,background .15s;
+}
+.ward-consult-card__delete:hover{
+  color:#f87171;
+  background:rgba(248,113,113,.1);
 }
