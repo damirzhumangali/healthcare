@@ -23,10 +23,10 @@ function shouldUseSameOriginApi() {
   return host !== "localhost" && host !== "127.0.0.1";
 }
 
-export const API_URL = shouldUseSameOriginApi()
-  ? ""
-  : resolvedApiBase?.trim()
-    ? normalizeBaseUrl(resolvedApiBase)
+export const API_URL = resolvedApiBase?.trim()
+  ? normalizeBaseUrl(resolvedApiBase)
+  : shouldUseSameOriginApi()
+    ? ""
     : "http://localhost:4015";
 
 export const BMO_SETTINGS_URL = envBmoSettingsUrl?.trim()
