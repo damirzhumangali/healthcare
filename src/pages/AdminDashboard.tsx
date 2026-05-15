@@ -7,6 +7,7 @@ import {
   Cpu,
   House,
   LayoutDashboard,
+  LayoutGrid,
   LoaderCircle,
   MessageSquare,
   MonitorSmartphone,
@@ -727,6 +728,14 @@ export default function AdminDashboard() {
               </a>
             );
           })}
+          <button
+            className="doctor-admin__nav-item doctor-admin__nav-item--compact"
+            type="button"
+            onClick={() => nav("/admin/doctor-schedule")}
+          >
+            <LayoutGrid size={18} />
+            График врачей
+          </button>
           <button
             className="doctor-admin__nav-item doctor-admin__nav-item--compact"
             type="button"
