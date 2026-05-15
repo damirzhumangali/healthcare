@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
+  Activity,
+  AlertTriangle,
+  Bot,
   CalendarClock,
+  CheckCircle,
   ClipboardList,
   Cpu,
-  Activity,
   ExternalLink,
   House,
   LayoutDashboard,
+  Loader2,
   MessageSquare,
   MonitorSmartphone,
   PhoneCall,
@@ -21,7 +25,7 @@ import {
 } from "lucide-react";
 import { DOCTORS } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
-import { BMO_SETTINGS_URL } from "../lib/apiBase";
+import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
 import { hasSession } from "../lib/auth";
 import { readStoredLocale, writeStoredLocale } from "../lib/locale";
 import { usePageSeo } from "../lib/seo";
@@ -179,6 +183,20 @@ export default function WardConsultationsPage() {
   const [medSlots, setMedSlots] = useState<MedicationSlot[]>([emptyMedSlot()]);
   const [vitalsEditId, setVitalsEditId] = useState<string | null>(null);
   const [vitalsInput, setVitalsInput] = useState({ tempC: "", hr: "" });
+  const [aiAdvice, setAiAdvice] = useState<{
+    consultId: string;
+    loading: boolean;
+    data: {
+      status: string;
+      summary: string;
+      concerns: string[];
+      doctor: string;
+      doctor_urgency: string;
+      medications: { compartment: string | null; drug: string; dosage: string; reason: string; available_in_robot: boolean }[];
+      actions: string[];
+    } | null;
+    error: string | null;
+  } | null>(null);
 
   function refresh() {
     setConsults(listAllBedsideConsultations());
@@ -217,6 +235,30 @@ export default function WardConsultationsPage() {
     if (!consult.meetRoomId) return;
     setActiveCall({ roomId: consult.meetRoomId, doctorName: consult.doctorName });
     handleStage(consult.id, "live");
+  }
+
+  async function requestAiAdvice(consult: BedsideConsultationView) {
+    setAiAdvice({ consultId: consult.id, loading: true, data: null, error: null });
+    try {
+      const res = await fetch(`${API_URL}/api/ai/vitals-advice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          tempC: consult.vitals.tempC,
+          hr: consult.vitals.pulseBpm,
+          systolic: consult.vitals.systolic,
+          diastolic: consult.vitals.diastolic,
+          spo2: consult.vitals.spo2,
+          medication: consult.medication ?? [],
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setAiAdvice({ consultId: consult.id, loading: false, data: json.advice, error: null });
+    } catch (e) {
+      setAiAdvice({ consultId: consult.id, loading: false, data: null, error: "Не удалось получить анализ ИИ. Проверьте подключение к серверу." });
+    }
   }
 
   function openVitalsEdit(consult: BedsideConsultationView) {
@@ -595,11 +637,78 @@ export default function WardConsultationsPage() {
                           <Activity size={12} />
                           {consult.realTempC != null ? "Обновить" : "Ввести показатели"}
                         </button>
+                        <button
+                          className="wc-vitals-btn wc-vitals-btn--ai"
+                          type="button"
+                          title="Анализ ИИ по показателям"
+                          onClick={() => requestAiAdvice(consult)}
+                          disabled={aiAdvice?.consultId === consult.id && aiAdvice.loading}
+                        >
+                          {aiAdvice?.consultId === consult.id && aiAdvice.loading
+                            ? <Loader2 size={12} className="wc-spin" />
+                            : <Bot size={12} />}
+                          Анализ ИИ
+                        </button>
                         <span style={{ marginLeft: "auto", color: consult.devices.robotLinked ? "#4ade80" : "#6b7280", fontSize: 11 }}>
                           {consult.devices.robotLinked ? "● Робот подключён" : "○ Робот не подключён"}
                         </span>
                       </div>
                     </div>
+
+                    {/* AI advice panel */}
+                    {aiAdvice?.consultId === consult.id && !aiAdvice.loading ? (
+                      <div className={`wc-ai-panel wc-ai-panel--${aiAdvice.data?.status === "критично" ? "critical" : aiAdvice.data?.status === "внимание" ? "warn" : "ok"}`}>
+                        {aiAdvice.error ? (
+                          <p style={{ color: "#f87171", margin: 0 }}>{aiAdvice.error}</p>
+                        ) : aiAdvice.data ? (
+                          <>
+                            <div className="wc-ai-panel__header">
+                              {aiAdvice.data.status === "критично" ? <AlertTriangle size={16} /> : aiAdvice.data.status === "внимание" ? <AlertTriangle size={16} /> : <CheckCircle size={16} />}
+                              <strong>ИИ-анализ: {aiAdvice.data.status.toUpperCase()}</strong>
+                              <button type="button" className="wc-jitsi-close" onClick={() => setAiAdvice(null)}><X size={14} /></button>
+                            </div>
+                            <p className="wc-ai-panel__summary">{aiAdvice.data.summary}</p>
+                            {aiAdvice.data.concerns.length > 0 && (
+                              <div className="wc-ai-section">
+                                <span>Отклонения:</span>
+                                <ul>{aiAdvice.data.concerns.map((c, i) => <li key={i}>{c}</li>)}</ul>
+                              </div>
+                            )}
+                            <div className="wc-ai-section">
+                              <span>Врач:</span>
+                              <strong>{aiAdvice.data.doctor}</strong>
+                              <em className={`wc-urgency wc-urgency--${aiAdvice.data.doctor_urgency === "срочно" ? "critical" : aiAdvice.data.doctor_urgency === "в течение дня" ? "warn" : "ok"}`}>
+                                {aiAdvice.data.doctor_urgency}
+                              </em>
+                            </div>
+                            {aiAdvice.data.medications.length > 0 && (
+                              <div className="wc-ai-section">
+                                <span>Лекарства:</span>
+                                <div className="wc-ai-meds">
+                                  {aiAdvice.data.medications.map((m, i) => (
+                                    <div key={i} className={`wc-ai-med ${m.available_in_robot ? "wc-ai-med--available" : ""}`}>
+                                      {m.available_in_robot && m.compartment ? (
+                                        <span className="wc-ai-med__cell">Ячейка {m.compartment}</span>
+                                      ) : null}
+                                      <strong>{m.drug}</strong>
+                                      <span>{m.dosage}</span>
+                                      <small>{m.reason}</small>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {aiAdvice.data.actions.length > 0 && (
+                              <div className="wc-ai-section">
+                                <span>Действия:</span>
+                                <ul>{aiAdvice.data.actions.map((a, i) => <li key={i}>{a}</li>)}</ul>
+                              </div>
+                            )}
+                            <p className="wc-ai-disclaimer">Проконсультируйтесь с врачом перед применением препаратов.</p>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="ward-consult-card__actions">
                       {consult.stage === "scheduled" ? (

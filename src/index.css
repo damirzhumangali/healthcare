@@ -2942,6 +2942,104 @@ button, input{font:inherit}
   transition:background .15s;
 }
 .wc-vitals-btn:hover{ background:rgba(74,222,128,.1) }
+.wc-vitals-btn--ai{
+  border-color:rgba(167,139,250,.4);
+  color:#a78bfa;
+}
+.wc-vitals-btn--ai:hover{ background:rgba(167,139,250,.1) }
+.wc-spin{ animation:spin 1s linear infinite }
+
+/* AI advice panel */
+.wc-ai-panel{
+  border-radius:10px;
+  padding:14px 16px;
+  margin-top:12px;
+  border:1px solid rgba(255,255,255,.1);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  font-size:13px;
+}
+.wc-ai-panel--ok{ background:#0d1a10;border-color:rgba(74,222,128,.3) }
+.wc-ai-panel--warn{ background:#1a150a;border-color:rgba(251,191,36,.3) }
+.wc-ai-panel--critical{ background:#1a0a0a;border-color:rgba(248,113,113,.4) }
+.wc-ai-panel__header{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+}
+.wc-ai-panel--ok .wc-ai-panel__header{ color:#4ade80 }
+.wc-ai-panel--warn .wc-ai-panel__header{ color:#fbbf24 }
+.wc-ai-panel--critical .wc-ai-panel__header{ color:#f87171 }
+.wc-ai-panel__summary{ color:#d1d5db;margin:0;line-height:1.5 }
+.wc-ai-section{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.wc-ai-section > span{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:#6b7280;
+  font-weight:700;
+}
+.wc-ai-section strong{ color:#f4f4ef;font-size:14px }
+.wc-ai-section ul{
+  margin:0;
+  padding-left:16px;
+  color:#d1d5db;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.wc-urgency{
+  font-size:11px;
+  font-weight:700;
+  padding:2px 8px;
+  border-radius:999px;
+  font-style:normal;
+}
+.wc-urgency--critical{ background:rgba(248,113,113,.15);color:#f87171 }
+.wc-urgency--warn{ background:rgba(251,191,36,.15);color:#fbbf24 }
+.wc-urgency--ok{ background:rgba(74,222,128,.15);color:#4ade80 }
+.wc-ai-meds{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.wc-ai-med{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;
+  padding:8px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.wc-ai-med--available{
+  background:rgba(251,191,36,.06);
+  border-color:rgba(251,191,36,.25);
+}
+.wc-ai-med__cell{
+  font-size:10px;
+  font-weight:700;
+  color:#d97706;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.wc-ai-med strong{ color:#f4f4ef }
+.wc-ai-med span{ color:#9ca3af;font-size:12px }
+.wc-ai-med small{ color:#6b7280;font-size:11px;font-style:italic }
+.wc-ai-disclaimer{
+  font-size:11px;
+  color:#4b5563;
+  border-top:1px solid rgba(255,255,255,.06);
+  padding-top:8px;
+  margin:0;
+  font-style:italic;
+}
 .ward-consult-empty{
   display:flex;
   flex-direction:column;
