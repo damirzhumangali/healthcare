@@ -136,7 +136,10 @@ export default function DoctorDashboard() {
 
   const user = useMemo(() => readCurrentUser(), []);
   const role = user?.role;
-  const allowed = role === "doctor" || role === "admin";
+  const ALLOWED_DOCTOR_EMAIL = "alixan.baktybaev@gmail.com";
+  const allowed =
+    user?.email === ALLOWED_DOCTOR_EMAIL ||
+    role === "admin";
   const doctorName = user?.name || user?.email || "Врач";
 
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
