@@ -983,13 +983,25 @@ export default function AdminDashboard() {
                         <strong>{name}</strong>
                         <span>{item.reason || t.appointmentFallback}</span>
                       </div>
-                      <button
-                        className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}
-                        type="button"
-                        onClick={() => changeStatus(item.id, item.status === "done" ? "pending" : "done")}
-                      >
-                        {statusLabel(item.status, locale)}
-                      </button>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
+                          {statusLabel(item.status, locale)}
+                        </span>
+                        {item.status !== "done" && (
+                          <button
+                            type="button"
+                            onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                            style={{
+                              background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                              color: "#0a1628", border: "none",
+                              borderRadius: 8, padding: "5px 14px",
+                              fontWeight: 800, cursor: "pointer", fontSize: 12,
+                            }}
+                          >
+                            {t.actionAccept}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })
@@ -1115,8 +1127,7 @@ export default function AdminDashboard() {
                           {t.startMeeting}
                         </a>
                       ) : null}
-                      {/* Pending → go through doctor+time selection; active/done → direct status controls */}
-                      {item.status === "pending" ? (
+                      {item.status !== "done" ? (
                         <button
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
@@ -1129,24 +1140,16 @@ export default function AdminDashboard() {
                         >
                           {t.actionAccept}
                         </button>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            disabled={item.status === "pending"}
-                            onClick={() => changeStatus(item.id, "pending")}
-                          >
-                            {t.actionPending}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={item.status === "done"}
-                            onClick={() => changeStatus(item.id, "done")}
-                          >
-                            {t.actionComplete}
-                          </button>
-                        </>
-                      )}
+                      ) : null}
+                      {item.status !== "pending" ? (
+                        <button
+                          type="button"
+                          onClick={() => changeStatus(item.id, "done")}
+                          disabled={item.status === "done"}
+                        >
+                          {t.actionComplete}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 );
