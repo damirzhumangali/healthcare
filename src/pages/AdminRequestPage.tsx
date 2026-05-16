@@ -24,7 +24,12 @@ function jitsiRoomUrl(appointmentId: string) {
 function getBusyDoctorIds(date: string, appointments: Appointment[], excludeId: string): Set<string> {
   return new Set(
     appointments
-      .filter((a) => a.date === date && a.id !== excludeId && (a.doctor_id || a.doctorId))
+      .filter((a) =>
+        a.date === date &&
+        a.id !== excludeId &&
+        a.status === "active" &&
+        (a.doctor_id || a.doctorId)
+      )
       .map((a) => (a.doctor_id || a.doctorId) as string)
   );
 }
@@ -201,22 +206,20 @@ export default function AdminRequestPage() {
                     borderRadius: 14, padding: "16px 18px",
                     border: isSelected
                       ? "2px solid #34d399"
-                      : isMatch && !isBusy
+                      : isMatch
                         ? "1px solid rgba(52,211,153,0.35)"
                         : "1px solid rgba(255,255,255,0.08)",
                     background: isSelected
                       ? "rgba(52,211,153,0.1)"
-                      : isBusy
-                        ? "rgba(255,255,255,0.02)"
-                        : "rgba(255,255,255,0.04)",
-                    opacity: isBusy ? 0.5 : 1,
-                    cursor: isBusy ? "not-allowed" : "pointer",
+                      : "rgba(255,255,255,0.04)",
+                    opacity: 1,
+                    cursor: "pointer",
                     transition: "all 0.15s",
                     position: "relative",
                   }}
-                  onClick={() => { if (!isBusy) setSelectedDoctorId(doc.id); }}
+                  onClick={() => setSelectedDoctorId(doc.id)}
                 >
-                  {isMatch && !isBusy && (
+                  {isMatch && !isSelected && (
                     <div style={{
                       position: "absolute", top: 10, right: 12,
                       fontSize: 10, fontWeight: 700, color: "#34d399",
@@ -227,24 +230,22 @@ export default function AdminRequestPage() {
                     </div>
                   )}
                   {isSelected && (
-                    <div style={{
-                      position: "absolute", top: 10, right: 12,
-                    }}>
+                    <div style={{ position: "absolute", top: 10, right: 12 }}>
                       <Check size={16} color="#34d399" />
                     </div>
                   )}
 
                   <div style={{
                     width: 40, height: 40, borderRadius: "50%",
-                    background: isBusy ? "rgba(255,255,255,0.06)" : "rgba(99,102,241,0.2)",
+                    background: "rgba(99,102,241,0.2)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 16, fontWeight: 800, marginBottom: 10,
-                    color: isBusy ? "rgba(255,255,255,0.3)" : "#a5b4fc",
+                    color: "#a5b4fc",
                   }}>
                     {doc.name.charAt(0)}
                   </div>
 
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: isBusy ? "rgba(255,255,255,0.35)" : "white" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: "white" }}>
                     {doc.name}
                   </div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
@@ -254,17 +255,19 @@ export default function AdminRequestPage() {
                   <div style={{
                     display: "inline-flex", alignItems: "center", gap: 5,
                     borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700,
-                    background: isBusy
-                      ? "rgba(255,255,255,0.06)"
-                      : isSelected
-                        ? "rgba(52,211,153,0.2)"
+                    background: isSelected
+                      ? "rgba(52,211,153,0.2)"
+                      : isBusy
+                        ? "rgba(251,191,36,0.1)"
                         : "rgba(52,211,153,0.12)",
-                    color: isBusy ? "rgba(255,255,255,0.25)" : "#34d399",
-                    border: isBusy
-                      ? "1px solid rgba(255,255,255,0.08)"
-                      : "1px solid rgba(52,211,153,0.3)",
+                    color: isSelected ? "#34d399" : isBusy ? "#f59e0b" : "#34d399",
+                    border: isSelected
+                      ? "1px solid rgba(52,211,153,0.3)"
+                      : isBusy
+                        ? "1px solid rgba(251,191,36,0.25)"
+                        : "1px solid rgba(52,211,153,0.3)",
                   }}>
-                    {isBusy ? "Занят" : isSelected ? "✓ Выбран" : "Свободно"}
+                    {isSelected ? "✓ Выбран" : isBusy ? "⚠ Занят (активный приём)" : "Свободен"}
                   </div>
                 </div>
               );
