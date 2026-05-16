@@ -14,11 +14,13 @@ import {
 } from "lucide-react";
 import {
   fetchAppointments,
+  fetchDoctors,
   updateAppointmentStatus,
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
-import { hasSession, setCurrentUser, setToken, clearStoredSession } from "../lib/auth";
+import { hasSession, clearStoredSession } from "../lib/auth";
+import { getGoogleAuthUrl } from "../lib/apiAuth";
 import {
   listAllBedsideConsultations,
   updateBedsideConsultationStage,
@@ -28,7 +30,6 @@ import {
 import { API_URL } from "../lib/apiBase";
 import { usePageSeo } from "../lib/seo";
 
-const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? "";
 const ALLOWED_DOCTOR_EMAIL = "alixan.baktybaev@gmail.com";
 
 type StoredUser = { id?: string; email?: string; name?: string; role?: string; picture?: string };
@@ -159,8 +160,9 @@ export default function DoctorDashboard() {
     robots: "noindex, nofollow",
   });
 
-  const [sessionUser, setSessionUser] = useState<StoredUser | null>(() => readCurrentUser());
+  const [sessionUser] = useState<StoredUser | null>(() => readCurrentUser());
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [myDoctorId, setMyDoctorId] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => sessionUser, [sessionUser]);
@@ -176,55 +178,15 @@ export default function DoctorDashboard() {
   const [activeCall, setActiveCall] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
 
-  // Load Google Identity Services and render sign-in button
-  useEffect(() => {
-    if (sessionUser || !GOOGLE_CLIENT_ID) return;
-
-    let cancelled = false;
-
-    function initGoogle() {
-      if (cancelled || !window.google || !googleBtnRef.current) return;
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          const payload = decodeGoogleJwt(response.credential);
-          if (!payload.email) {
-            setGoogleError("Не удалось получить данные аккаунта.");
-            return;
-          }
-          if (payload.email !== ALLOWED_DOCTOR_EMAIL) {
-            setGoogleError(`Аккаунт ${payload.email} не имеет доступа к кабинету врача.`);
-            return;
-          }
-          const u: StoredUser = { email: payload.email, name: payload.name, role: "doctor", picture: payload.picture };
-          setCurrentUser(u);
-          setToken(`google:${payload.email}`);
-          setSessionUser(u);
-          setGoogleError(null);
-        },
-      });
-      window.google.accounts.id.renderButton(googleBtnRef.current, {
-        theme: "filled_black",
-        size: "large",
-        text: "signin_with",
-        locale: "ru",
-        width: 280,
-      });
+  async function handleGoogleLogin() {
+    setGoogleError(null);
+    try {
+      const url = await getGoogleAuthUrl();
+      window.location.href = url;
+    } catch {
+      setGoogleError("Не удалось получить ссылку входа. Попробуйте ещё раз.");
     }
-
-    if (window.google) {
-      initGoogle();
-    } else {
-      const s = document.createElement("script");
-      s.src = "https://accounts.google.com/gsi/client";
-      s.async = true;
-      s.defer = true;
-      s.onload = () => { if (!cancelled) initGoogle(); };
-      document.head.appendChild(s);
-    }
-
-    return () => { cancelled = true; };
-  }, [sessionUser, googleBtnRef]);
+  }
 
   const loadConsultations = useCallback((d: string) => {
     const all = listAllBedsideConsultations();
@@ -235,15 +197,28 @@ export default function DoctorDashboard() {
     setErr(null);
     setLoading(true);
     try {
-      const data = await fetchAppointments(date);
-      setAppointments(data.items ?? []);
+      const [apptData, doctorsData] = await Promise.all([
+        fetchAppointments(date),
+        fetchDoctors(),
+      ]);
+      const email = sessionUser?.email?.toLowerCase();
+      const myDoc = email ? doctorsData.items.find(d => d.email?.toLowerCase() === email) : null;
+      if (myDoc) setMyDoctorId(myDoc.id);
+      const all = apptData.items ?? [];
+      const mine = myDoc
+        ? all.filter(a => {
+            const did = a.doctor_id || a.doctorId;
+            return did === myDoc.id;
+          })
+        : all;
+      setAppointments(mine);
       loadConsultations(date);
     } catch {
       setErr("Не удалось загрузить данные.");
     } finally {
       setLoading(false);
     }
-  }, [date, loadConsultations]);
+  }, [date, loadConsultations, sessionUser]);
 
   useEffect(() => {
     if (allowed) void load();
@@ -296,6 +271,7 @@ export default function DoctorDashboard() {
   }
 
   const todayAppts = appointments.filter(a => a.date === date);
+  const newAppts = appointments.filter(a => a.status === "pending");
   const activeConsults = consultations.filter(c => c.stage === "live" || c.stage === "bedside_ready");
   const completedToday = appointments.filter(a => a.status === "done").length;
 
@@ -326,19 +302,23 @@ export default function DoctorDashboard() {
             HealthAssist · Только для авторизованных врачей
           </p>
 
-          {!GOOGLE_CLIENT_ID ? (
-            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24", fontSize: 13 }}>
-              Google Sign-In не настроен.<br />Добавьте <code>VITE_GOOGLE_CLIENT_ID</code> в переменные окружения.
+          <button
+            onClick={() => void handleGoogleLogin()}
+            style={{
+              width: "100%", padding: "12px 20px", borderRadius: 12, fontSize: 15, fontWeight: 700,
+              background: "linear-gradient(135deg, #22d3ee, #6366f1)",
+              color: "#0a0f1a", border: "none", cursor: "pointer",
+            }}
+          >
+            Войти через Google
+          </button>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "10px 0 0" }}>
+            Только для аккаунта {ALLOWED_DOCTOR_EMAIL}
+          </p>
+          {googleError && (
+            <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", fontSize: 13, textAlign: "left" }}>
+              {googleError}
             </div>
-          ) : (
-            <>
-              <div ref={googleBtnRef} style={{ display: "flex", justifyContent: "center", marginBottom: 16 }} />
-              {googleError && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", fontSize: 13, textAlign: "left" }}>
-                  {googleError}
-                </div>
-              )}
-            </>
           )}
 
           <Link to="/" style={{ display: "block", marginTop: 24, color: "rgba(255,255,255,0.35)", fontSize: 13, textDecoration: "none" }}>
@@ -470,6 +450,74 @@ export default function DoctorDashboard() {
           {/* ── OVERVIEW ── */}
           {activeSection === "overview" && (
             <div className="stack">
+
+              {/* New appointment notifications */}
+              {newAppts.length > 0 && (
+                <div style={{
+                  borderRadius: 14, padding: "16px 20px",
+                  background: "rgba(99,102,241,0.1)",
+                  border: "1px solid rgba(99,102,241,0.35)",
+                  borderLeft: "4px solid #6366f1",
+                }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, color: "#a5b4fc" }}>
+                    🔔 Новые назначения ({newAppts.length})
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {newAppts.map(a => {
+                      const isOnline = a.wants_online || a.wantsOnline;
+                      const jitsiUrl = isOnline
+                        ? `https://meet.jit.si/healthassist-${a.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`
+                        : null;
+                      return (
+                        <div key={a.id} style={{
+                          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                          padding: "10px 14px", borderRadius: 10,
+                          background: "rgba(255,255,255,0.04)",
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>
+                              {a.patientName || a.patient_email || "Пациент"} · {a.date} {a.time !== "00:00" ? a.time : ""}
+                            </div>
+                            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
+                              {a.reason || a.specialty_request || a.specialtyRequest || ""}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                            {isOnline && (
+                              <span style={{
+                                background: "rgba(34,211,238,0.15)", color: "#22d3ee",
+                                borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
+                              }}>Онлайн</span>
+                            )}
+                            {isOnline && jitsiUrl && (
+                              <a
+                                href={jitsiUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  background: "rgba(34,211,238,0.2)", color: "#22d3ee",
+                                  border: "1px solid rgba(34,211,238,0.4)",
+                                  borderRadius: 8, padding: "5px 12px",
+                                  fontWeight: 700, fontSize: 12, textDecoration: "none",
+                                }}
+                              >
+                                Войти в звонок
+                              </a>
+                            )}
+                            <button
+                              onClick={() => void setStatus(a.id, "active")}
+                              style={{ padding: "5px 14px", borderRadius: 8, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399", cursor: "pointer", fontSize: 12, fontWeight: 700 }}
+                            >
+                              Принять
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 14 }}>
                 {[
                   { label: "Пациентов сегодня",    value: todayAppts.length,      color: "#22d3ee" },

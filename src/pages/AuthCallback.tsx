@@ -4,7 +4,7 @@ import Card from "../components/Card";
 import { exchangeGoogleCode } from "../lib/apiAuth";
 import { consumePostLoginRedirect } from "../lib/authRedirect";
 import { setSession } from "../lib/auth";
-import { isAdminAccount } from "../lib/adminAccess";
+import { isAdminAccount, isDoctorAccount } from "../lib/adminAccess";
 import { approveDevicePairingSession } from "../lib/devicePairing";
 import { usePageSeo } from "../lib/seo";
 
@@ -39,7 +39,8 @@ export default function AuthCallback() {
       .then(({ token, user }) => {
         setSession({ token, user, persistToken: true });
 
-        const dest = consumePostLoginRedirect(isAdminAccount(user) ? "/admin" : "/app");
+        const defaultDest = isAdminAccount(user) ? "/admin" : isDoctorAccount(user) ? "/doctor" : "/app";
+        const dest = consumePostLoginRedirect(defaultDest);
 
         // If the stored redirect is a pairing URL, approve silently in the
         // background and send the patient straight to their cabinet.
