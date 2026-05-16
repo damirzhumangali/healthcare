@@ -550,20 +550,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats row — unified muted style */}
+        {/* Stats row — appointments + ticket only */}
         <div style={{ display: "flex", gap: 0, borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 32, padding: "18px 0" }}>
           <div style={{ flex: 1, textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
             <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1 }}>{appointmentsLoading ? "…" : appointments.length}</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>{t.heroAppointments}</div>
-          </div>
-          <div style={{ flex: 1, textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1 }}>{loading ? "…" : items.length}</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>{t.heroMeasurements}</div>
-            {!loading && items.length === 0 && (
-              <button onClick={() => nav("/app/measurements/new")} style={{
-                marginTop: 6, fontSize: 11, color: "#818cf8", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600,
-              }}>+ Добавить</button>
-            )}
           </div>
           <div style={{ flex: 1, textAlign: "center" }}>
             <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1 }}>{ticket ? `A-${ticket.ticketNumber}` : "—"}</div>
