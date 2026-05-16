@@ -391,6 +391,18 @@ async function ensureLocalBackendToken(user: StoredUser | null) {
   setCurrentUser(data.user);
 }
 
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const pad = part.length % 4;
+    const padded = pad ? part + "=".repeat(4 - pad) : part;
+    return JSON.parse(atob(padded.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
 function patientLabel(item: Appointment, fallback: string, patients: AdminPatient[] = []) {
   // Direct name fields win — they come from enrichment or the original booking
   if (item.patientName) return item.patientName;
@@ -529,19 +541,38 @@ export default function AdminDashboard() {
 
       const enrichWithCurrentUser = (apts: Appointment[]) => {
         const cu = readCurrentUser();
-        if (!cu) return apts;
+        const jwtPayload = (() => { const tok = getToken(); return tok ? parseJwtPayload(tok) : null; })();
+
+        // Collect every identifier format the server might have stored as patient_id
+        const userIds = new Set<string>(
+          [
+            cu?.id,
+            cu?.email,
+            jwtPayload?.sub as string | undefined,
+            jwtPayload?.id as string | undefined,
+            jwtPayload?.user_id as string | undefined,
+            jwtPayload?.email as string | undefined,
+          ].filter((v): v is string => Boolean(v))
+        );
+
+        if (userIds.size === 0) return apts;
+
+        const userName =
+          cu?.name ||
+          (jwtPayload?.name as string | undefined) ||
+          cu?.email ||
+          (jwtPayload?.email as string | undefined);
+        const userEmail = cu?.email || (jwtPayload?.email as string | undefined);
+
         return apts.map((apt) => {
           if (apt.patientName || apt.patient_name || apt.patient_email || apt.patientEmail) return apt;
           const pid = apt.patient_id || apt.patientId || "";
-          const match =
-            (cu.id && pid === cu.id) ||
-            (cu.email && pid === cu.email);
-          if (!match) return apt;
+          if (!pid || !userIds.has(pid)) return apt;
           return {
             ...apt,
-            patientName: cu.name || cu.email,
-            patient_name: cu.name || cu.email,
-            patient_email: cu.email,
+            patientName: userName || userEmail,
+            patient_name: userName || userEmail,
+            patient_email: userEmail,
           };
         });
       };
