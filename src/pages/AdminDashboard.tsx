@@ -521,8 +521,27 @@ export default function AdminDashboard() {
         fetchAdminPatients(),
       ]);
 
-      setItems(appointmentsData.items ?? []);
-      setAllItems(allAppointmentsData.items ?? []);
+      const enrichWithCurrentUser = (apts: Appointment[]) => {
+        const cu = readCurrentUser();
+        if (!cu) return apts;
+        return apts.map((apt) => {
+          if (apt.patientName || apt.patient_name || apt.patient_email || apt.patientEmail) return apt;
+          const pid = apt.patient_id || apt.patientId || "";
+          const match =
+            (cu.id && pid === cu.id) ||
+            (cu.email && pid === cu.email);
+          if (!match) return apt;
+          return {
+            ...apt,
+            patientName: cu.name || cu.email,
+            patient_name: cu.name || cu.email,
+            patient_email: cu.email,
+          };
+        });
+      };
+
+      setItems(enrichWithCurrentUser(appointmentsData.items ?? []));
+      setAllItems(enrichWithCurrentUser(allAppointmentsData.items ?? []));
       setSummary(summaryData);
       setDoctors(
         doctorsData.items.length > 0

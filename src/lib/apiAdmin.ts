@@ -89,6 +89,15 @@ function readLocalAppointments(): Appointment[] {
   }
 }
 
+function readCurrentUser(): { id?: string; email?: string; name?: string } | null {
+  try {
+    const raw = localStorage.getItem("healthassist_current_user");
+    return raw ? (JSON.parse(raw) as { id?: string; email?: string; name?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
 function localSummary(): AdminSummary {
   const today = new Date().toISOString().slice(0, 10);
   const appointments = readLocalAppointments();
@@ -107,21 +116,37 @@ function localSummary(): AdminSummary {
 }
 
 function localPatients(): AdminPatient[] {
+  const currentUser = readCurrentUser();
   const grouped = new Map<string, AdminPatient>();
 
   for (const item of readLocalAppointments()) {
     const id = item.patient_id || item.patientId || item.patientEmail || "local-patient";
     const existing = grouped.get(id);
-    const name =
+
+    let resolvedName: string | undefined =
       item.patientName ||
       item.patient_name ||
       item.patient_email ||
       item.patientEmail ||
-      `Пациент ${String(id).slice(-4)}`;
+      undefined;
+
+    let resolvedEmail: string | null = item.patient_email || item.patientEmail || null;
+
+    if (!resolvedName && currentUser) {
+      const isCurrentUser =
+        (currentUser.id && id === currentUser.id) ||
+        (currentUser.email && id === currentUser.email);
+      if (isCurrentUser) {
+        resolvedName = currentUser.name || currentUser.email || undefined;
+        resolvedEmail = resolvedEmail || currentUser.email || null;
+      }
+    }
+
+    const name = resolvedName || `Пациент ${String(id).slice(-4)}`;
 
     grouped.set(id, {
       id,
-      email: item.patient_email || item.patientEmail || null,
+      email: resolvedEmail,
       name,
       role: "patient",
       last_appointment_at: item.created_at || item.createdAt || null,
