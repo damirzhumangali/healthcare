@@ -392,15 +392,21 @@ async function ensureLocalBackendToken(user: StoredUser | null) {
 }
 
 function patientLabel(item: Appointment, fallback: string, patients: AdminPatient[] = []) {
+  // Direct name fields win — they come from enrichment or the original booking
+  if (item.patientName) return item.patientName;
+  if (item.patient_name) return item.patient_name;
+
   const pid = item.patient_id || item.patientId || item.patient_email || item.patientEmail || "";
   const fromPatients = patients.find(
     (p) => p.id === pid || p.email === pid || p.email === item.patient_email || p.email === item.patientEmail
   );
   const idTail = String(pid).slice(-4);
+  // Skip auto-generated fallback names that look like "Пациент XXXX"
+  const fromPatientName = fromPatients?.name && !/^Пациент\s+\S+$/.test(fromPatients.name)
+    ? fromPatients.name
+    : undefined;
   return (
-    fromPatients?.name ||
-    item.patientName ||
-    item.patient_name ||
+    fromPatientName ||
     item.patient_email ||
     item.patientEmail ||
     (idTail ? `${fallback} ${idTail}` : fallback)
