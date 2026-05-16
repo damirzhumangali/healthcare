@@ -51,6 +51,45 @@ export const DOCTORS: DoctorOption[] = [
 ];
 
 const LOCAL_APPOINTMENTS_KEY = "healthassist_appointments_v1";
+// Separate key for doctor assignments — never overwritten by server data
+const ASSIGN_OVERRIDES_KEY = "healthassist_assign_overrides_v1";
+
+type AssignOverride = {
+  doctorId: string;
+  doctorName: string;
+  time?: string;
+};
+
+function readAssignOverrides(): Record<string, AssignOverride> {
+  try {
+    const raw = localStorage.getItem(ASSIGN_OVERRIDES_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, AssignOverride>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveAssignOverride(appointmentId: string, override: AssignOverride) {
+  const overrides = readAssignOverrides();
+  overrides[appointmentId] = override;
+  localStorage.setItem(ASSIGN_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
+function applyAssignOverrides(items: Appointment[]): Appointment[] {
+  const overrides = readAssignOverrides();
+  if (Object.keys(overrides).length === 0) return items;
+  return items.map((item) => {
+    const ov = overrides[item.id];
+    if (!ov) return item;
+    return {
+      ...item,
+      doctor_id: ov.doctorId,
+      doctorId: ov.doctorId,
+      doctorName: ov.doctorName,
+      ...(ov.time ? { time: ov.time } : {}),
+    };
+  });
+}
 
 function readAppointments(): Appointment[] {
   try {
@@ -97,13 +136,10 @@ function appointmentKey(item: Appointment) {
 function mergeAppointments(serverItems: Appointment[], localItems: Appointment[]) {
   const merged = new Map<string, Appointment>();
 
-  // Server data is the base
   serverItems.forEach((item) => {
     merged.set(appointmentKey(item), item);
   });
 
-  // Local data takes priority — preserves admin-assigned doctor/time changes
-  // that the backend may not have persisted yet
   localItems.forEach((item) => {
     const key = appointmentKey(item);
     const server = merged.get(key);
@@ -111,7 +147,6 @@ function mergeAppointments(serverItems: Appointment[], localItems: Appointment[]
       merged.set(key, item);
       return;
     }
-    // Keep server fields that local doesn't have, but prefer local doctor/time/status
     merged.set(key, {
       ...server,
       doctor_id: item.doctor_id || server.doctor_id,
@@ -121,6 +156,7 @@ function mergeAppointments(serverItems: Appointment[], localItems: Appointment[]
       status: item.status,
       patientName: item.patientName || server.patientName,
       patient_name: item.patient_name || server.patient_name,
+      patient_email: item.patient_email || server.patient_email,
     });
   });
 
@@ -151,8 +187,9 @@ function createLocalAppointment(input: {
     patient_id: user?.id || user?.email || "local-patient",
     patient_email: user?.email,
     patientName: user?.name || user?.email || "Пациент",
+    patient_name: user?.name || user?.email || "",
     doctor_id: input.doctorId,
-    doctorName: doctor ? `${doctor.name} - ${doctor.specialty}` : undefined,
+    doctorName: doctor ? `${doctor.name} — ${doctor.specialty}` : undefined,
     date: input.date,
     time: input.time,
     reason: input.reason,
@@ -231,7 +268,6 @@ export async function createAppointment(input: {
   specialtyRequest?: string;
   wantsOnline?: boolean;
 }) {
-  // Resolve a real doctor_id — backend requires it even for pending requests
   let resolvedDoctorId = input.doctorId;
   if (!resolvedDoctorId) {
     try {
@@ -265,7 +301,13 @@ export async function createAppointment(input: {
     const created = data.item ?? data.appointment ?? null;
 
     if (created) {
-      persistAppointment(created);
+      // Enrich server response with local user info the server may not return
+      persistAppointment({
+        ...created,
+        patient_name: created.patient_name || patientName || undefined,
+        patientName: created.patientName || patientName || undefined,
+        patient_email: created.patient_email || currentUser?.email || undefined,
+      });
     }
 
     return data;
@@ -275,17 +317,20 @@ export async function createAppointment(input: {
 }
 
 export async function assignDoctorToAppointment(id: string, doctorId: string, time?: string) {
-  // Always apply locally first — admin's explicit choice is the source of truth
-  const items = readAppointments();
   const doctor = DOCTORS.find((d) => d.id === doctorId);
   const doctorName = doctor ? `${doctor.name} — ${doctor.specialty}` : doctorId;
+
+  // Save to separate override map — applied after every fetch, cannot be overwritten by server
+  saveAssignOverride(id, { doctorId, doctorName, time });
+
+  // Also update main appointments list for consistency
+  const items = readAppointments();
   const next = items.map((item) =>
     item.id === id
       ? { ...item, doctor_id: doctorId, doctorId, doctorName, time: time ?? item.time }
       : item
   );
   writeAppointments(next);
-  const localResult = { item: next.find((item) => item.id === id) ?? null };
 
   try {
     const res = await fetch(`${API_URL}/api/appointments/${id}/assign`, {
@@ -295,10 +340,9 @@ export async function assignDoctorToAppointment(id: string, doctorId: string, ti
       body: JSON.stringify({ doctor_id: doctorId, time }),
     });
     if (!res.ok) throw new Error("assign failed");
-    // Don't overwrite local with server response — local assignment takes priority
     return await res.json();
   } catch {
-    return localResult;
+    return { item: next.find((item) => item.id === id) ?? null };
   }
 }
 
@@ -317,9 +361,10 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
 
     if (!res.ok) throw new Error("fetch appointments failed");
     const data = normalizeAppointmentList(await res.json());
-    return { items: mergeAppointments(data.items ?? [], localItems) };
+    // Apply overrides last — always wins over both server and merged local data
+    return { items: applyAssignOverrides(mergeAppointments(data.items ?? [], localItems)) };
   } catch {
-    return { items: localItems };
+    return { items: applyAssignOverrides(localItems) };
   }
 }
 
@@ -351,7 +396,8 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
       credentials: "include",
     });
     if (!res.ok) throw new Error();
-    return normalizeAppointmentList(await res.json());
+    const data = normalizeAppointmentList(await res.json());
+    return { items: applyAssignOverrides(data.items) };
   } catch {
     const all = readAppointments();
     const mine = all.filter((a) => {
@@ -362,6 +408,6 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
         (user?.email && pemail === user.email.toLowerCase())
       );
     });
-    return { items: mine };
+    return { items: applyAssignOverrides(mine) };
   }
 }
