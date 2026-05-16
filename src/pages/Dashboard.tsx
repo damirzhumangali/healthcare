@@ -566,7 +566,6 @@ export default function Dashboard() {
         {confirmedAppts.map((confirmed) => {
           const isOnline = confirmed.wants_online || confirmed.wantsOnline;
           const jitsiUrl = `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
-          const dLabel = doctorLabel(confirmed);
           return (
             <div key={`conf-${confirmed.id}`} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
@@ -578,7 +577,7 @@ export default function Dashboard() {
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#6ee7b7" }}>{t.confirmedTitle}</div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
-                    {dLabel} · {confirmed.date}{confirmed.time && confirmed.time !== "00:00" ? ` · ${confirmed.time}` : ""}
+                    {confirmed.specialty_request || confirmed.specialtyRequest || "Специалист"} · {confirmed.date}{confirmed.time && confirmed.time !== "00:00" ? ` · ${confirmed.time}` : ""}
                   </div>
                 </div>
               </div>
@@ -616,20 +615,18 @@ export default function Dashboard() {
             ) : (
               <>
                 {/* Table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 110px", gap: 12, padding: "0 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 4 }}>
-                  {["Специальность · Дата", "Врач", "Статус"].map((h) => (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 12, padding: "0 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 4 }}>
+                  {["Специальность · Дата", "Статус"].map((h) => (
                     <div key={h} style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</div>
                   ))}
                 </div>
 
                 {appointments.slice(0, apptVisible).map((appt, idx) => {
                   const sm = statusMeta(appt.status);
-                  const dLabel = doctorLabel(appt);
-                  const hasRealDoctor = (appt.doctor_id || appt.doctorId) && (appt.doctor_id || appt.doctorId) !== "pending";
                   const isEven = idx % 2 === 0;
                   return (
                     <div key={appt.id} style={{
-                      display: "grid", gridTemplateColumns: "1fr 110px 110px", gap: 12,
+                      display: "grid", gridTemplateColumns: "1fr 110px", gap: 12,
                       padding: "11px 8px",
                       background: isEven ? "rgba(255,255,255,0.02)" : "transparent",
                       borderBottom: "1px solid rgba(255,255,255,0.04)",
@@ -641,11 +638,6 @@ export default function Dashboard() {
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
                           {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
                         </div>
-                      </div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", display: "flex", alignItems: "center", overflow: "hidden" }}>
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {hasRealDoctor ? dLabel : "—"}
-                        </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center" }}>
                         <span style={{
