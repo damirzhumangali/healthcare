@@ -391,9 +391,14 @@ async function ensureLocalBackendToken(user: StoredUser | null) {
   setCurrentUser(data.user);
 }
 
-function patientLabel(item: Appointment, fallback: string) {
-  const idTail = (item.patient_id || item.patientId || "").slice(-4);
+function patientLabel(item: Appointment, fallback: string, patients: AdminPatient[] = []) {
+  const pid = item.patient_id || item.patientId || item.patient_email || item.patientEmail || "";
+  const fromPatients = patients.find(
+    (p) => p.id === pid || p.email === pid || p.email === item.patient_email || p.email === item.patientEmail
+  );
+  const idTail = String(pid).slice(-4);
   return (
+    fromPatients?.name ||
     item.patientName ||
     item.patient_name ||
     item.patient_email ||
@@ -553,7 +558,7 @@ export default function AdminDashboard() {
       : visibleItems.map((item) => ({
           id: item.patient_id || item.patientId || item.id,
           email: item.patient_email || item.patientEmail || null,
-          name: patientLabel(item, t.patientFallback),
+          name: patientLabel(item, t.patientFallback, patients),
           role: "patient",
           last_appointment_at: item.created_at || item.createdAt || null,
           appointment_count: 1,
@@ -899,7 +904,7 @@ export default function AdminDashboard() {
             </div>
             <div className="doctor-admin__record-list">
               {unassignedItems.map((item) => {
-                const name = patientLabel(item, t.patientFallback);
+                const name = patientLabel(item, t.patientFallback, patients);
                 const isOnline = item.wants_online || item.wantsOnline;
                 const busyIds = getBusyDoctorIds(item.date, items);
                 const freeDocs = doctors.filter((d) => !busyIds.has(d.id));
@@ -978,7 +983,7 @@ export default function AdminDashboard() {
                 <p className="doctor-admin__empty">{t.noAppointments}</p>
               ) : (
                 visibleItems.map((item) => {
-                  const name = patientLabel(item, t.patientFallback);
+                  const name = patientLabel(item, t.patientFallback, patients);
 
                   return (
                     <div className="doctor-admin__appointment" key={item.id}>
@@ -1057,7 +1062,7 @@ export default function AdminDashboard() {
               <p className="doctor-admin__empty">{t.noRecords}</p>
             ) : (
               visibleItems.map((item) => {
-                const name = patientLabel(item, t.patientFallback);
+                const name = patientLabel(item, t.patientFallback, patients);
                 const isOnline = item.wants_online || item.wantsOnline;
                 const docId = item.doctor_id || item.doctorId;
                 const hasDoctor = Boolean(docId) && docId !== "pending";
