@@ -486,31 +486,11 @@ export default function Dashboard() {
 
   function consultationTimeline() {
     return [
-      {
-        key: "scheduled" as const,
-        label: tele.stageScheduled,
-        desc: tele.stageScheduledDesc,
-      },
-      {
-        key: "robot_en_route" as const,
-        label: tele.stageRobot,
-        desc: tele.stageRobotDesc,
-      },
-      {
-        key: "bedside_ready" as const,
-        label: tele.stageReady,
-        desc: tele.stageReadyDesc,
-      },
-      {
-        key: "live" as const,
-        label: tele.stageLive,
-        desc: tele.stageLiveDesc,
-      },
-      {
-        key: "completed" as const,
-        label: tele.stageCompleted,
-        desc: tele.stageCompletedDesc,
-      },
+      { key: "scheduled" as const, label: tele.stageScheduled, desc: tele.stageScheduledDesc },
+      { key: "robot_en_route" as const, label: tele.stageRobot, desc: tele.stageRobotDesc },
+      { key: "bedside_ready" as const, label: tele.stageReady, desc: tele.stageReadyDesc },
+      { key: "live" as const, label: tele.stageLive, desc: tele.stageLiveDesc },
+      { key: "completed" as const, label: tele.stageCompleted, desc: tele.stageCompletedDesc },
     ];
   }
 
@@ -522,302 +502,189 @@ export default function Dashboard() {
     completed: 4,
   };
 
-  const confirmedAppts = appointments.filter((a) => a.status === "active" && (a.doctor_id || a.doctorId) && (a.doctor_id || a.doctorId) !== "pending");
+  const confirmedAppts = appointments.filter(
+    (a) => a.status === "active" && (a.doctor_id || a.doctorId) && (a.doctor_id || a.doctorId) !== "pending"
+  );
   const pendingAppts = appointments.filter((a) => a.status === "pending");
 
-  const initials = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-  };
-
-  const glass = {
-    background: "rgba(255,255,255,0.07)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.15)",
-    borderRadius: 24,
-  } as React.CSSProperties;
-
+  /* escape .container padding (28px top, 24px sides, 60px bottom) */
   return (
     <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f0c29 0%, #302b63 40%, #24243e 70%, #0f0c29 100%)",
+      margin: "-28px -24px -60px",
+      minHeight: "calc(100vh - 56px)",
+      background: "linear-gradient(160deg, #0f0c29 0%, #302b63 50%, #1a1040 100%)",
       color: "white",
       fontFamily: "inherit",
       position: "relative",
-      overflow: "hidden",
     }}>
-      {/* Decorative blobs */}
-      <div style={{
-        position: "fixed", top: -200, left: -200, width: 600, height: 600,
-        borderRadius: "50%", pointerEvents: "none", zIndex: 0,
-        background: "radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)",
-      }} />
-      <div style={{
-        position: "fixed", bottom: -150, right: -150, width: 500, height: 500,
-        borderRadius: "50%", pointerEvents: "none", zIndex: 0,
-        background: "radial-gradient(circle, rgba(34,211,238,0.18) 0%, transparent 70%)",
-      }} />
-      <div style={{
-        position: "fixed", top: "40%", right: "10%", width: 300, height: 300,
-        borderRadius: "50%", pointerEvents: "none", zIndex: 0,
-        background: "radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)",
-      }} />
+      {/* ambient blobs */}
+      <div style={{ position: "fixed", top: -300, left: -200, width: 700, height: 700, borderRadius: "50%", pointerEvents: "none", zIndex: 0, background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 65%)" }} />
+      <div style={{ position: "fixed", bottom: -200, right: -100, width: 600, height: 600, borderRadius: "50%", pointerEvents: "none", zIndex: 0, background: "radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 65%)" }} />
 
-      {/* Sticky header */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 20,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 28px", height: 64,
-        background: "rgba(15,12,41,0.6)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: "1px solid rgba(255,255,255,0.1)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, zIndex: 1 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg, #818cf8, #22d3ee)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 20px rgba(129,140,248,0.5)",
-          }}>
-            <Stethoscope size={18} color="#fff" />
-          </div>
-          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-0.3px" }}>HealthAssist</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-          {isAdmin && (
-            <button onClick={() => nav("/admin")} style={{
-              padding: "7px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              background: "rgba(129,140,248,0.15)", border: "1px solid rgba(129,140,248,0.35)", color: "#c7d2fe",
-            }}>
-              {t.adminPanel}
-            </button>
-          )}
-          <div style={{
-            width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-            background: "linear-gradient(135deg, #818cf8, #34d399)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontWeight: 800, fontSize: 14, color: "#0f0c29",
-            boxShadow: "0 0 16px rgba(129,140,248,0.4)",
-          }}>
-            {initials(displayName)}
-          </div>
-        </div>
-      </header>
+      <div style={{ position: "relative", zIndex: 1, padding: "44px 48px 80px" }}>
 
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "36px 20px 80px", position: "relative", zIndex: 1 }}>
-
-        {/* Hero welcome */}
-        <div style={{
-          ...glass,
-          padding: "32px 36px",
-          marginBottom: 24,
-          background: "linear-gradient(135deg, rgba(129,140,248,0.15), rgba(34,211,238,0.08))",
-          border: "1px solid rgba(129,140,248,0.25)",
-          display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20,
-        }}>
+        {/* Welcome + CTA */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 20, marginBottom: 40 }}>
           <div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 8, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
               {new Date().toLocaleDateString(locale === "kk" ? "kk-KZ" : locale === "en" ? "en-US" : "ru-RU", { weekday: "long", day: "numeric", month: "long" })}
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, margin: "0 0 8px", letterSpacing: "-0.5px" }}>
+            <h1 style={{ fontSize: 38, fontWeight: 900, margin: "0 0 8px", letterSpacing: "-1px", lineHeight: 1.1 }}>
               Привет, {displayName.split(" ")[0]} 👋
             </h1>
-            <p style={{ margin: 0, fontSize: 15, color: "rgba(255,255,255,0.5)", maxWidth: 400 }}>
+            <p style={{ margin: 0, fontSize: 15, color: "rgba(255,255,255,0.4)" }}>
               {t.subtitle}
             </p>
           </div>
-          <button
-            onClick={() => nav("/appointments/new")}
-            style={{
-              padding: "14px 32px", borderRadius: 14, fontWeight: 800, fontSize: 15, cursor: "pointer",
-              border: "none", flexShrink: 0, letterSpacing: "-0.2px",
-              background: "linear-gradient(135deg, #818cf8, #22d3ee)",
-              color: "#0f0c29",
-              boxShadow: "0 8px 32px rgba(129,140,248,0.45)",
-            }}
-          >
-            + {t.bookDoctor}
-          </button>
+          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+            {isAdmin && (
+              <button onClick={() => nav("/admin")} style={{
+                padding: "12px 22px", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer",
+                background: "rgba(129,140,248,0.1)", border: "1px solid rgba(129,140,248,0.25)", color: "#c7d2fe",
+              }}>
+                {t.adminPanel}
+              </button>
+            )}
+            <button onClick={() => nav("/appointments/new")} style={{
+              padding: "12px 28px", borderRadius: 10, fontWeight: 800, fontSize: 14, cursor: "pointer", border: "none",
+              background: "linear-gradient(135deg, #818cf8, #22d3ee)", color: "#0f0c29",
+              boxShadow: "0 4px 20px rgba(129,140,248,0.4)",
+            }}>
+              + {t.bookDoctor}
+            </button>
+          </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+        {/* Stats strip */}
+        <div style={{
+          display: "flex",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          marginBottom: 36,
+          padding: "22px 0",
+        }}>
           {[
-            {
-              label: t.heroAppointments, value: appointmentsLoading ? "…" : appointments.length,
-              grad: "linear-gradient(135deg, rgba(129,140,248,0.3), rgba(99,102,241,0.1))",
-              glow: "rgba(129,140,248,0.3)", color: "#c7d2fe", border: "rgba(129,140,248,0.3)",
-            },
-            {
-              label: t.heroMeasurements, value: loading ? "…" : items.length,
-              grad: "linear-gradient(135deg, rgba(34,211,238,0.25), rgba(6,182,212,0.08))",
-              glow: "rgba(34,211,238,0.25)", color: "#67e8f9", border: "rgba(34,211,238,0.3)",
-            },
-            {
-              label: t.heroTicket, value: ticket ? `A-${ticket.ticketNumber}` : "—",
-              grad: "linear-gradient(135deg, rgba(251,191,36,0.25), rgba(245,158,11,0.08))",
-              glow: "rgba(251,191,36,0.25)", color: "#fde68a", border: "rgba(251,191,36,0.3)",
-            },
-          ].map((s) => (
+            { label: t.heroAppointments, value: appointmentsLoading ? "…" : appointments.length, color: "#a5b4fc" },
+            { label: t.heroMeasurements, value: loading ? "…" : items.length, color: "#67e8f9" },
+            { label: t.heroTicket, value: ticket ? `A-${ticket.ticketNumber}` : "—", color: "#fde68a" },
+          ].map((s, i) => (
             <div key={s.label} style={{
-              ...glass,
-              padding: "22px 24px",
-              background: s.grad,
-              border: `1px solid ${s.border}`,
-              boxShadow: `0 8px 32px ${s.glow}`,
+              flex: 1, textAlign: "center",
+              borderRight: i < 2 ? "1px solid rgba(255,255,255,0.07)" : "none",
             }}>
               <div style={{ fontSize: 36, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 8, fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 6, fontWeight: 500 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Confirmed appointment banner */}
+        {/* Confirmed appointment banners */}
         {confirmedAppts.map((confirmed) => {
           const isOnline = confirmed.wants_online || confirmed.wantsOnline;
           const jitsiUrl = `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
           const dLabel = doctorLabel(confirmed);
           return (
             <div key={`conf-${confirmed.id}`} style={{
-              ...glass,
-              padding: "24px 28px", marginBottom: 20,
-              background: "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(34,211,238,0.1))",
-              border: "1.5px solid rgba(52,211,153,0.4)",
-              boxShadow: "0 8px 40px rgba(52,211,153,0.15)",
+              borderLeft: "4px solid #34d399",
+              background: "rgba(52,211,153,0.07)",
+              padding: "16px 24px",
+              marginBottom: 12,
+              display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14,
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 0 16px rgba(52,211,153,0.5)",
-                }}>
-                  <HeartPulse size={18} color="#0f0c29" />
-                </div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: "#6ee7b7" }}>{t.confirmedTitle}</div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16, marginBottom: isOnline ? 20 : 0 }}>
-                {[
-                  { label: t.confirmedDoctor, value: dLabel },
-                  { label: t.confirmedDate, value: confirmed.date },
-                  { label: t.confirmedTime, value: confirmed.time && confirmed.time !== "00:00" ? confirmed.time : "—" },
-                ].map((row) => (
-                  <div key={row.label} style={{
-                    background: "rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                  }}>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{row.label}</div>
-                    <div style={{ fontWeight: 800, fontSize: 15 }}>{row.value}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <HeartPulse size={18} color="#34d399" />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#6ee7b7", marginBottom: 3 }}>{t.confirmedTitle}</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
+                    {dLabel} · {confirmed.date}{confirmed.time && confirmed.time !== "00:00" ? ` · ${confirmed.time}` : ""}
                   </div>
-                ))}
+                </div>
               </div>
               {isOnline && (
                 <a href={jitsiUrl} target="_blank" rel="noreferrer" style={{
-                  display: "inline-flex", alignItems: "center", gap: 8, marginTop: 4,
+                  display: "inline-flex", alignItems: "center", gap: 7,
                   background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                  color: "#0f0c29", borderRadius: 12, padding: "12px 28px",
-                  fontWeight: 800, fontSize: 14, textDecoration: "none",
-                  boxShadow: "0 6px 24px rgba(52,211,153,0.4)",
+                  color: "#0f0c29", borderRadius: 8, padding: "8px 18px",
+                  fontWeight: 700, fontSize: 13, textDecoration: "none",
                 }}>
-                  <Video size={16} /> {t.joinMeeting}
+                  <Video size={13} /> {t.joinMeeting}
                 </a>
               )}
             </div>
           );
         })}
 
-        {/* Pending appointments */}
+        {/* Pending appointments banner */}
         {pendingAppts.length > 0 && (
           <div style={{
-            ...glass,
-            padding: "20px 24px", marginBottom: 20,
-            background: "linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.06))",
-            border: "1px solid rgba(251,191,36,0.3)",
-            boxShadow: "0 8px 32px rgba(245,158,11,0.1)",
+            borderLeft: "4px solid #fbbf24",
+            background: "rgba(251,191,36,0.05)",
+            padding: "16px 24px",
+            marginBottom: 36,
           }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: "#fde68a", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{
-                background: "rgba(251,191,36,0.2)", border: "1px solid rgba(251,191,36,0.4)",
-                borderRadius: 8, padding: "2px 10px", fontSize: 12,
-              }}>⏳ {pendingAppts.length}</span>
-              Ваши заявки на рассмотрении
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#fde68a", marginBottom: 10 }}>
+              ⏳ Ваши заявки на рассмотрении ({pendingAppts.length})
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pendingAppts.map((a) => (
-                <div key={a.id} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8,
-                  background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: "10px 14px",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}>
-                  <div>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{a.specialty_request || a.specialtyRequest || "Специалист"}</span>
-                    <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginLeft: 10 }}>{a.date}</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: "#fbbf24", fontWeight: 600, background: "rgba(251,191,36,0.1)", borderRadius: 8, padding: "3px 10px" }}>
-                    Ожидает врача
+                <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <span style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
+                    {a.specialty_request || a.specialtyRequest || "Специалист"}
+                    <span style={{ color: "rgba(255,255,255,0.3)", marginLeft: 10, fontSize: 13 }}>{a.date}</span>
                   </span>
+                  <span style={{ fontSize: 12, color: "#fbbf24", fontWeight: 600 }}>Ожидает врача</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Two-column grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 18, marginBottom: 16 }}>
+        {/* Two-column layout */}
+        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 48 }}>
 
-          {/* Appointment list */}
-          <div style={{ ...glass, padding: "26px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 17 }}>{t.myAppointments}</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{t.myAppointmentsHint}</div>
-              </div>
-              <CalendarClock size={20} style={{ color: "rgba(255,255,255,0.2)" }} />
+          {/* Appointments list */}
+          <div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, marginBottom: 20 }}>
+              {t.myAppointments}
             </div>
             {appointmentsLoading ? (
-              <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, margin: 0 }}>{t.loading}</p>
+              <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 14, margin: 0 }}>{t.loading}</p>
             ) : appointments.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0" }}>
-                <CalendarClock size={36} style={{ color: "rgba(255,255,255,0.1)", display: "block", margin: "0 auto 12px" }} />
-                <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 14, margin: 0 }}>{t.noAppointments}</p>
+              <div style={{ padding: "32px 0" }}>
+                <CalendarClock size={28} style={{ color: "rgba(255,255,255,0.1)", display: "block", marginBottom: 10 }} />
+                <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 14, margin: 0 }}>{t.noAppointments}</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {appointments.slice(0, 5).map((appt, idx) => {
-                  const scMap: Record<string, { grad: string; color: string; label: string }> = {
-                    active: { grad: "rgba(34,211,238,0.12)", color: "#67e8f9", label: t.appointmentStatusActive },
-                    done: { grad: "rgba(52,211,153,0.12)", color: "#6ee7b7", label: t.appointmentStatusDone },
-                    pending: { grad: "rgba(251,191,36,0.1)", color: "#fde68a", label: t.appointmentStatusPending },
+              <div>
+                {appointments.slice(0, 7).map((appt, idx) => {
+                  const scMap: Record<string, { color: string; label: string }> = {
+                    active: { color: "#67e8f9", label: t.appointmentStatusActive },
+                    done: { color: "#6ee7b7", label: t.appointmentStatusDone },
+                    pending: { color: "#fde68a", label: t.appointmentStatusPending },
                   };
                   const sc = scMap[appt.status] ?? scMap.pending;
                   const dLabel = doctorLabel(appt);
                   const hasRealDoctor = (appt.doctor_id || appt.doctorId) && (appt.doctor_id || appt.doctorId) !== "pending";
                   return (
                     <div key={appt.id} style={{
-                      borderRadius: 14, padding: "13px 16px",
-                      background: idx === 0 ? "rgba(129,140,248,0.1)" : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${idx === 0 ? "rgba(129,140,248,0.25)" : "rgba(255,255,255,0.08)"}`,
-                      transition: "background 0.2s",
+                      display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                      padding: "13px 0",
+                      borderBottom: idx < appointments.slice(0, 7).length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
                     }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 14 }}>
-                            {appt.specialty_request || appt.specialtyRequest || (hasRealDoctor ? dLabel : "Специалист")}
-                          </div>
-                          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
-                            {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
-                            {hasRealDoctor && <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.35)" }}>· {dLabel}</span>}
-                          </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>
+                          {appt.specialty_request || appt.specialtyRequest || (hasRealDoctor ? dLabel : "Специалист")}
                         </div>
-                        <span style={{
-                          borderRadius: 20, padding: "3px 11px", fontSize: 11, fontWeight: 700, flexShrink: 0,
-                          background: sc.grad, color: sc.color,
-                          border: `1px solid ${sc.color}33`,
-                        }}>{sc.label}</span>
+                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>
+                          {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
+                          {hasRealDoctor && ` · ${dLabel}`}
+                        </div>
                       </div>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, flexShrink: 0, whiteSpace: "nowrap",
+                        color: sc.color, background: `${sc.color}1a`,
+                        borderRadius: 20, padding: "3px 12px",
+                      }}>{sc.label}</span>
                     </div>
                   );
                 })}
@@ -825,93 +692,77 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Right column: ticket + vitals */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Right: ticket + vitals */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
 
-            {/* Queue ticket */}
-            <div style={{
-              ...glass,
-              padding: "22px",
-              background: ticket
-                ? "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(245,158,11,0.08))"
-                : "rgba(255,255,255,0.05)",
-              border: ticket ? "1px solid rgba(251,191,36,0.35)" : "1px solid rgba(255,255,255,0.1)",
-              boxShadow: ticket ? "0 8px 32px rgba(245,158,11,0.15)" : "none",
-            }}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>🎫</span> {t.onlineTicket}
+            {/* Ticket */}
+            <div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, marginBottom: 20 }}>
+                {t.onlineTicket}
               </div>
               {!ticket ? (
-                <>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: "0 0 16px", lineHeight: 1.5 }}>{t.noTicket}</p>
+                <div style={{ borderLeft: "4px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.04)", padding: "16px 20px" }}>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: "0 0 14px", lineHeight: 1.6 }}>{t.noTicket}</p>
                   <button
                     onClick={() => { const c = createNewMyTicket(); setTicket(c); }}
                     style={{
-                      padding: "11px 20px", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
-                      background: "linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.1))",
-                      border: "1px solid rgba(251,191,36,0.4)", color: "#fde68a",
+                      padding: "9px 18px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer",
+                      background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fde68a",
                     }}
                   >{t.takeNewTicket}</button>
-                </>
+                </div>
               ) : (
-                <>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div style={{ borderLeft: "4px solid #fbbf24", background: "rgba(251,191,36,0.06)", padding: "16px 20px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
                     {[
                       { label: t.yourNumber, value: `A-${ticket.ticketNumber}` },
                       { label: t.nowCalling, value: `A-${ticket.servingNow}` },
                       { label: t.ahead, value: ticket.peopleAhead },
                       { label: t.waiting, value: `~${ticket.etaMinutes} ${t.minutes}` },
                     ].map((m) => (
-                      <div key={m.label} style={{ borderRadius: 10, padding: "10px 12px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 4, fontWeight: 600 }}>{m.label}</div>
-                        <div style={{ fontWeight: 800, fontSize: 16, color: "#fde68a" }}>{m.value}</div>
+                      <div key={m.label}>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 2 }}>{m.label}</div>
+                        <div style={{ fontWeight: 800, fontSize: 20, color: "#fde68a" }}>{m.value}</div>
                       </div>
                     ))}
                   </div>
                   <button
                     onClick={() => { const n = createNewMyTicket(); setTicket(n); }}
                     style={{
-                      padding: "9px 16px", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%",
-                      background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fde68a",
+                      padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer",
+                      background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#fde68a",
                     }}
                   >{t.takeNewTicket}</button>
-                </>
+                </div>
               )}
             </div>
 
-            {/* Latest vitals */}
+            {/* Vitals */}
             {items.length > 0 && (
-              <div style={{ ...glass, padding: "22px" }}>
-                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>📊</span> {t.history}
+              <div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, marginBottom: 20 }}>
+                  {t.history}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   {[
-                    {
-                      icon: "🌡", label: t.temp,
-                      value: latestMeasurement?.tempC != null ? `${latestMeasurement.tempC}°C` : "—",
-                      color: "#f87171", bg: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.25)",
-                    },
-                    {
-                      icon: "❤️", label: t.pulse,
-                      value: latestMeasurement?.hr != null ? `${latestMeasurement.hr}` : "—",
-                      color: "#fb7185", bg: "rgba(251,113,133,0.1)", border: "rgba(251,113,133,0.25)",
-                    },
+                    { icon: "🌡", label: t.temp, value: latestMeasurement?.tempC != null ? `${latestMeasurement.tempC}°C` : "—", color: "#f87171" },
+                    { icon: "❤️", label: t.pulse, value: latestMeasurement?.hr != null ? `${latestMeasurement.hr}` : "—", color: "#fb7185" },
                   ].map((v) => (
                     <div key={v.label} style={{
-                      borderRadius: 14, padding: "16px 14px",
-                      background: v.bg, border: `1px solid ${v.border}`,
+                      borderLeft: `4px solid ${v.color}55`,
+                      background: `${v.color}0d`,
+                      padding: "14px 16px",
                     }}>
-                      <div style={{ fontSize: 20, marginBottom: 6 }}>{v.icon}</div>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: v.color }}>{v.value}</div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4, fontWeight: 500 }}>{v.label}</div>
+                      <div style={{ fontSize: 18, marginBottom: 4 }}>{v.icon}</div>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: v.color, lineHeight: 1 }}>{v.value}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{v.label}</div>
                     </div>
                   ))}
                 </div>
                 {latestMeasurement && (
                   <Link to={`/app/measurements/${latestMeasurement.id}`} style={{
-                    display: "block", marginTop: 14, textAlign: "center", fontSize: 13,
-                    color: "rgba(255,255,255,0.3)", textDecoration: "none", fontWeight: 500,
+                    display: "block", marginTop: 12, fontSize: 12,
+                    color: "rgba(255,255,255,0.2)", textDecoration: "none",
                   }}>
                     {fmtDate(latestMeasurement.createdAt)} →
                   </Link>
@@ -921,7 +772,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {err && <div className="alert" style={{ marginTop: 12 }}>{err}</div>}
+        {err && <div className="alert" style={{ marginTop: 24 }}>{err}</div>}
       </div>
     </div>
   );
