@@ -106,6 +106,7 @@ const adminText = {
     noRecords: "Записей по выбранным фильтрам нет.",
     actionPending: "Ожидает",
     actionAccept: "Принять",
+    actionEdit: "Изменить",
     actionComplete: "Завершить",
     newAppointment: "Новая запись",
     accessDenied: "Нет доступа",
@@ -190,6 +191,7 @@ const adminText = {
     noRecords: "Таңдалған сүзгілер бойынша жазылу жоқ.",
     actionPending: "Күту",
     actionAccept: "Қабылдау",
+    actionEdit: "Өзгерту",
     actionComplete: "Аяқтау",
     newAppointment: "Жаңа жазылу",
     accessDenied: "Қол жеткізу жоқ",
@@ -274,6 +276,7 @@ const adminText = {
     noRecords: "No appointments match the selected filters.",
     actionPending: "Waiting",
     actionAccept: "Admit",
+    actionEdit: "Edit",
     actionComplete: "Complete",
     newAppointment: "New appointment",
     accessDenied: "Access denied",
@@ -1109,7 +1112,7 @@ export default function AdminDashboard() {
                           {t.startMeeting}
                         </a>
                       ) : null}
-                      {item.status !== "done" ? (
+                      {item.status === "pending" && (
                         <button
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
@@ -1122,11 +1125,25 @@ export default function AdminDashboard() {
                         >
                           {t.actionAccept}
                         </button>
-                      ) : null}
+                      )}
+                      {item.status === "active" && (
+                        <button
+                          type="button"
+                          onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                          style={{
+                            background: "rgba(255,255,255,0.08)",
+                            color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)",
+                            borderRadius: 8, padding: "6px 16px",
+                            fontWeight: 700, cursor: "pointer", fontSize: 13,
+                          }}
+                        >
+                          {t.actionEdit}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => changeStatus(item.id, "done")}
-                        disabled={item.status === "done"}
+                        disabled={item.status !== "active"}
                       >
                         {t.actionComplete}
                       </button>
