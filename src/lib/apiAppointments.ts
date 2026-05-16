@@ -53,6 +53,8 @@ export const DOCTORS: DoctorOption[] = [
 const LOCAL_APPOINTMENTS_KEY = "healthassist_appointments_v1";
 // Separate key for doctor assignments — never overwritten by server data
 const ASSIGN_OVERRIDES_KEY = "healthassist_assign_overrides_v1";
+// Tracks IDs of appointments created by the current patient on this device
+const MY_APT_IDS_KEY = "healthassist_my_apt_ids_v1";
 
 type AssignOverride = {
   doctorId: string;
@@ -73,6 +75,21 @@ function saveAssignOverride(appointmentId: string, override: AssignOverride) {
   const overrides = readAssignOverrides();
   overrides[appointmentId] = override;
   localStorage.setItem(ASSIGN_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
+function readMyAptIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(MY_APT_IDS_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function addMyAptId(id: string) {
+  const ids = readMyAptIds();
+  ids.add(id);
+  localStorage.setItem(MY_APT_IDS_KEY, JSON.stringify([...ids]));
 }
 
 function applyAssignOverrides(items: Appointment[]): Appointment[] {
@@ -202,6 +219,7 @@ function createLocalAppointment(input: {
   const items = readAppointments();
   items.push(appointment);
   writeAppointments(items);
+  addMyAptId(appointment.id);
   return { item: appointment };
 }
 
@@ -308,6 +326,7 @@ export async function createAppointment(input: {
         patientName: created.patientName || patientName || undefined,
         patient_email: created.patient_email || currentUser?.email || undefined,
       });
+      addMyAptId(created.id);
     }
 
     return data;
@@ -411,9 +430,7 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     return { items: applyAssignOverrides(mergeAppointments(data.items, localItems)) };
   } catch {
     const all = readAppointments();
-    // Local fallback: try email/id match first, but fall back to all local records.
-    // localStorage only holds appointments created on this device by the current user,
-    // so returning everything unfiltered is safe and avoids ID-format mismatches.
+    // Try strict email/id match first
     const byId = all.filter((a) => {
       const pid = a.patient_id || a.patientId || "";
       const pemail = (a.patient_email || a.patientEmail || "").toLowerCase();
@@ -422,6 +439,15 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
         (user?.email && pemail === user.email.toLowerCase())
       );
     });
-    return { items: applyAssignOverrides(byId.length > 0 ? byId : all) };
+    if (byId.length > 0) return { items: applyAssignOverrides(byId) };
+
+    // Fall back to IDs recorded at booking time — avoids exposing admin-fetched records
+    const myIds = readMyAptIds();
+    if (myIds.size > 0) {
+      const byMyIds = all.filter((a) => myIds.has(a.id));
+      return { items: applyAssignOverrides(byMyIds) };
+    }
+
+    return { items: [] };
   }
 }
