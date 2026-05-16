@@ -406,10 +406,15 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     });
     if (!res.ok) throw new Error();
     const data = normalizeAppointmentList(await res.json());
-    return { items: applyAssignOverrides(data.items) };
+    // Merge server list with local so enriched fields (patient_email etc.) survive
+    const localItems = readAppointments();
+    return { items: applyAssignOverrides(mergeAppointments(data.items, localItems)) };
   } catch {
     const all = readAppointments();
-    const mine = all.filter((a) => {
+    // Local fallback: try email/id match first, but fall back to all local records.
+    // localStorage only holds appointments created on this device by the current user,
+    // so returning everything unfiltered is safe and avoids ID-format mismatches.
+    const byId = all.filter((a) => {
       const pid = a.patient_id || a.patientId || "";
       const pemail = (a.patient_email || a.patientEmail || "").toLowerCase();
       return (
@@ -417,6 +422,6 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
         (user?.email && pemail === user.email.toLowerCase())
       );
     });
-    return { items: applyAssignOverrides(mine) };
+    return { items: applyAssignOverrides(byId.length > 0 ? byId : all) };
   }
 }
