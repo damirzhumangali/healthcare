@@ -538,10 +538,7 @@ export default function AdminDashboard() {
   }, [doctorFilter, items, status]);
 
   const unassignedItems = useMemo(
-    () => allItems.filter((item) => {
-      const docId = item.doctor_id || item.doctorId;
-      return (!docId || docId === "pending") && item.status === "pending";
-    }),
+    () => allItems.filter((item) => item.status === "pending"),
     [allItems]
   );
   const visibleItems = filteredItems;
@@ -1101,7 +1098,7 @@ export default function AdminDashboard() {
                       <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
                         {statusLabel(item.status, locale)}
                       </span>
-                      {isOnline && hasDoctor ? (
+                      {isOnline && item.status === "active" ? (
                         <a
                           href={jitsiRoomUrl(item.id)}
                           target="_blank"
@@ -1118,8 +1115,8 @@ export default function AdminDashboard() {
                           {t.startMeeting}
                         </a>
                       ) : null}
-                      {/* If no doctor → navigate to assign page; else → status controls */}
-                      {!hasDoctor ? (
+                      {/* Pending → go through doctor+time selection; active/done → direct status controls */}
+                      {item.status === "pending" ? (
                         <button
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
@@ -1130,7 +1127,7 @@ export default function AdminDashboard() {
                             fontWeight: 800, cursor: "pointer", fontSize: 13,
                           }}
                         >
-                          {t.assignBtn}
+                          {t.actionAccept}
                         </button>
                       ) : (
                         <>
@@ -1140,13 +1137,6 @@ export default function AdminDashboard() {
                             onClick={() => changeStatus(item.id, "pending")}
                           >
                             {t.actionPending}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={item.status === "active"}
-                            onClick={() => changeStatus(item.id, "active")}
-                          >
-                            {t.actionAccept}
                           </button>
                           <button
                             type="button"

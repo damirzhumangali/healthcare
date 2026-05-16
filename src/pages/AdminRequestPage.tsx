@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import {
-  ArrowLeft, BedDouble, CalendarClock, ClipboardList,
-  LayoutDashboard, MonitorSmartphone, Users, Video, Check,
-} from "lucide-react";
+import { ArrowLeft, Check, Clock, Video } from "lucide-react";
 import {
   DOCTORS,
   assignDoctorToAppointment,
   updateAppointmentStatus,
-  getLocalAppointmentById,
   fetchAppointments,
   type Appointment,
 } from "../lib/apiAppointments";
@@ -51,53 +47,45 @@ export default function AdminRequestPage() {
   );
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<DoctorRow[]>(DOCTORS);
-  const [selectedDoctorId, setSelectedDoctorId] = useState("");
-  const [date, setDate] = useState(today());
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [time, setTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!request && id) {
-      setRequest(getLocalAppointmentById(id));
-    }
-  }, [id, request]);
-
-  useEffect(() => {
-    if (request?.date) setDate(request.date || today());
-  }, [request]);
-
-  useEffect(() => {
     fetchAppointments().then((d) => setAllAppointments(d.items ?? [])).catch(() => {});
     fetchAdminDoctors()
-      .then((d) => {
-        if (d.items.length > 0) setDoctors(d.items);
-      })
+      .then((d) => { if (d.items.length > 0) setDoctors(d.items); })
       .catch(() => {});
   }, []);
 
-  // Pre-select first free doctor matching patient's specialty
+  // If request not passed via state, try to find it in allAppointments
   useEffect(() => {
-    if (!selectedDoctorId && doctors.length > 0) {
-      const specialty = request?.specialty_request || request?.specialtyRequest;
-      const busyIds = getBusyDoctorIds(date, allAppointments, id ?? "");
-      const matching = specialty
-        ? doctors.filter((d) => d.specialty === specialty && !busyIds.has(d.id))
-        : doctors.filter((d) => !busyIds.has(d.id));
-      setSelectedDoctorId((matching[0] ?? doctors[0])?.id ?? "");
+    if (!request && id && allAppointments.length > 0) {
+      const found = allAppointments.find((a) => a.id === id);
+      if (found) setRequest(found);
     }
-  }, [doctors, allAppointments, date, request, id, selectedDoctorId]);
+  }, [id, request, allAppointments]);
 
+  const date = request?.date || today();
   const busyIds = getBusyDoctorIds(date, allAppointments, id ?? "");
-  const freeDocs = doctors.filter((d) => !busyIds.has(d.id));
-  const busyDocs = doctors.filter((d) => busyIds.has(d.id));
-
   const isOnline = request?.wants_online || request?.wantsOnline;
   const jitsiUrl = request ? jitsiRoomUrl(request.id) : "";
   const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId);
 
-  async function handleSubmit() {
-    if (!request || !selectedDoctorId || !date || !time) return;
+  // specialty matching — highlight matching doctors first
+  const specialtyNeeded = request?.specialty_request || request?.specialtyRequest;
+  const sortedDoctors = [...doctors].sort((a, b) => {
+    const aMatch = specialtyNeeded && a.specialty === specialtyNeeded ? -1 : 0;
+    const bMatch = specialtyNeeded && b.specialty === specialtyNeeded ? -1 : 0;
+    const aFree = !busyIds.has(a.id) ? -1 : 1;
+    const bFree = !busyIds.has(b.id) ? -1 : 1;
+    if (aMatch !== bMatch) return aMatch - bMatch;
+    return aFree - bFree;
+  });
+
+  async function handleAssign() {
+    if (!request || !selectedDoctorId || !time) return;
     setSaving(true);
     try {
       await assignDoctorToAppointment(request.id, selectedDoctorId, time);
@@ -109,283 +97,276 @@ export default function AdminRequestPage() {
     }
   }
 
-  const navItems = [
-    { label: "Дашборд",        icon: <LayoutDashboard size={18} />, path: "/admin#overview" },
-    { label: "Расписание",     icon: <CalendarClock size={18} />,  path: "/admin#schedule" },
-    { label: "Записи",         icon: <ClipboardList size={18} />,  path: "/admin#appointments" },
-    { label: "Пациенты",       icon: <Users size={18} />,          path: "/admin#patients" },
-    { label: "Онлайн в палатах", icon: <MonitorSmartphone size={18} />, path: "/admin/ward-consults" },
-    { label: "График врачей",  icon: <BedDouble size={18} />,      path: "/admin/doctor-schedule" },
-  ];
-
   return (
-    <div className="doctor-admin">
-      <aside className="doctor-admin__sidebar">
-        <div className="doctor-admin__brand">
-          <strong>HealthAssist</strong>
-          <span>Принять заявку</span>
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #0b0f14 0%, #111827 100%)",
+      color: "white",
+      fontFamily: "inherit",
+    }}>
+      {/* Top bar */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16,
+        padding: "16px 28px",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        background: "rgba(255,255,255,0.02)",
+      }}>
+        <button
+          type="button"
+          onClick={() => nav("/admin")}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "7px 14px", borderRadius: 8, fontSize: 13,
+            background: "rgba(255,255,255,0.07)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            color: "white", cursor: "pointer",
+          }}
+        >
+          <ArrowLeft size={14} /> Назад
+        </button>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 17 }}>Назначить врача</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>Выберите свободного врача и укажите время</div>
         </div>
-        <nav className="doctor-admin__nav">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              className="doctor-admin__nav-item"
-              type="button"
-              onClick={() => nav(item.path)}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </aside>
+      </div>
 
-      <main className="doctor-admin__main">
-        <header className="doctor-admin__topbar">
-          <div className="doctor-admin__topbar-copy">
-            <div>
-              <h1>Принять заявку</h1>
-              <p>Назначьте свободного врача и время приёма</p>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "28px 24px" }}>
+
+        {/* Patient card */}
+        {request && (
+          <div style={{
+            borderRadius: 16, padding: "18px 22px", marginBottom: 28,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+              Заявка пациента
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => nav("/admin")}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 14px", borderRadius: 8, fontSize: 13,
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "white", cursor: "pointer",
-            }}
-          >
-            <ArrowLeft size={14} />
-            Назад
-          </button>
-        </header>
-
-        {!request ? (
-          <div style={{ padding: 32, color: "rgba(255,255,255,0.4)" }}>
-            Заявка не найдена.
-          </div>
-        ) : (
-          <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, maxWidth: 700 }}>
-
-            {/* Patient request card */}
-            <div style={{
-              borderRadius: 16, padding: "20px 24px",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
-            }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
-                Заявка пациента
-              </div>
-              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>
-                {request.patientName || request.patient_email || "Пациент"}
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                {(request.specialty_request || request.specialtyRequest) ? (
-                  <span style={{
-                    background: "rgba(99,102,241,0.18)", color: "#a5b4fc",
-                    borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700,
-                  }}>
-                    {request.specialty_request || request.specialtyRequest}
-                  </span>
-                ) : null}
-                {isOnline ? (
-                  <span style={{
-                    background: "rgba(34,211,238,0.15)", color: "#22d3ee",
-                    borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700,
-                  }}>
-                    Онлайн
-                  </span>
-                ) : null}
-                <span style={{
-                  background: "rgba(251,191,36,0.12)", color: "#f59e0b",
-                  borderRadius: 7, padding: "3px 12px", fontSize: 13,
-                }}>
-                  Желаемая дата: {request.date || "не указана"}
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>
+              {request.patientName || request.patient_email || "Пациент"}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {specialtyNeeded && (
+                <span style={{ background: "rgba(99,102,241,0.18)", color: "#a5b4fc", borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700 }}>
+                  {specialtyNeeded}
                 </span>
-              </div>
-              {request.reason ? (
-                <div style={{
-                  fontSize: 14, color: "rgba(255,255,255,0.65)",
-                  fontStyle: "italic", lineHeight: 1.5,
-                  background: "rgba(255,255,255,0.04)", borderRadius: 8,
-                  padding: "10px 14px",
-                }}>
-                  «{request.reason}»
-                </div>
-              ) : null}
-            </div>
-
-            {/* Free/busy summary */}
-            <div style={{
-              display: "flex", gap: 12, flexWrap: "wrap",
-            }}>
-              <div style={{
-                borderRadius: 12, padding: "12px 18px",
-                background: freeDocs.length > 0 ? "rgba(34,211,153,0.08)" : "rgba(251,191,36,0.08)",
-                border: `1px solid ${freeDocs.length > 0 ? "rgba(34,211,153,0.25)" : "rgba(251,191,36,0.25)"}`,
-                flex: 1,
-              }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: freeDocs.length > 0 ? "#34d399" : "#f59e0b" }}>
-                  {freeDocs.length}
-                </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
-                  врачей свободны {date && `(${date})`}
-                </div>
-              </div>
-              <div style={{
-                borderRadius: 12, padding: "12px 18px",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                flex: 1,
-              }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.4)" }}>
-                  {busyDocs.length}
-                </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
-                  врачей заняты
-                </div>
-              </div>
-            </div>
-
-            {/* Assignment form */}
-            <div style={{
-              borderRadius: 16, padding: "20px 24px",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              display: "flex", flexDirection: "column", gap: 16,
-            }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Назначение
-              </div>
-
-              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>Врач</span>
-                <select
-                  className="input"
-                  value={selectedDoctorId}
-                  onChange={(e) => setSelectedDoctorId(e.target.value)}
-                  style={{ maxWidth: 400 }}
-                >
-                  {freeDocs.length > 0 ? (
-                    <optgroup label="✓ Свободны">
-                      {freeDocs.map((doc) => (
-                        <option key={doc.id} value={doc.id}>
-                          {doc.name} — {doc.specialty}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                  {busyDocs.length > 0 ? (
-                    <optgroup label="✗ Заняты в этот день">
-                      {busyDocs.map((doc) => (
-                        <option key={doc.id} value={doc.id}>
-                          {doc.name} — {doc.specialty}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                </select>
-              </label>
-
-              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>Дата приёма</span>
-                  <input
-                    type="date"
-                    className="input"
-                    value={date}
-                    min={today()}
-                    onChange={(e) => { setDate(e.target.value); setSelectedDoctorId(""); }}
-                    style={{ minWidth: 160 }}
-                  />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>Время приёма</span>
-                  <input
-                    type="time"
-                    className="input"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    style={{ minWidth: 130 }}
-                    placeholder="09:00"
-                  />
-                </label>
-              </div>
-
-              {isOnline && jitsiUrl ? (
-                <div style={{
-                  borderRadius: 10, padding: "12px 14px",
-                  background: "rgba(34,211,238,0.08)",
-                  border: "1px solid rgba(34,211,238,0.2)",
-                  display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <Video size={16} style={{ color: "#22d3ee", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: "#22d3ee", fontWeight: 700 }}>Ссылка на встречу будет отправлена пациенту</div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2, wordBreak: "break-all" }}>{jitsiUrl}</div>
-                  </div>
-                  <a
-                    href={jitsiUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      background: "rgba(34,211,238,0.15)", color: "#22d3ee",
-                      border: "1px solid rgba(34,211,238,0.3)",
-                      borderRadius: 7, padding: "5px 12px",
-                      fontSize: 12, fontWeight: 700, textDecoration: "none",
-                    }}
-                  >
-                    Открыть
-                  </a>
-                </div>
-              ) : null}
-
-              {done ? (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  color: "#34d399", fontWeight: 700, fontSize: 15,
-                }}>
-                  <Check size={18} />
-                  Заявка принята! Пациент уведомлён. Переходим в админ...
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={saving || !selectedDoctorId || !date || !time}
-                  onClick={handleSubmit}
-                  style={{
-                    padding: "12px 28px", borderRadius: 10, fontSize: 15, fontWeight: 800,
-                    background: (!selectedDoctorId || !date || !time)
-                      ? "rgba(255,255,255,0.07)"
-                      : "linear-gradient(135deg, #34d399, #22d3ee)",
-                    color: (!selectedDoctorId || !date || !time) ? "rgba(255,255,255,0.35)" : "#0a1628",
-                    border: "none", cursor: (!selectedDoctorId || !date || !time) ? "not-allowed" : "pointer",
-                    alignSelf: "flex-start",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {saving ? "Отправляем..." : (
-                    <>
-                      {selectedDoctor ? `Назначить ${selectedDoctor.name}` : "Назначить врача"}
-                      {date && time ? ` · ${date} ${time}` : ""}
-                    </>
-                  )}
-                </button>
               )}
-
-              {!time ? (
-                <div style={{ fontSize: 12, color: "#f59e0b" }}>
-                  ⚠ Укажите время приёма
-                </div>
-              ) : null}
+              {isOnline && (
+                <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700 }}>
+                  🎥 Онлайн консультация
+                </span>
+              )}
+              <span style={{ background: "rgba(251,191,36,0.12)", color: "#f59e0b", borderRadius: 7, padding: "3px 12px", fontSize: 13 }}>
+                📅 {request.date || "дата не указана"}
+              </span>
             </div>
+            {request.reason && (
+              <div style={{
+                marginTop: 12, fontSize: 14, color: "rgba(255,255,255,0.55)",
+                fontStyle: "italic", background: "rgba(255,255,255,0.03)",
+                borderRadius: 8, padding: "10px 14px",
+              }}>
+                «{request.reason}»
+              </div>
+            )}
           </div>
         )}
-      </main>
+
+        {/* Step 1: Doctor selection */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+            Шаг 1 — Выберите врача
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+            {sortedDoctors.map((doc) => {
+              const isBusy = busyIds.has(doc.id);
+              const isSelected = selectedDoctorId === doc.id;
+              const isMatch = specialtyNeeded && doc.specialty === specialtyNeeded;
+
+              return (
+                <div
+                  key={doc.id}
+                  style={{
+                    borderRadius: 14, padding: "16px 18px",
+                    border: isSelected
+                      ? "2px solid #34d399"
+                      : isMatch && !isBusy
+                        ? "1px solid rgba(52,211,153,0.35)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                    background: isSelected
+                      ? "rgba(52,211,153,0.1)"
+                      : isBusy
+                        ? "rgba(255,255,255,0.02)"
+                        : "rgba(255,255,255,0.04)",
+                    opacity: isBusy ? 0.5 : 1,
+                    cursor: isBusy ? "not-allowed" : "pointer",
+                    transition: "all 0.15s",
+                    position: "relative",
+                  }}
+                  onClick={() => { if (!isBusy) setSelectedDoctorId(doc.id); }}
+                >
+                  {isMatch && !isBusy && (
+                    <div style={{
+                      position: "absolute", top: 10, right: 12,
+                      fontSize: 10, fontWeight: 700, color: "#34d399",
+                      background: "rgba(52,211,153,0.12)",
+                      borderRadius: 5, padding: "2px 7px",
+                    }}>
+                      Подходит
+                    </div>
+                  )}
+                  {isSelected && (
+                    <div style={{
+                      position: "absolute", top: 10, right: 12,
+                    }}>
+                      <Check size={16} color="#34d399" />
+                    </div>
+                  )}
+
+                  <div style={{
+                    width: 40, height: 40, borderRadius: "50%",
+                    background: isBusy ? "rgba(255,255,255,0.06)" : "rgba(99,102,241,0.2)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 16, fontWeight: 800, marginBottom: 10,
+                    color: isBusy ? "rgba(255,255,255,0.3)" : "#a5b4fc",
+                  }}>
+                    {doc.name.charAt(0)}
+                  </div>
+
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: isBusy ? "rgba(255,255,255,0.35)" : "white" }}>
+                    {doc.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
+                    {doc.specialty}
+                  </div>
+
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700,
+                    background: isBusy
+                      ? "rgba(255,255,255,0.06)"
+                      : isSelected
+                        ? "rgba(52,211,153,0.2)"
+                        : "rgba(52,211,153,0.12)",
+                    color: isBusy ? "rgba(255,255,255,0.25)" : "#34d399",
+                    border: isBusy
+                      ? "1px solid rgba(255,255,255,0.08)"
+                      : "1px solid rgba(52,211,153,0.3)",
+                  }}>
+                    {isBusy ? "Занят" : isSelected ? "✓ Выбран" : "Свободно"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Step 2: Time selection — appears after doctor selected */}
+        {selectedDoctorId && (
+          <div style={{
+            borderRadius: 16, padding: "20px 22px", marginBottom: 24,
+            background: "rgba(52,211,153,0.06)",
+            border: "1px solid rgba(52,211,153,0.2)",
+          }}>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+              Шаг 2 — Укажите время приёма
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6 }}>Врач</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{selectedDoctor?.name} · {selectedDoctor?.specialty}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6 }}>Дата</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{date}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Clock size={12} /> Время приёма
+                </div>
+                <input
+                  type="time"
+                  className="input"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  style={{ minWidth: 120, fontSize: 15, fontWeight: 700 }}
+                />
+              </div>
+            </div>
+
+            {/* Online consultation preview */}
+            {isOnline && jitsiUrl && (
+              <div style={{
+                marginTop: 16, borderRadius: 10, padding: "12px 16px",
+                background: "rgba(34,211,238,0.08)",
+                border: "1px solid rgba(34,211,238,0.2)",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <Video size={16} style={{ color: "#22d3ee", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: "#22d3ee", fontWeight: 700 }}>Ссылка на онлайн встречу будет отправлена автоматически</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2, wordBreak: "break-all" }}>{jitsiUrl}</div>
+                </div>
+                <a
+                  href={jitsiUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: "rgba(34,211,238,0.15)", color: "#22d3ee",
+                    border: "1px solid rgba(34,211,238,0.3)",
+                    borderRadius: 7, padding: "5px 12px",
+                    fontSize: 12, fontWeight: 700, textDecoration: "none",
+                  }}
+                >
+                  Открыть
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Submit */}
+        {selectedDoctorId && (
+          done ? (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              color: "#34d399", fontWeight: 700, fontSize: 16,
+              padding: "16px 0",
+            }}>
+              <Check size={20} />
+              Заявка принята! Врач и пациент уведомлены. Возвращаемся...
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button
+                type="button"
+                disabled={saving || !time}
+                onClick={handleAssign}
+                style={{
+                  padding: "13px 32px", borderRadius: 12, fontSize: 15, fontWeight: 800,
+                  background: !time
+                    ? "rgba(255,255,255,0.07)"
+                    : "linear-gradient(135deg, #34d399, #22d3ee)",
+                  color: !time ? "rgba(255,255,255,0.3)" : "#0a1628",
+                  border: "none",
+                  cursor: !time ? "not-allowed" : "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                {saving
+                  ? "Отправляем..."
+                  : `Назначить ${selectedDoctor?.name ?? ""} · ${date} ${time || "— укажите время"}`
+                }
+              </button>
+              {!time && (
+                <span style={{ fontSize: 13, color: "#f59e0b" }}>⚠ Укажите время приёма</span>
+              )}
+            </div>
+          )
+        )}
+      </div>
     </div>
   );
 }

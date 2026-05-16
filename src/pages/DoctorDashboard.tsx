@@ -271,7 +271,7 @@ export default function DoctorDashboard() {
   }
 
   const todayAppts = appointments.filter(a => a.date === date);
-  const newAppts = appointments.filter(a => a.status === "pending");
+  const newAppts = appointments.filter(a => a.status === "pending" || a.status === "active");
   const activeConsults = consultations.filter(c => c.stage === "live" || c.stage === "bedside_ready");
   const completedToday = appointments.filter(a => a.status === "done").length;
 
@@ -460,7 +460,7 @@ export default function DoctorDashboard() {
                   borderLeft: "4px solid #6366f1",
                 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, color: "#a5b4fc" }}>
-                    🔔 Новые назначения ({newAppts.length})
+                    🔔 Мои записи ({newAppts.length})
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {newAppts.map(a => {
@@ -468,11 +468,13 @@ export default function DoctorDashboard() {
                       const jitsiUrl = isOnline
                         ? `https://meet.jit.si/healthassist-${a.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`
                         : null;
+                      const isActive = a.status === "active";
                       return (
                         <div key={a.id} style={{
                           display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
                           padding: "10px 14px", borderRadius: 10,
-                          background: "rgba(255,255,255,0.04)",
+                          background: isActive ? "rgba(52,211,153,0.06)" : "rgba(255,255,255,0.04)",
+                          border: isActive ? "1px solid rgba(52,211,153,0.2)" : "none",
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 14 }}>
@@ -489,6 +491,12 @@ export default function DoctorDashboard() {
                                 borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
                               }}>Онлайн</span>
                             )}
+                            {isActive ? (
+                              <span style={{
+                                background: "rgba(52,211,153,0.15)", color: "#34d399",
+                                borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
+                              }}>Подтверждено</span>
+                            ) : null}
                             {isOnline && jitsiUrl && (
                               <a
                                 href={jitsiUrl}
@@ -504,12 +512,14 @@ export default function DoctorDashboard() {
                                 Войти в звонок
                               </a>
                             )}
-                            <button
-                              onClick={() => void setStatus(a.id, "active")}
-                              style={{ padding: "5px 14px", borderRadius: 8, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399", cursor: "pointer", fontSize: 12, fontWeight: 700 }}
-                            >
-                              Принять
-                            </button>
+                            {!isActive && (
+                              <button
+                                onClick={() => void setStatus(a.id, "active")}
+                                style={{ padding: "5px 14px", borderRadius: 8, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399", cursor: "pointer", fontSize: 12, fontWeight: 700 }}
+                              >
+                                Принять
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -606,6 +616,21 @@ export default function DoctorDashboard() {
                             <span className="badge__dot" />
                             {item.status === "active" ? "На приёме" : item.status === "done" ? "Завершён" : "Ожидает"}
                           </span>
+                          {(item.wants_online || item.wantsOnline) && item.status === "active" && (
+                            <a
+                              href={`https://meet.jit.si/healthassist-${item.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 5,
+                                padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                                background: "rgba(34,211,238,0.18)", color: "#22d3ee",
+                                border: "1px solid rgba(34,211,238,0.4)", textDecoration: "none",
+                              }}
+                            >
+                              Войти в звонок
+                            </a>
+                          )}
                           {item.status !== "active" && item.status !== "done" && (
                             <button
                               onClick={() => void setStatus(item.id, "active")}
