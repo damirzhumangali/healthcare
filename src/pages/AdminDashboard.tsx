@@ -983,29 +983,9 @@ export default function AdminDashboard() {
                         <strong>{name}</strong>
                         <span>{item.reason || t.appointmentFallback}</span>
                       </div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        {item.status !== "done" && (
-                          <button
-                            type="button"
-                            onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                            style={{
-                              background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                              color: "#0a1628", border: "none",
-                              borderRadius: 8, padding: "5px 14px",
-                              fontWeight: 800, cursor: "pointer", fontSize: 12,
-                            }}
-                          >
-                            {t.actionAccept}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => changeStatus(item.id, "done")}
-                          disabled={item.status === "done"}
-                        >
-                          {t.actionComplete}
-                        </button>
-                      </div>
+                      <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
+                        {statusLabel(item.status, locale)}
+                      </span>
                     </div>
                   );
                 })
