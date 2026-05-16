@@ -433,7 +433,10 @@ function appointmentCountLabel(locale: Locale, count: number) {
 function getBusyDoctorIds(date: string, appointments: Appointment[]): Set<string> {
   return new Set(
     appointments
-      .filter((a) => a.date === date && (a.doctor_id || a.doctorId))
+      .filter((a) => {
+        const docId = a.doctor_id || a.doctorId;
+        return a.date === date && docId && docId !== "pending";
+      })
       .map((a) => (a.doctor_id || a.doctorId) as string)
   );
 }
@@ -535,7 +538,10 @@ export default function AdminDashboard() {
   }, [doctorFilter, items, status]);
 
   const unassignedItems = useMemo(
-    () => allItems.filter((item) => !item.doctor_id && !item.doctorId && item.status === "pending"),
+    () => allItems.filter((item) => {
+      const docId = item.doctor_id || item.doctorId;
+      return (!docId || docId === "pending") && item.status === "pending";
+    }),
     [allItems]
   );
   const visibleItems = filteredItems;
@@ -1055,7 +1061,8 @@ export default function AdminDashboard() {
               visibleItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback);
                 const isOnline = item.wants_online || item.wantsOnline;
-                const hasDoctor = Boolean(item.doctor_id || item.doctorId);
+                const docId = item.doctor_id || item.doctorId;
+                const hasDoctor = Boolean(docId) && docId !== "pending";
 
                 return (
                   <div className="doctor-admin__record" key={`${item.id}-record`}>
