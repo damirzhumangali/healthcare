@@ -10,6 +10,7 @@ export type Appointment = {
   patient_email?: string;
   patientEmail?: string;
   patientName?: string;
+  patient_name?: string;
   doctor_id?: string;
   doctorId?: string;
   doctorName?: string;
@@ -222,6 +223,9 @@ export async function createAppointment(input: {
     }
   }
 
+  const currentUser = readCurrentUser();
+  const patientName = currentUser?.name || currentUser?.email || "";
+
   try {
     const res = await fetch(`${API_URL}/api/appointments`, {
       method: "POST",
@@ -233,6 +237,7 @@ export async function createAppointment(input: {
         time: input.time || "00:00",
         specialty_request: input.specialtyRequest ?? "",
         wants_online: input.wantsOnline ?? false,
+        patient_name: patientName,
       }),
     });
 

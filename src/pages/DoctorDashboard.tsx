@@ -77,7 +77,7 @@ function readCurrentUser(): StoredUser | null {
 function today() { return new Date().toISOString().slice(0, 10); }
 
 function patientLabel(item: Appointment) {
-  return item.patientName || item.patient_email || item.patientEmail || item.patient_id || item.patientId || "Пациент";
+  return item.patientName || item.patient_name || item.patient_email || item.patientEmail || item.patient_id || item.patientId || "Пациент";
 }
 
 const STAGE_LABELS: Record<ConsultationStage, string> = {
@@ -478,7 +478,7 @@ export default function DoctorDashboard() {
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 14 }}>
-                              {a.patientName || a.patient_email || "Пациент"} · {a.date} {a.time !== "00:00" ? a.time : ""}
+                              {a.patientName || a.patient_name || a.patient_email || "Пациент"} · {a.date} {a.time !== "00:00" ? a.time : ""}
                             </div>
                             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
                               {a.reason || a.specialty_request || a.specialtyRequest || ""}

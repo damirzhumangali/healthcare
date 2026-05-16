@@ -392,6 +392,7 @@ function patientLabel(item: Appointment, fallback: string) {
   const idTail = (item.patient_id || item.patientId || "").slice(-4);
   return (
     item.patientName ||
+    item.patient_name ||
     item.patient_email ||
     item.patientEmail ||
     (idTail ? `${fallback} ${idTail}` : fallback)

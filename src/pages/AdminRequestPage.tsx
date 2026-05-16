@@ -143,7 +143,7 @@ export default function AdminRequestPage() {
               Заявка пациента
             </div>
             <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>
-              {request.patientName || request.patient_email || "Пациент"}
+              {request.patientName || request.patient_name || request.patient_email || "Пациент"}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {specialtyNeeded && (
