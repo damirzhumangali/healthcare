@@ -232,16 +232,6 @@ export default function AppLayout() {
       <main className="container">
         <Outlet />
       </main>
-      <a
-        href="https://t.me/telehealth_assist_bot"
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-5 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#27A7E7] text-white shadow-[0_16px_40px_rgba(39,167,231,0.34)] transition-transform hover:scale-105 md:bottom-6 md:right-6"
-        aria-label={t.telegramSupport}
-        title={t.telegramSupport}
-      >
-        <TelegramIcon className="h-5 w-5" />
-      </a>
       </div>
     </AppPreferencesProvider>
   );
