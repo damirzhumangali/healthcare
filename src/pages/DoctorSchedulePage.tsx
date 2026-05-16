@@ -9,7 +9,8 @@ import {
   MonitorSmartphone,
   Users,
 } from "lucide-react";
-import { DOCTORS, fetchAppointments, type Appointment } from "../lib/apiAppointments";
+import { fetchAppointments, type Appointment } from "../lib/apiAppointments";
+import { fetchAdminDoctors, type DoctorOption } from "../lib/apiAdmin";
 import { usePageSeo } from "../lib/seo";
 
 // Time slots 08:00 – 18:00 every 30 min
@@ -66,7 +67,14 @@ export default function DoctorSchedulePage() {
   const nav = useNavigate();
   const [date, setDate] = useState(today);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<DoctorOption[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAdminDoctors()
+      .then((d) => setDoctors(d.items.filter((doc) => doc.active !== false)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -158,11 +166,11 @@ export default function DoctorSchedulePage() {
         <div style={{ padding: "24px" }}>
           {/* Doctor summary cards */}
           <div style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${DOCTORS.length}, 1fr)`,
+            display: "flex",
             gap: 14, marginBottom: 24,
+            overflowX: "auto", paddingBottom: 4,
           }}>
-            {DOCTORS.map((doc) => {
+            {doctors.map((doc) => {
               const docAppts = appointments.filter(
                 (a) => (a.doctor_id ?? a.doctorId) === doc.id
               );
@@ -172,6 +180,7 @@ export default function DoctorSchedulePage() {
                   borderRadius: 16, padding: "18px 20px",
                   background: "rgba(255,255,255,0.04)",
                   border: "1px solid rgba(255,255,255,0.09)",
+                  minWidth: 160, flexShrink: 0,
                 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{doc.name}</div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{doc.specialty}</div>
@@ -192,20 +201,21 @@ export default function DoctorSchedulePage() {
 
           {/* Schedule grid */}
           <div style={{
-            borderRadius: 16, overflow: "hidden",
+            borderRadius: 16, overflow: "auto",
             border: "1px solid rgba(255,255,255,0.09)",
           }}>
+            <div style={{ minWidth: `${72 + doctors.length * 180}px` }}>
             {/* Column headers */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: `72px repeat(${DOCTORS.length}, 1fr)`,
+              gridTemplateColumns: `72px repeat(${doctors.length}, minmax(180px, 1fr))`,
               background: "rgba(255,255,255,0.06)",
               borderBottom: "1px solid rgba(255,255,255,0.09)",
             }}>
               <div style={{ padding: "12px 14px", fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 Время
               </div>
-              {DOCTORS.map((doc) => (
+              {doctors.map((doc) => (
                 <div key={doc.id} style={{ padding: "12px 14px", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
                   <div style={{ fontWeight: 800, fontSize: 14 }}>{doc.name}</div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{doc.specialty}</div>
@@ -226,7 +236,7 @@ export default function DoctorSchedulePage() {
                     key={slot}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: `72px repeat(${DOCTORS.length}, 1fr)`,
+                      gridTemplateColumns: `72px repeat(${doctors.length}, minmax(180px, 1fr))`,
                       borderBottom: idx < TIME_SLOTS.length - 1
                         ? `1px solid rgba(255,255,255,${isHour ? "0.07" : "0.03"})`
                         : "none",
@@ -244,7 +254,7 @@ export default function DoctorSchedulePage() {
                     </div>
 
                     {/* Doctor cells */}
-                    {DOCTORS.map((doc) => {
+                    {doctors.map((doc) => {
                       const appt = getSlot(doc.id, slot);
                       return (
                         <div
@@ -294,6 +304,7 @@ export default function DoctorSchedulePage() {
                 );
               })
             )}
+            </div>{/* end minWidth wrapper */}
           </div>
 
           {/* Legend */}

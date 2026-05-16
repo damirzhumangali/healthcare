@@ -351,18 +351,39 @@ export default function AdminRequestPage() {
               {isOnline && (
                 <div style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                   {notifyStatus === "sending" && (
-                    <span style={{ color: "rgba(255,255,255,0.5)" }}>⏳ Отправляем ссылку пациенту и врачу...</span>
+                    <span style={{ color: "rgba(255,255,255,0.5)" }}>⏳ Отправляем ссылку...</span>
                   )}
                   {notifyStatus === "sent" && (
-                    <span style={{ color: "#22d3ee" }}>✓ Ссылка на онлайн встречу отправлена пациенту и врачу</span>
+                    <span style={{ color: "#22d3ee" }}>✓ Ссылка отправлена пациенту и врачу</span>
                   )}
                   {notifyStatus === "failed" && (
-                    <span style={{ color: "#f59e0b" }}>⚠ Ссылка не отправлена автоматически — скопируйте её вручную</span>
+                    <span style={{ color: "#6ee7b7" }}>✓ Ссылка доступна в кабинете пациента автоматически</span>
                   )}
                 </div>
               )}
-              {isOnline && notifyStatus === "failed" && jitsiUrl && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", wordBreak: "break-all" }}>{jitsiUrl}</div>
+              {isOnline && jitsiUrl && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", wordBreak: "break-all", flex: 1 }}>{jitsiUrl}</div>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText(jitsiUrl)}
+                    style={{
+                      padding: "5px 12px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      background: "rgba(34,211,238,0.15)", border: "1px solid rgba(34,211,238,0.3)", color: "#22d3ee",
+                    }}
+                  >
+                    📋 Скопировать
+                  </button>
+                  <a
+                    href={jitsiUrl} target="_blank" rel="noreferrer"
+                    style={{
+                      padding: "5px 12px", borderRadius: 7, fontSize: 12, fontWeight: 700, textDecoration: "none",
+                      background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399",
+                    }}
+                  >
+                    Открыть
+                  </a>
+                </div>
               )}
             </div>
           ) : (
