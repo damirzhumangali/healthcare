@@ -65,12 +65,16 @@ const appointmentText = {
     date: "Желаемая дата",
     symptoms: "Симптомы / Причина обращения",
     symptomsPlaceholder: "Например: головная боль, высокая температура, боль в груди...",
+    symptomsHint: "Минимум 10 символов. Опишите жалобы как можно точнее.",
     suggestion: "Рекомендуем специалиста:",
     applySuggestion: "Выбрать",
     onlineConsult: "Хотите онлайн консультацию?",
     onlineYes: "Да",
     onlineNo: "Нет",
     fillAllError: "Заполните дату и опишите симптомы.",
+    tooShortError: "Опишите симптомы подробнее — минимум 10 символов.",
+    spamError: "Пожалуйста, опишите ваши реальные симптомы медицинскими словами.",
+    offensiveError: "Пожалуйста, используйте корректные медицинские термины.",
     created: "Заявка отправлена. Администратор назначит врача и время.",
     createError: "Не удалось создать заявку. Попробуйте ещё раз чуть позже.",
     creating: "Отправляем...",
@@ -86,12 +90,16 @@ const appointmentText = {
     date: "Қалаулы күн",
     symptoms: "Симптомдар / Өтініш себебі",
     symptomsPlaceholder: "Мысалы: бас ауруы, жоғары температура, кеуде ауруы...",
+    symptomsHint: "Кем дегенде 10 таңба. Шағымдарыңызды мүмкіндігінше нақты сипаттаңыз.",
     suggestion: "Маман ұсынылады:",
     applySuggestion: "Таңдау",
     onlineConsult: "Онлайн кеңес алғыңыз келе ме?",
     onlineYes: "Иә",
     onlineNo: "Жоқ",
     fillAllError: "Күнді толтырыңыз және симптомдарды сипаттаңыз.",
+    tooShortError: "Симптомдарды толығырақ сипаттаңыз — кем дегенде 10 таңба.",
+    spamError: "Нақты симптомдарыңызды медициналық сөздермен сипаттаңыз.",
+    offensiveError: "Дұрыс медициналық терминдерді қолданыңыз.",
     created: "Өтінім жіберілді. Әкімші дәрігер мен уақытты тағайындайды.",
     createError: "Өтінімді жасау мүмкін болмады. Сәл кейінірек қайта көріңіз.",
     creating: "Жіберілуде...",
@@ -107,12 +115,16 @@ const appointmentText = {
     date: "Preferred date",
     symptoms: "Symptoms / Reason for visit",
     symptomsPlaceholder: "For example: headache, high fever, chest pain...",
+    symptomsHint: "At least 10 characters. Describe your complaint as precisely as possible.",
     suggestion: "Recommended specialist:",
     applySuggestion: "Select",
     onlineConsult: "Would you like an online consultation?",
     onlineYes: "Yes",
     onlineNo: "No",
     fillAllError: "Please fill in the date and describe your symptoms.",
+    tooShortError: "Please describe your symptoms in more detail — at least 10 characters.",
+    spamError: "Please describe your real symptoms using medical terms.",
+    offensiveError: "Please use appropriate medical terminology.",
     created: "Request sent. An admin will assign a doctor and time.",
     createError: "Could not create the request. Please try again a little later.",
     creating: "Sending...",
@@ -120,6 +132,23 @@ const appointmentText = {
     cancel: "Cancel",
   },
 } as const;
+
+const BAD_WORDS = ["хуй", "пизд", "еба", "бляд", "ёба", "блят", "сука", "пиздец", "нахуй", "ёбан", "залуп", "мудак", "мудил", "ублюд"];
+
+function validateSymptoms(text: string): "ok" | "short" | "spam" | "offensive" {
+  const trimmed = text.trim();
+  if (trimmed.length < 10) return "short";
+
+  const lower = trimmed.toLowerCase();
+  if (BAD_WORDS.some((w) => lower.includes(w))) return "offensive";
+
+  // Detect spam: repeated chars (ааааа), or less than 50% actual letters
+  if (/(.)\1{4,}/.test(trimmed)) return "spam";
+  const letters = (trimmed.match(/[а-яёa-zәіңғүұқөһ]/gi) ?? []).length;
+  if (letters / trimmed.length < 0.45) return "spam";
+
+  return "ok";
+}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -178,6 +207,11 @@ export default function AppointmentForm() {
       setErr(t.fillAllError);
       return;
     }
+
+    const check = validateSymptoms(symptoms);
+    if (check === "short") { setErr(t.tooShortError); return; }
+    if (check === "spam") { setErr(t.spamError); return; }
+    if (check === "offensive") { setErr(t.offensiveError); return; }
 
     setLoading(true);
     try {
@@ -252,6 +286,12 @@ export default function AppointmentForm() {
                 placeholder={t.symptomsPlaceholder}
                 style={{ height: "auto", resize: "vertical" }}
               />
+              <span style={{
+                fontSize: 11, marginTop: 4, display: "block",
+                color: symptoms.trim().length >= 10 ? "rgba(52,211,153,0.7)" : "rgba(255,255,255,0.3)",
+              }}>
+                {symptoms.trim().length}/10 — {t.symptomsHint}
+              </span>
             </label>
 
             {/* Smart suggestion chip */}

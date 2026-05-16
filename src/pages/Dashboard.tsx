@@ -15,7 +15,7 @@ import Button from "../components/Button";
 import { fetchMyMeasurements, readCachedMeasurements, type MeasurementItem } from "../lib/apiMeasurements";
 import {
   DOCTORS,
-  fetchAppointments,
+  fetchMyAppointments,
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
@@ -440,20 +440,18 @@ export default function Dashboard() {
   const loadAppointments = useCallback(async () => {
     setAppointmentsLoading(true);
     try {
-      const data = await fetchAppointments();
-      const mine = (data.items ?? [])
-        .filter((item) => appointmentBelongsToUser(item, currentUser))
-        .sort((a, b) => {
-          const byDate = a.date.localeCompare(b.date);
-          return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
-        });
-      setAppointments(mine);
+      const data = await fetchMyAppointments();
+      const sorted = (data.items ?? []).sort((a, b) => {
+        const byDate = a.date.localeCompare(b.date);
+        return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
+      });
+      setAppointments(sorted);
     } catch {
       setErr(t.appointmentError);
     } finally {
       setAppointmentsLoading(false);
     }
-  }, [currentUser, t.appointmentError]);
+  }, [t.appointmentError]);
 
   function appointmentStatusLabel(status: AppointmentStatus) {
     if (status === "active") return t.appointmentStatusActive;
