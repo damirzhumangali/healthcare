@@ -97,12 +97,31 @@ function appointmentKey(item: Appointment) {
 function mergeAppointments(serverItems: Appointment[], localItems: Appointment[]) {
   const merged = new Map<string, Appointment>();
 
-  localItems.forEach((item) => {
+  // Server data is the base
+  serverItems.forEach((item) => {
     merged.set(appointmentKey(item), item);
   });
 
-  serverItems.forEach((item) => {
-    merged.set(appointmentKey(item), item);
+  // Local data takes priority — preserves admin-assigned doctor/time changes
+  // that the backend may not have persisted yet
+  localItems.forEach((item) => {
+    const key = appointmentKey(item);
+    const server = merged.get(key);
+    if (!server) {
+      merged.set(key, item);
+      return;
+    }
+    // Keep server fields that local doesn't have, but prefer local doctor/time/status
+    merged.set(key, {
+      ...server,
+      doctor_id: item.doctor_id || server.doctor_id,
+      doctorId: item.doctorId || server.doctorId,
+      doctorName: item.doctorName || server.doctorName,
+      time: (item.time && item.time !== "00:00") ? item.time : server.time,
+      status: item.status,
+      patientName: item.patientName || server.patientName,
+      patient_name: item.patient_name || server.patient_name,
+    });
   });
 
   return Array.from(merged.values()).sort(appointmentSort);
