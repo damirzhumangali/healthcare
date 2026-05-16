@@ -512,14 +512,11 @@ export default function Dashboard() {
     <div style={{
       margin: "-28px -24px -60px",
       minHeight: "calc(100vh - 56px)",
-      background: "linear-gradient(160deg, #0f0c29 0%, #302b63 50%, #1a1040 100%)",
+      background: "transparent",
       color: "white",
       fontFamily: "inherit",
       position: "relative",
     }}>
-      {/* ambient blobs */}
-      <div style={{ position: "fixed", top: -300, left: -200, width: 700, height: 700, borderRadius: "50%", pointerEvents: "none", zIndex: 0, background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 65%)" }} />
-      <div style={{ position: "fixed", bottom: -200, right: -100, width: 600, height: 600, borderRadius: "50%", pointerEvents: "none", zIndex: 0, background: "radial-gradient(circle, rgba(34,211,238,0.12) 0%, transparent 65%)" }} />
 
       <div style={{ position: "relative", zIndex: 1, padding: "44px 48px 80px" }}>
 
