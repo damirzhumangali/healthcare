@@ -275,6 +275,18 @@ export async function createAppointment(input: {
 }
 
 export async function assignDoctorToAppointment(id: string, doctorId: string, time?: string) {
+  // Always apply locally first — admin's explicit choice is the source of truth
+  const items = readAppointments();
+  const doctor = DOCTORS.find((d) => d.id === doctorId);
+  const doctorName = doctor ? `${doctor.name} — ${doctor.specialty}` : doctorId;
+  const next = items.map((item) =>
+    item.id === id
+      ? { ...item, doctor_id: doctorId, doctorId, doctorName, time: time ?? item.time }
+      : item
+  );
+  writeAppointments(next);
+  const localResult = { item: next.find((item) => item.id === id) ?? null };
+
   try {
     const res = await fetch(`${API_URL}/api/appointments/${id}/assign`, {
       method: "PATCH",
@@ -283,20 +295,10 @@ export async function assignDoctorToAppointment(id: string, doctorId: string, ti
       body: JSON.stringify({ doctor_id: doctorId, time }),
     });
     if (!res.ok) throw new Error("assign failed");
-    const data = await res.json();
-    const updated = data.item ?? data.appointment ?? null;
-    if (updated) persistAppointment(updated);
-    return data;
+    // Don't overwrite local with server response — local assignment takes priority
+    return await res.json();
   } catch {
-    const items = readAppointments();
-    const doctor = DOCTORS.find((d) => d.id === doctorId);
-    const next = items.map((item) =>
-      item.id === id
-        ? { ...item, doctor_id: doctorId, doctorName: doctor ? `${doctor.name} - ${doctor.specialty}` : doctorId, time: time ?? item.time }
-        : item
-    );
-    writeAppointments(next);
-    return { item: next.find((item) => item.id === id) ?? null };
+    return localResult;
   }
 }
 

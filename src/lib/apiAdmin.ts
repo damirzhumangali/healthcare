@@ -114,6 +114,7 @@ function localPatients(): AdminPatient[] {
     const existing = grouped.get(id);
     const name =
       item.patientName ||
+      item.patient_name ||
       item.patient_email ||
       item.patientEmail ||
       `Пациент ${String(id).slice(-4)}`;
