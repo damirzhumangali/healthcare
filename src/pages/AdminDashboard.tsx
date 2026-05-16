@@ -984,9 +984,6 @@ export default function AdminDashboard() {
                         <span>{item.reason || t.appointmentFallback}</span>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
-                          {statusLabel(item.status, locale)}
-                        </span>
                         {item.status !== "done" && (
                           <button
                             type="button"
@@ -1001,6 +998,13 @@ export default function AdminDashboard() {
                             {t.actionAccept}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => changeStatus(item.id, "done")}
+                          disabled={item.status === "done"}
+                        >
+                          {t.actionComplete}
+                        </button>
                       </div>
                     </div>
                   );
@@ -1107,10 +1111,7 @@ export default function AdminDashboard() {
                       <small>{item.reason || t.appointmentFallback}</small>
                     </div>
                     <div className="doctor-admin__record-actions">
-                      <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
-                        {statusLabel(item.status, locale)}
-                      </span>
-                      {isOnline && item.status === "active" ? (
+                      {isOnline ? (
                         <a
                           href={jitsiRoomUrl(item.id)}
                           target="_blank"
@@ -1141,15 +1142,13 @@ export default function AdminDashboard() {
                           {t.actionAccept}
                         </button>
                       ) : null}
-                      {item.status !== "pending" ? (
-                        <button
-                          type="button"
-                          onClick={() => changeStatus(item.id, "done")}
-                          disabled={item.status === "done"}
-                        >
-                          {t.actionComplete}
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => changeStatus(item.id, "done")}
+                        disabled={item.status === "done"}
+                      >
+                        {t.actionComplete}
+                      </button>
                     </div>
                   </div>
                 );
