@@ -522,428 +522,332 @@ export default function Dashboard() {
     completed: 4,
   };
 
+  const confirmedAppts = appointments.filter((a) => a.status === "active" && (a.doctor_id || a.doctorId) && (a.doctor_id || a.doctorId) !== "pending");
+  const pendingAppts = appointments.filter((a) => a.status === "pending");
+
+  const initials = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  };
+
   return (
-    <div className="container dashboard-page">
-      <div className="dashboard-layout">
+    <div style={{ minHeight: "100vh", background: "var(--bg, #0a0f1a)", color: "white", fontFamily: "inherit" }}>
 
-        {/* Hero — full width */}
-        <div className="dashboard-hero">
-          <div className="patient-hero">
-            <div className="patient-hero__copy">
-              <div className="patient-hero__eyebrow">HealthAssist</div>
-              <h1 className="patient-hero__title">{t.title}</h1>
-              <p className="patient-hero__subtitle">{t.subtitle}</p>
-              <div className="patient-account">
-                <span>{t.hello}</span>
-                <strong>{displayName}</strong>
-              </div>
-            </div>
-
-            <div className="patient-hero__aside">
-              <div className="patient-hero__stats">
-                <div className="patient-hero__stat">
-                  <span className="patient-hero__stat-label">{t.heroAppointments}</span>
-                  <strong className="patient-hero__stat-value">
-                    {appointmentsLoading ? "…" : appointments.length}
-                  </strong>
-                </div>
-                <div className="patient-hero__stat">
-                  <span className="patient-hero__stat-label">{t.heroMeasurements}</span>
-                  <strong className="patient-hero__stat-value">
-                    {loading ? "…" : items.length}
-                  </strong>
-                </div>
-                <div className="patient-hero__stat">
-                  <span className="patient-hero__stat-label">{t.heroTicket}</span>
-                  <strong className="patient-hero__stat-value">
-                    {ticket ? `A-${ticket.ticketNumber}` : "—"}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="patient-hero__panel">
-                <div className="patient-hero__panel-top">
-                  <div>
-                    <div className="patient-hero__panel-label">{t.heroSnapshot}</div>
-                    <div className="patient-hero__panel-title">
-                      {ticket
-                        ? ticket.status === "invited"
-                          ? t.invited
-                          : ticket.status === "waiting"
-                            ? t.waitForCall
-                            : t.ticketMissed
-                        : t.heroQueueMissing}
-                    </div>
-                  </div>
-                  {ticket ? (
-                    <span className={`badge ${ticket.status === "invited" ? "badge--ok" : ticket.status === "waiting" ? "badge--warn" : "badge--danger"}`}>
-                      <span className="badge__dot" />
-                      {ticket.status === "invited" ? t.invited : ticket.status === "waiting" ? t.waitForCall : t.ticketMissed}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="patient-hero__panel-grid">
-                  <div className="patient-hero__mini">
-                    <span className="patient-hero__mini-label">{t.heroUpcomingVisit}</span>
-                    <strong className="patient-hero__mini-value">
-                      {nextAppointment ? `${nextAppointment.date} • ${nextAppointment.time}` : "—"}
-                    </strong>
-                    <span className="patient-hero__mini-meta">
-                      {nextAppointment ? doctorLabel(nextAppointment) : t.heroNoAppointments}
-                    </span>
-                  </div>
-
-                  <div className="patient-hero__mini">
-                    <span className="patient-hero__mini-label">{t.heroLatestMeasurement}</span>
-                    <strong className="patient-hero__mini-value">
-                      {latestMeasurement ? `${latestMeasurement.tempC}°C / ${latestMeasurement.hr}` : "—"}
-                    </strong>
-                    <span className="patient-hero__mini-meta">
-                      {latestMeasurement ? fmtDate(latestMeasurement.createdAt) : t.heroNoMeasurements}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* Top navbar */}
+      <header style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 24px", height: 60,
+        background: "rgba(255,255,255,0.03)",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        position: "sticky", top: 0, zIndex: 10,
+        backdropFilter: "blur(12px)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: "linear-gradient(135deg, #22d3ee, #6366f1)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Stethoscope size={16} color="#0a0f1a" />
           </div>
-          {err ? <div className="alert" style={{ marginTop: 12 }}>{err}</div> : null}
+          <span style={{ fontWeight: 800, fontSize: 16 }}>HealthAssist</span>
         </div>
-
-        {/* Sidebar — Quick Actions + Ticket */}
-        <div className="dashboard-sidebar">
-          <Card>
-            <div className="stack">
-              <div>
-                <h2 className="h2" style={{ margin: 0 }}>{t.quickActions}</h2>
-                <p className="muted" style={{ margin: "6px 0 0" }}>{t.quickActionsHint}</p>
-              </div>
-              <div className="dashboard-actions">
-                {isAdmin ? (
-                  <Button className="dashboard-actions__button" onClick={() => nav("/admin")}>{t.adminPanel}</Button>
-                ) : null}
-                <Button className="dashboard-actions__button" variant="ghost" onClick={() => nav("/appointments/new")}>
-                  {t.bookDoctor}
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="stack">
-              <h2 className="h2" style={{ margin: 0 }}>{t.onlineTicket}</h2>
-
-              {!ticket ? (
-                <div className="stack">
-                  <p className="muted" style={{ margin: 0 }}>{t.noTicket}</p>
-                  <Button onClick={() => { const c = createNewMyTicket(); setTicket(c); }}>
-                    {t.takeNewTicket}
-                  </Button>
-                </div>
-              ) : (
-                <div className="stack">
-                  <div className="grid">
-                    <div className="metric">
-                      <div className="metric__label">{t.yourNumber}</div>
-                      <div className="metric__value">A-{ticket.ticketNumber}</div>
-                    </div>
-                    <div className="metric">
-                      <div className="metric__label">{t.nowCalling}</div>
-                      <div className="metric__value">A-{ticket.servingNow}</div>
-                    </div>
-                    <div className="metric">
-                      <div className="metric__label">{t.ahead}</div>
-                      <div className="metric__value">{ticket.peopleAhead}</div>
-                    </div>
-                    <div className="metric">
-                      <div className="metric__label">{t.waiting}</div>
-                      <div className="metric__value">~{ticket.etaMinutes} {t.minutes}</div>
-                    </div>
-                  </div>
-                  <div className="row">
-                    <Button onClick={() => { const n = createNewMyTicket(); setTicket(n); }}>
-                      {t.takeNewTicket}
-                    </Button>
-                    <span className={`badge ${ticket.status === "invited" ? "badge--ok" : ticket.status === "waiting" ? "badge--warn" : "badge--danger"}`}>
-                      <span className="badge__dot" />
-                      {ticket.status === "invited" ? t.invited : ticket.status === "waiting" ? t.waitForCall : t.ticketMissed}
-                    </span>
-                  </div>
-                  <span className="muted" style={{ fontSize: 12 }}>{t.issued}: {fmtDate(ticket.createdAt)}</span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* Confirmed appointment notification */}
-        {appointments.filter((a) => a.status === "active" && (a.doctor_id || a.doctorId)).map((confirmed) => {
-          const isOnline = confirmed.wants_online || confirmed.wantsOnline;
-          const jitsiUrl = `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
-          return (
-            <div
-              key={`confirmed-${confirmed.id}`}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {isAdmin && (
+            <button
+              onClick={() => nav("/admin")}
               style={{
-                borderRadius: 16, padding: "18px 22px",
-                background: "linear-gradient(135deg, rgba(34,211,153,0.12), rgba(34,211,238,0.08))",
-                border: "1.5px solid rgba(34,211,153,0.35)",
-                marginBottom: 4,
+                padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)",
+                color: "#a5b4fc", cursor: "pointer",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <span style={{ fontSize: 20 }}>✅</span>
-                <strong style={{ fontSize: 16, color: "#34d399" }}>{t.confirmedTitle}</strong>
+              {t.adminPanel}
+            </button>
+          )}
+          <div style={{
+            width: 34, height: 34, borderRadius: "50%",
+            background: "linear-gradient(135deg, #6366f1, #22d3ee)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 800, fontSize: 13, color: "#0a0f1a", flexShrink: 0,
+          }}>
+            {initials(displayName)}
+          </div>
+        </div>
+      </header>
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 20px 60px" }}>
+
+        {/* Welcome */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>
+            {new Date().toLocaleDateString(locale === "kk" ? "kk-KZ" : locale === "en" ? "en-US" : "ru-RU", { weekday: "long", day: "numeric", month: "long" })}
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
+            Привет, {displayName.split(" ")[0]} 👋
+          </h1>
+          <p style={{ color: "rgba(255,255,255,0.45)", margin: "6px 0 0", fontSize: 14 }}>
+            {t.subtitle}
+          </p>
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+          {[
+            { label: t.heroAppointments, value: appointmentsLoading ? "…" : appointments.length, color: "#6366f1", bg: "rgba(99,102,241,0.1)", border: "rgba(99,102,241,0.2)" },
+            { label: t.heroMeasurements, value: loading ? "…" : items.length, color: "#22d3ee", bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.18)" },
+            { label: t.heroTicket, value: ticket ? `A-${ticket.ticketNumber}` : "—", color: "#f59e0b", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.18)" },
+          ].map((s) => (
+            <div key={s.label} style={{
+              borderRadius: 16, padding: "18px 20px",
+              background: s.bg, border: `1px solid ${s.border}`,
+            }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 4 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Confirmed appointment banner */}
+        {confirmedAppts.map((confirmed) => {
+          const isOnline = confirmed.wants_online || confirmed.wantsOnline;
+          const jitsiUrl = `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
+          const dLabel = doctorLabel(confirmed);
+          return (
+            <div key={`conf-${confirmed.id}`} style={{
+              borderRadius: 20, padding: "22px 24px", marginBottom: 20,
+              background: "linear-gradient(135deg, rgba(52,211,153,0.13), rgba(34,211,238,0.08))",
+              border: "1.5px solid rgba(52,211,153,0.4)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%",
+                  background: "rgba(52,211,153,0.2)", border: "1.5px solid rgba(52,211,153,0.5)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <HeartPulse size={16} color="#34d399" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: "#34d399" }}>{t.confirmedTitle}</div>
+                </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 14 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.confirmedDoctor}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginTop: 3 }}>{doctorLabel(confirmed)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.confirmedDate}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginTop: 3 }}>{confirmed.date}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.confirmedTime}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginTop: 3 }}>{confirmed.time || "—"}</div>
-                </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 16, marginBottom: isOnline ? 18 : 0 }}>
+                {[
+                  { label: t.confirmedDoctor, value: dLabel },
+                  { label: t.confirmedDate, value: confirmed.date },
+                  { label: t.confirmedTime, value: confirmed.time && confirmed.time !== "00:00" ? confirmed.time : "—" },
+                ].map((row) => (
+                  <div key={row.label}>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>{row.label}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{row.value}</div>
+                  </div>
+                ))}
               </div>
-              {isOnline ? (
-                <a
-                  href={jitsiUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 8,
-                    background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                    color: "#0a1628", borderRadius: 10,
-                    padding: "10px 20px", fontWeight: 800, fontSize: 14,
-                    textDecoration: "none",
-                  }}
-                >
+              {isOnline && (
+                <a href={jitsiUrl} target="_blank" rel="noreferrer" style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                  color: "#0a1628", borderRadius: 10, padding: "10px 22px",
+                  fontWeight: 800, fontSize: 14, textDecoration: "none",
+                }}>
                   <Video size={16} />
                   {t.joinMeeting}
                 </a>
-              ) : null}
+              )}
             </div>
           );
         })}
 
-        {/* Main — History + Appointments */}
-        <div className="dashboard-main">
-          <Card>
-            <div className="stack telemed-card telemed-card--patient">
-              <div className="telemed-card__top">
-                <div>
-                  <div className="telemed-card__eyebrow">{tele.eyebrow}</div>
-                  <h2 className="h2" style={{ margin: 0 }}>{tele.title}</h2>
-                  <p className="muted" style={{ margin: "8px 0 0" }}>
-                    {nextConsultation ? tele.automation : tele.emptyText}
-                  </p>
-                </div>
-                {nextConsultation ? (
-                  <span className={`badge ${consultationBadgeClass(nextConsultation.stage)}`}>
-                    <span className="badge__dot" />
-                    {consultationStageLabel(nextConsultation.stage)}
-                  </span>
-                ) : null}
-              </div>
-
-              {!nextConsultation ? (
-                <div className="telemed-empty">
+        {/* Pending appointments waiting for doctor */}
+        {pendingAppts.length > 0 && (
+          <div style={{
+            borderRadius: 16, padding: "16px 20px", marginBottom: 20,
+            background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)",
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#f59e0b", marginBottom: 10 }}>
+              ⏳ Ваши заявки на рассмотрении ({pendingAppts.length})
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {pendingAppts.map((a) => (
+                <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
-                    <strong>{tele.emptyTitle}</strong>
-                    <p className="muted" style={{ margin: "8px 0 0" }}>{tele.emptyText}</p>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{a.specialty_request || a.specialtyRequest || "Специалист"}</span>
+                    <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginLeft: 8 }}>{a.date}</span>
                   </div>
-                  <Button onClick={() => nav("/appointments/new")}>{tele.bookVisit}</Button>
+                  <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>Ожидает назначения врача</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Main CTA */}
+        <div style={{
+          borderRadius: 20, padding: "24px",
+          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(34,211,238,0.08))",
+          border: "1px solid rgba(99,102,241,0.25)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 16, flexWrap: "wrap", marginBottom: 20,
+        }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>Записаться к врачу</div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>Опишите симптомы — администратор назначит врача и время</div>
+          </div>
+          <button
+            onClick={() => nav("/appointments/new")}
+            style={{
+              padding: "12px 28px", borderRadius: 12, fontWeight: 800, fontSize: 15,
+              background: "linear-gradient(135deg, #6366f1, #22d3ee)",
+              color: "#0a1628", border: "none", cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            {t.bookDoctor}
+          </button>
+        </div>
+
+        {/* Two-column grid: appointments + ticket */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+
+          {/* Appointment list */}
+          <div style={{
+            borderRadius: 20, padding: "22px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.09)",
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{t.myAppointments}</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 16 }}>{t.myAppointmentsHint}</div>
+            {appointmentsLoading ? (
+              <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, margin: 0 }}>{t.loading}</p>
+            ) : appointments.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <CalendarClock size={32} style={{ color: "rgba(255,255,255,0.15)", display: "block", margin: "0 auto 10px" }} />
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, margin: 0 }}>{t.noAppointments}</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {appointments.slice(0, 4).map((appt) => {
+                  const statusColors: Record<string, { bg: string; color: string; label: string }> = {
+                    active: { bg: "rgba(34,211,238,0.12)", color: "#22d3ee", label: t.appointmentStatusActive },
+                    done: { bg: "rgba(52,211,153,0.12)", color: "#34d399", label: t.appointmentStatusDone },
+                    pending: { bg: "rgba(245,158,11,0.12)", color: "#f59e0b", label: t.appointmentStatusPending },
+                  };
+                  const sc = statusColors[appt.status] ?? statusColors.pending;
+                  const dLabel = doctorLabel(appt);
+                  const hasRealDoctor = (appt.doctor_id || appt.doctorId) && (appt.doctor_id || appt.doctorId) !== "pending";
+                  return (
+                    <div key={appt.id} style={{
+                      borderRadius: 12, padding: "12px 14px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>
+                            {appt.specialty_request || appt.specialtyRequest || (hasRealDoctor ? dLabel : "Специалист")}
+                          </div>
+                          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>
+                            {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
+                          </div>
+                          {hasRealDoctor && (
+                            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{dLabel}</div>
+                          )}
+                        </div>
+                        <span style={{
+                          borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+                          background: sc.bg, color: sc.color, flexShrink: 0,
+                        }}>{sc.label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Ticket + Measurements */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Queue ticket */}
+            <div style={{
+              borderRadius: 20, padding: "22px",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              flex: ticket ? "none" : 1,
+            }}>
+              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{t.onlineTicket}</div>
+              {!ticket ? (
+                <>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: "0 0 16px" }}>{t.noTicket}</p>
+                  <button
+                    onClick={() => { const c = createNewMyTicket(); setTicket(c); }}
+                    style={{
+                      padding: "10px 20px", borderRadius: 10, fontWeight: 700, fontSize: 14,
+                      background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.35)",
+                      color: "#f59e0b", cursor: "pointer", width: "100%",
+                    }}
+                  >{t.takeNewTicket}</button>
+                </>
               ) : (
                 <>
-                  <div className="telemed-grid">
-                    <div className="telemed-stat">
-                      <div className="telemed-stat__icon"><Stethoscope size={18} /></div>
-                      <span className="telemed-stat__label">{tele.doctor}</span>
-                      <strong className="telemed-stat__value">{nextConsultation.doctorName}</strong>
-                      <span className="telemed-stat__meta">{nextConsultation.specialty}</span>
-                    </div>
-                    <div className="telemed-stat">
-                      <div className="telemed-stat__icon"><CalendarClock size={18} /></div>
-                      <span className="telemed-stat__label">{tele.schedule}</span>
-                      <strong className="telemed-stat__value">{nextConsultation.date} • {nextConsultation.time}</strong>
-                      <span className="telemed-stat__meta">{nextConsultation.notes}</span>
-                    </div>
-                    <div className="telemed-stat">
-                      <div className="telemed-stat__icon"><BedDouble size={18} /></div>
-                      <span className="telemed-stat__label">{tele.location}</span>
-                      <strong className="telemed-stat__value">{nextConsultation.wardLabel}</strong>
-                      <span className="telemed-stat__meta">{nextConsultation.bedLabel}</span>
-                    </div>
-                    <div className="telemed-stat">
-                      <div className="telemed-stat__icon"><Bot size={18} /></div>
-                      <span className="telemed-stat__label">{tele.robot}</span>
-                      <strong className="telemed-stat__value">{nextConsultation.robotUnit}</strong>
-                      <span className="telemed-stat__meta">
-                        {nextConsultation.devices.robotLinked ? tele.robotOnline : tele.pending}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="telemed-body">
-                    <div className="telemed-panel">
-                      <div className="telemed-panel__title">{tele.deviceReadiness}</div>
-                      <div className="telemed-device-grid">
-                        {[
-                          {
-                            key: "camera",
-                            label: tele.camera,
-                            icon: <Video size={16} />,
-                            ready: nextConsultation.devices.cameraReady,
-                          },
-                          {
-                            key: "audio",
-                            label: tele.audio,
-                            icon: <Mic size={16} />,
-                            ready: nextConsultation.devices.audioReady,
-                          },
-                          {
-                            key: "monitoring",
-                            label: tele.monitoring,
-                            icon: <HeartPulse size={16} />,
-                            ready: nextConsultation.devices.monitoringReady,
-                          },
-                          {
-                            key: "medication",
-                            label: tele.medication,
-                            icon: <Package size={16} />,
-                            ready: nextConsultation.devices.medicationReady,
-                          },
-                        ].map((device) => (
-                          <div
-                            key={device.key}
-                            className={`telemed-device ${device.ready ? "telemed-device--ready" : "telemed-device--pending"}`}
-                          >
-                            <span className="telemed-device__icon">{device.icon}</span>
-                            <span>
-                              <strong>{device.label}</strong>
-                              <small>{device.ready ? tele.robotOnline : tele.pending}</small>
-                            </span>
-                          </div>
-                        ))}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                    {[
+                      { label: t.yourNumber, value: `A-${ticket.ticketNumber}` },
+                      { label: t.nowCalling, value: `A-${ticket.servingNow}` },
+                      { label: t.ahead, value: ticket.peopleAhead },
+                      { label: t.waiting, value: `~${ticket.etaMinutes} ${t.minutes}` },
+                    ].map((m) => (
+                      <div key={m.label} style={{ borderRadius: 10, padding: "10px 12px", background: "rgba(255,255,255,0.05)" }}>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 2 }}>{m.label}</div>
+                        <div style={{ fontWeight: 800, fontSize: 16 }}>{m.value}</div>
                       </div>
-                    </div>
-
-                    <div className="telemed-panel">
-                      <div className="telemed-panel__title">{tele.liveMetrics}</div>
-                      <div className="telemed-vitals">
-                        <div className="telemed-vital">
-                          <span>{t.temp}</span>
-                          <strong>{latestMeasurement?.tempC != null ? `${latestMeasurement.tempC}°C` : "—"}</strong>
-                        </div>
-                        <div className="telemed-vital">
-                          <span>{t.pulse}</span>
-                          <strong>{latestMeasurement?.hr != null ? latestMeasurement.hr : "—"}</strong>
-                        </div>
-                      </div>
-                      <p className="muted" style={{ margin: "12px 0 0", fontSize: 13 }}>{tele.vitalsHint}</p>
-                    </div>
+                    ))}
                   </div>
-
-                  <div className="telemed-timeline-wrap">
-                    <div className="telemed-panel__title">{tele.timeline}</div>
-                    <div className="telemed-timeline">
-                      {consultationTimeline().map((step) => {
-                        const active = step.key === nextConsultation.stage;
-                        const done = stageRank[nextConsultation.stage] > stageRank[step.key];
-                        return (
-                          <div
-                            key={step.key}
-                            className={`telemed-step ${active ? "telemed-step--active" : ""} ${done ? "telemed-step--done" : ""}`}
-                          >
-                            <div className="telemed-step__marker" />
-                            <strong>{step.label}</strong>
-                            <span>{step.desc}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => { const n = createNewMyTicket(); setTicket(n); }}
+                    style={{
+                      padding: "8px 16px", borderRadius: 9, fontWeight: 700, fontSize: 13,
+                      background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)",
+                      color: "#f59e0b", cursor: "pointer", width: "100%",
+                    }}
+                  >{t.takeNewTicket}</button>
                 </>
               )}
             </div>
-          </Card>
 
-          <Card>
-            <div className="stack">
-              <div>
-                <h2 className="h2" style={{ margin: 0 }}>{t.myAppointments}</h2>
-                <p className="muted" style={{ margin: "6px 0 0" }}>{t.myAppointmentsHint}</p>
-              </div>
-              {appointmentsLoading ? (
-                <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
-              ) : appointments.length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>{t.noAppointments}</p>
-              ) : (
-                <div style={{ display: "grid", gap: 10 }}>
-                  {appointments.map((appointment) => (
-                    <div key={appointment.id} className="dashboard-list-item">
-                      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontWeight: 800, fontSize: 15 }}>{appointment.date} • {appointment.time}</div>
-                          <div className="muted" style={{ fontSize: 13, marginTop: 5 }}>{t.doctor}: {doctorLabel(appointment)}</div>
-                          <div className="muted" style={{ fontSize: 13, marginTop: 3 }}>{t.reason}: {appointment.reason || "—"}</div>
-                        </div>
-                        <span className={`badge ${appointmentStatusClass(appointment.status)}`}>
-                          <span className="badge__dot" />
-                          {appointmentStatusLabel(appointment.status)}
-                        </span>
-                      </div>
+            {/* Latest measurement */}
+            {items.length > 0 && (
+              <div style={{
+                borderRadius: 20, padding: "22px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.09)",
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14 }}>{t.history}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { icon: "🌡", label: t.temp, value: latestMeasurement?.tempC != null ? `${latestMeasurement.tempC}°C` : "—" },
+                    { icon: "❤️", label: t.pulse, value: latestMeasurement?.hr != null ? `${latestMeasurement.hr}` : "—" },
+                  ].map((v) => (
+                    <div key={v.label} style={{ borderRadius: 12, padding: "14px", background: "rgba(255,255,255,0.05)" }}>
+                      <div style={{ fontSize: 22, marginBottom: 4 }}>{v.icon}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800 }}>{v.value}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{v.label}</div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          </Card>
-
-          <Card>
-            <div className="stack">
-              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                <h2 className="h2" style={{ margin: 0 }}>{t.history}</h2>
-                {items.length > 3 && (
-                  <button
-                    onClick={() => setShowAllMeasurements((p) => !p)}
-                    style={{ fontSize: 13, color: "var(--primary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                  >
-                    {showAllMeasurements ? t.showLess : t.showAll} ({items.length})
-                  </button>
+                {latestMeasurement && (
+                  <Link to={`/app/measurements/${latestMeasurement.id}`} style={{
+                    display: "block", marginTop: 12, textAlign: "center",
+                    fontSize: 13, color: "rgba(255,255,255,0.35)", textDecoration: "none",
+                  }}>
+                    {fmtDate(latestMeasurement.createdAt)} →
+                  </Link>
                 )}
               </div>
-
-              {loading ? (
-                <p className="muted" style={{ margin: 0 }}>{t.loading}</p>
-              ) : items.length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>
-                  {t.noMeasurements}
-                </p>
-              ) : (
-                <div style={{ display: "grid", gap: 10 }}>
-                  {(showAllMeasurements ? items : items.slice(0, 3)).map((m) => (
-                    <Link key={m.id} to={`/app/measurements/${m.id}`} style={{ textDecoration: "none" }}>
-                      <div className="dashboard-list-item dashboard-list-item--measure">
-                        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                          {fmtDate(m.createdAt)} · {t.device}: {m.deviceId}
-                        </div>
-                        <div className="dashboard-measure-row">
-                          <span><b>{m.tempC}°C</b> <span className="muted">{t.temp}</span></span>
-                          <span><b>{m.hr}</b> <span className="muted">{t.pulse}</span></span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Card>
+            )}
+          </div>
         </div>
+
+        {err && <div className="alert" style={{ marginTop: 12 }}>{err}</div>}
       </div>
     </div>
   );
