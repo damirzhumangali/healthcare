@@ -1065,7 +1065,7 @@ export default function AdminDashboard() {
                 const name = patientLabel(item, t.patientFallback, patients);
                 const isOnline = item.wants_online || item.wantsOnline;
                 const docId = item.doctor_id || item.doctorId;
-                const hasDoctor = Boolean(docId) && docId !== "pending";
+                const hasDoctor = item.status !== "pending" && Boolean(docId) && docId !== "pending";
 
                 return (
                   <div className="doctor-admin__record" key={`${item.id}-record`}>
