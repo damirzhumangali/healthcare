@@ -8,7 +8,7 @@ import {
   fetchAppointments,
   type Appointment,
 } from "../lib/apiAppointments";
-import { fetchAdminDoctors } from "../lib/apiAdmin";
+import { fetchAdminDoctors, notifyOnlineMeeting } from "../lib/apiAdmin";
 import { usePageSeo } from "../lib/seo";
 
 type DoctorRow = { id: string; name: string; specialty: string };
@@ -51,6 +51,7 @@ export default function AdminRequestPage() {
   const [time, setTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [notifyStatus, setNotifyStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
 
   useEffect(() => {
     fetchAppointments().then((d) => setAllAppointments(d.items ?? [])).catch(() => {});
@@ -88,10 +89,19 @@ export default function AdminRequestPage() {
     if (!request || !selectedDoctorId || !time) return;
     setSaving(true);
     try {
-      await assignDoctorToAppointment(request.id, selectedDoctorId, time);
+      const meetingUrl = isOnline && jitsiUrl ? jitsiUrl : undefined;
+      await assignDoctorToAppointment(request.id, selectedDoctorId, time, meetingUrl);
       await updateAppointmentStatus(request.id, "active");
+
+      if (isOnline && jitsiUrl) {
+        setNotifyStatus("sending");
+        const meetingAt = `${date}T${time}:00`;
+        const { notified } = await notifyOnlineMeeting(request.id, jitsiUrl, meetingAt);
+        setNotifyStatus(notified ? "sent" : "failed");
+      }
+
       setDone(true);
-      window.setTimeout(() => nav("/admin"), 1500);
+      window.setTimeout(() => nav("/admin"), 2500);
     } catch {
       setSaving(false);
     }
@@ -330,13 +340,27 @@ export default function AdminRequestPage() {
         {/* Submit */}
         {selectedDoctorId && (
           done ? (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 10,
-              color: "#34d399", fontWeight: 700, fontSize: 16,
-              padding: "16px 0",
-            }}>
-              <Check size={20} />
-              Заявка принята! Врач и пациент уведомлены. Возвращаемся...
+            <div style={{ padding: "16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#34d399", fontWeight: 700, fontSize: 16 }}>
+                <Check size={20} />
+                Заявка принята! Возвращаемся...
+              </div>
+              {isOnline && (
+                <div style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                  {notifyStatus === "sending" && (
+                    <span style={{ color: "rgba(255,255,255,0.5)" }}>⏳ Отправляем ссылку пациенту и врачу...</span>
+                  )}
+                  {notifyStatus === "sent" && (
+                    <span style={{ color: "#22d3ee" }}>✓ Ссылка на онлайн встречу отправлена пациенту и врачу</span>
+                  )}
+                  {notifyStatus === "failed" && (
+                    <span style={{ color: "#f59e0b" }}>⚠ Ссылка не отправлена автоматически — скопируйте её вручную</span>
+                  )}
+                </div>
+              )}
+              {isOnline && notifyStatus === "failed" && jitsiUrl && (
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", wordBreak: "break-all" }}>{jitsiUrl}</div>
+              )}
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

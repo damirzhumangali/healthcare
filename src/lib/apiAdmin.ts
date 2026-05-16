@@ -301,6 +301,26 @@ export async function updateDoctor(
   }
 }
 
+export async function notifyOnlineMeeting(
+  appointmentId: string,
+  meetingUrl: string,
+  meetingAt: string,
+): Promise<{ notified: boolean; notifyError: string | null }> {
+  try {
+    const res = await fetch(`${API_URL}/api/appointments/${appointmentId}/notify-online`, {
+      method: "POST",
+      headers: authHeaders(),
+      credentials: "include",
+      body: JSON.stringify({ meeting_url: meetingUrl, meeting_at: meetingAt }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return { notified: data.notified ?? true, notifyError: data.notify_error ?? null };
+  } catch (err) {
+    return { notified: false, notifyError: String(err) };
+  }
+}
+
 export type ServoDeviceState = {
   isOpen: boolean;
   angle: number;

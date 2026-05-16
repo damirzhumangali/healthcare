@@ -316,7 +316,12 @@ export async function createAppointment(input: {
   }
 }
 
-export async function assignDoctorToAppointment(id: string, doctorId: string, time?: string) {
+export async function assignDoctorToAppointment(
+  id: string,
+  doctorId: string,
+  time?: string,
+  meetingUrl?: string,
+) {
   const doctor = DOCTORS.find((d) => d.id === doctorId);
   const doctorName = doctor ? `${doctor.name} — ${doctor.specialty}` : doctorId;
 
@@ -337,7 +342,11 @@ export async function assignDoctorToAppointment(id: string, doctorId: string, ti
       method: "PATCH",
       headers: authHeaders(),
       credentials: "include",
-      body: JSON.stringify({ doctor_id: doctorId, time }),
+      body: JSON.stringify({
+        doctor_id: doctorId,
+        time,
+        ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
+      }),
     });
     if (!res.ok) throw new Error("assign failed");
     return await res.json();
