@@ -405,7 +405,8 @@ function patientLabel(item: Appointment, fallback: string) {
 function doctorLabel(item: Appointment, doctors: DoctorOption[], fallback: string) {
   const doctorId = item.doctor_id || item.doctorId;
   const doctor = doctors.find((doctorItem) => doctorItem.id === doctorId);
-  return item.doctorName || (doctor ? `${doctor.name} - ${doctor.specialty}` : doctorId) || fallback;
+  const raw = item.doctorName || (doctor ? `${doctor.name} — ${doctor.specialty}` : doctorId) || fallback;
+  return raw.replace(/^Др\.\s*/i, "");
 }
 
 function initials(name: string) {
@@ -1126,7 +1127,7 @@ export default function AdminDashboard() {
                           {t.actionAccept}
                         </button>
                       )}
-                      {item.status === "active" && (
+                      {(item.status === "active" || item.status === "done") && (
                         <button
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
