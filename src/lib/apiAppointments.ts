@@ -558,13 +558,17 @@ function normalizeFetchedAppointments(items: Appointment[]) {
     .sort(appointmentSort);
 }
 
+export function pingBackend() {
+  void fetch(`${API_URL}/api/appointments`, { method: "HEAD", headers: authHeaders(), credentials: "include" }).catch(() => {});
+}
+
 export async function fetchAppointments(date?: string): Promise<{ items: Appointment[] }> {
   const params = new URLSearchParams();
   if (date) params.set("date", date);
   const query = params.toString();
   const url = query ? `${API_URL}/api/appointments?${query}` : `${API_URL}/api/appointments`;
+  const allLocal = normalizeFetchedAppointments(readAppointments()); // full local cache, unfiltered
   const localItems = fetchLocalAppointments(date).items;
-  const currentUser = readCurrentUser();
 
   try {
     const res = await fetch(url, {
@@ -575,16 +579,15 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
     if (!res.ok) throw new Error("fetch appointments failed");
     const data = normalizeAppointmentList(await res.json());
     const normalized = normalizeFetchedAppointments(data.items ?? []);
-    const keepCachedSchedule =
-      normalized.length === 0 &&
-      localItems.length > 0 &&
-      (currentUser?.role === "doctor" || currentUser?.role === "admin");
 
-    if (!keepCachedSchedule) {
-      writeAppointments(normalized);
-    }
+    // Preserve local-only appointments (created while backend was unreachable)
+    const serverIds = new Set(normalized.map((a) => a.id));
+    const localOnly = allLocal.filter((a) => !serverIds.has(a.id));
+    const merged = localOnly.length > 0 ? [...normalized, ...localOnly] : normalized;
 
-    return { items: applyAssignOverrides(keepCachedSchedule ? normalizeFetchedAppointments(localItems) : normalized) };
+    writeAppointments(merged);
+    const result = date ? merged.filter((a) => a.date === date) : merged;
+    return { items: applyAssignOverrides(result) };
   } catch {
     return { items: applyAssignOverrides(normalizeFetchedAppointments(localItems)) };
   }

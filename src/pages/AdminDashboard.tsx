@@ -18,6 +18,7 @@ import {
 import {
   DOCTORS,
   fetchAppointments,
+  pingBackend,
   readCachedAppointments,
   updateAppointmentStatus,
   type Appointment,
@@ -758,7 +759,10 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    if (allowed) void load();
+    if (allowed) {
+      pingBackend(); // warm up Render backend before patient requests arrive
+      void load();
+    }
   }, [allowed, load]);
 
 
