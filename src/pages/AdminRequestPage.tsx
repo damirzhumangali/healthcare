@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Check, Clock, Video } from "lucide-react";
 import {
@@ -8,7 +8,15 @@ import {
   fetchAppointments,
   type Appointment,
 } from "../lib/apiAppointments";
+import {
+  isHomeOnlineConsultation,
+  isWardOnlineConsultation,
+  readBedLabel,
+  readRoomLabel,
+  readWardLabel,
+} from "../lib/consultationMode";
 import { fetchAdminDoctors, notifyOnlineMeeting } from "../lib/apiAdmin";
+import { syncBedsideConsultations } from "../lib/onlineConsultations";
 import { usePageSeo } from "../lib/seo";
 
 type DoctorRow = { id: string; name: string; specialty: string };
@@ -21,13 +29,19 @@ function jitsiRoomUrl(appointmentId: string) {
   return `https://meet.jit.si/healthassist-${appointmentId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
 }
 
-function getBusyDoctorIds(date: string, appointments: Appointment[], excludeId: string): Set<string> {
+function getBusyDoctorIds(
+  date: string,
+  timeSlot: string,
+  appointments: Appointment[],
+  excludeId: string,
+): Set<string> {
   return new Set(
     appointments
       .filter((a) =>
         a.date === date &&
         a.id !== excludeId &&
-        a.status === "active" &&
+        a.status !== "done" &&
+        (timeSlot ? a.time === timeSlot : a.status === "active") &&
         (a.doctor_id || a.doctorId)
       )
       .map((a) => (a.doctor_id || a.doctorId) as string)
@@ -47,13 +61,12 @@ export default function AdminRequestPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
 
-  const [request, setRequest] = useState<Appointment | null>(
-    (location.state as { appointment?: Appointment } | null)?.appointment ?? null
-  );
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<DoctorRow[]>(DOCTORS);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
-  const [time, setTime] = useState("");
+  const [selectedDoctorDraftId, setSelectedDoctorDraftId] = useState<string | null>(null);
+  const [assignDateDraft, setAssignDateDraft] = useState("");
+  const [timeDraft, setTimeDraft] = useState("");
+  const [roomLabelDraft, setRoomLabelDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [notifyStatus, setNotifyStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
@@ -65,17 +78,22 @@ export default function AdminRequestPage() {
       .catch(() => {});
   }, []);
 
-  // If request not passed via state, try to find it in allAppointments
-  useEffect(() => {
-    if (!request && id && allAppointments.length > 0) {
-      const found = allAppointments.find((a) => a.id === id);
-      if (found) setRequest(found);
-    }
-  }, [id, request, allAppointments]);
+  const request = useMemo(
+    () =>
+      (location.state as { appointment?: Appointment } | null)?.appointment ??
+      allAppointments.find((a) => a.id === id) ??
+      null,
+    [allAppointments, id, location.state],
+  );
 
-  const date = request?.date || today();
-  const busyIds = getBusyDoctorIds(date, allAppointments, id ?? "");
-  const isOnline = request?.wants_online || request?.wantsOnline;
+  const selectedDoctorId = selectedDoctorDraftId ?? (request?.doctor_id || request?.doctorId) ?? null;
+  const date = assignDateDraft || request?.date || today();
+  const time = timeDraft || (request?.time && request.time !== "00:00" ? request.time : "");
+  const roomLabel = roomLabelDraft || readRoomLabel(request);
+  const busyIds = getBusyDoctorIds(date, time, allAppointments, id ?? "");
+  const isHomeOnline = isHomeOnlineConsultation(request);
+  const isWardOnline = isWardOnlineConsultation(request);
+  const isOfflineVisit = Boolean(request) && !isHomeOnline && !isWardOnline;
   const jitsiUrl = request ? jitsiRoomUrl(request.id) : "";
   const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId);
 
@@ -91,18 +109,45 @@ export default function AdminRequestPage() {
   });
 
   async function handleAssign() {
-    if (!request || !selectedDoctorId || !time) return;
+    if (!request || !selectedDoctorId || !date || !time || (isOfflineVisit && !roomLabel.trim())) return;
     setSaving(true);
     try {
-      const meetingUrl = isOnline && jitsiUrl ? jitsiUrl : undefined;
-      await assignDoctorToAppointment(request.id, selectedDoctorId, time, meetingUrl);
+      const meetingAt = `${date}T${time}:00`;
+      const meetingUrl = isHomeOnline && jitsiUrl ? jitsiUrl : undefined;
+      await assignDoctorToAppointment(request.id, selectedDoctorId, {
+        date,
+        time,
+        roomLabel: isOfflineVisit ? roomLabel.trim() : undefined,
+        meetingUrl,
+        meetingAt,
+      });
       await updateAppointmentStatus(request.id, "active");
 
-      if (isOnline && jitsiUrl) {
+      const doctorName = selectedDoctor
+        ? `${selectedDoctor.name} — ${selectedDoctor.specialty}`
+        : selectedDoctorId;
+      const assignedAppointment: Appointment = {
+        ...request,
+        doctor_id: selectedDoctorId,
+        doctorId: selectedDoctorId,
+        doctorName,
+        date,
+        time,
+        room_label: isOfflineVisit ? roomLabel.trim() : undefined,
+        roomLabel: isOfflineVisit ? roomLabel.trim() : undefined,
+        meeting_url: meetingUrl,
+        meeting_at: meetingAt,
+        meetingAt,
+      };
+
+      if (isHomeOnline && jitsiUrl) {
         setNotifyStatus("sending");
-        const meetingAt = `${date}T${time}:00`;
         const { notified } = await notifyOnlineMeeting(request.id, jitsiUrl, meetingAt);
         setNotifyStatus(notified ? "sent" : "failed");
+      }
+
+      if (isWardOnline) {
+        syncBedsideConsultations([assignedAppointment]);
       }
 
       setDone(true);
@@ -166,14 +211,24 @@ export default function AdminRequestPage() {
                   {specialtyNeeded}
                 </span>
               )}
-              {isOnline && (
+              {isHomeOnline && (
                 <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700 }}>
-                  🎥 Онлайн консультация
+                  🎥 Онлайн из дома
+                </span>
+              )}
+              {isWardOnline && (
+                <span style={{ background: "rgba(52,211,153,0.15)", color: "#6ee7b7", borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700 }}>
+                  🛏 Онлайн в палате
                 </span>
               )}
               <span style={{ background: "rgba(251,191,36,0.12)", color: "#f59e0b", borderRadius: 7, padding: "3px 12px", fontSize: 13 }}>
                 📅 {request.date || "дата не указана"}
               </span>
+              {isWardOnline && readWardLabel(request) ? (
+                <span style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.75)", borderRadius: 7, padding: "3px 12px", fontSize: 13 }}>
+                  {readWardLabel(request)}{readBedLabel(request) ? ` · ${readBedLabel(request)}` : ""}
+                </span>
+              ) : null}
             </div>
             {request.reason && (
               <div style={{
@@ -217,7 +272,7 @@ export default function AdminRequestPage() {
                     transition: "all 0.15s",
                     position: "relative",
                   }}
-                  onClick={() => setSelectedDoctorId(doc.id)}
+                  onClick={() => setSelectedDoctorDraftId(doc.id)}
                 >
                   {isMatch && !isSelected && (
                     <div style={{
@@ -283,7 +338,7 @@ export default function AdminRequestPage() {
             border: "1px solid rgba(52,211,153,0.2)",
           }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
-              Шаг 2 — Укажите время приёма
+              Шаг 2 — Укажите дату, время и формат приёма
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
@@ -293,7 +348,13 @@ export default function AdminRequestPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6 }}>Дата</div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{date}</div>
+                <input
+                  type="date"
+                  className="input"
+                  value={date}
+                  onChange={(e) => setAssignDateDraft(e.target.value)}
+                  style={{ minWidth: 150, fontSize: 15, fontWeight: 700 }}
+                />
               </div>
               <div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
@@ -303,14 +364,29 @@ export default function AdminRequestPage() {
                   type="time"
                   className="input"
                   value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  onChange={(e) => setTimeDraft(e.target.value)}
                   style={{ minWidth: 120, fontSize: 15, fontWeight: 700 }}
                 />
               </div>
+              {isOfflineVisit && (
+                <div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6 }}>
+                    Кабинет
+                  </div>
+                  <input
+                    type="text"
+                    className="input"
+                    value={roomLabel}
+                    onChange={(e) => setRoomLabelDraft(e.target.value)}
+                    placeholder="Например, кабинет 204"
+                    style={{ minWidth: 180, fontSize: 15, fontWeight: 700 }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Online consultation preview */}
-            {isOnline && jitsiUrl && (
+            {isHomeOnline && jitsiUrl && (
               <div style={{
                 marginTop: 16, borderRadius: 10, padding: "12px 16px",
                 background: "rgba(34,211,238,0.08)",
@@ -337,6 +413,35 @@ export default function AdminRequestPage() {
                 </a>
               </div>
             )}
+            {isWardOnline && (
+              <div style={{
+                marginTop: 16, borderRadius: 10, padding: "12px 16px",
+                background: "rgba(52,211,153,0.08)",
+                border: "1px solid rgba(52,211,153,0.2)",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: "#6ee7b7", fontWeight: 700 }}>
+                    После назначения запись сразу появится в потоке палатных онлайн-консультаций
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
+                    Врач увидит её в разделе палат, а робот AIMAR сможет подключиться автоматически к указанному времени.
+                  </div>
+                </div>
+              </div>
+            )}
+            {isOfflineVisit && (
+              <div style={{
+                marginTop: 16, borderRadius: 10, padding: "12px 16px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Офлайн-встреча в клинике</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 4 }}>
+                  После назначения пациент увидит дату, время и кабинет в своём кабинете. Ссылка на звонок не создаётся.
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -348,20 +453,25 @@ export default function AdminRequestPage() {
                 <Check size={20} />
                 Заявка принята! Возвращаемся...
               </div>
-              {isOnline && (
+              {isHomeOnline && (
                 <div style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                   {notifyStatus === "sending" && (
                     <span style={{ color: "rgba(255,255,255,0.5)" }}>⏳ Отправляем ссылку...</span>
                   )}
                   {notifyStatus === "sent" && (
-                    <span style={{ color: "#22d3ee" }}>✓ Ссылка отправлена пациенту и врачу</span>
+                    <span style={{ color: "#22d3ee" }}>✓ Ссылка отправлена пациенту и врачу сразу после назначения времени</span>
                   )}
                   {notifyStatus === "failed" && (
-                    <span style={{ color: "#6ee7b7" }}>✓ Ссылка доступна в кабинете пациента автоматически</span>
+                    <span style={{ color: "#6ee7b7" }}>✓ Ссылка сохранена в системе и видна пациенту и врачу, даже если уведомление не ушло</span>
                   )}
                 </div>
               )}
-              {isOnline && jitsiUrl && (
+              {isWardOnline && (
+                <div style={{ fontSize: 13, color: "#6ee7b7" }}>
+                  ✓ Палатная консультация поставлена в очередь, врач увидит её в разделе онлайн-консультаций в палатах
+                </div>
+              )}
+              {isHomeOnline && jitsiUrl && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", wordBreak: "break-all", flex: 1 }}>{jitsiUrl}</div>
                   <button
@@ -390,16 +500,16 @@ export default function AdminRequestPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button
                 type="button"
-                disabled={saving || !time}
+                disabled={saving || !date || !time || (isOfflineVisit && !roomLabel.trim())}
                 onClick={handleAssign}
                 style={{
                   padding: "13px 32px", borderRadius: 12, fontSize: 15, fontWeight: 800,
-                  background: !time
+                  background: !date || !time || (isOfflineVisit && !roomLabel.trim())
                     ? "rgba(255,255,255,0.07)"
                     : "linear-gradient(135deg, #34d399, #22d3ee)",
-                  color: !time ? "rgba(255,255,255,0.3)" : "#0a1628",
+                  color: !date || !time || (isOfflineVisit && !roomLabel.trim()) ? "rgba(255,255,255,0.3)" : "#0a1628",
                   border: "none",
-                  cursor: !time ? "not-allowed" : "pointer",
+                  cursor: !date || !time || (isOfflineVisit && !roomLabel.trim()) ? "not-allowed" : "pointer",
                   transition: "all 0.15s",
                 }}
               >
@@ -410,6 +520,9 @@ export default function AdminRequestPage() {
               </button>
               {!time && (
                 <span style={{ fontSize: 13, color: "#f59e0b" }}>⚠ Укажите время приёма</span>
+              )}
+              {isOfflineVisit && !roomLabel.trim() && (
+                <span style={{ fontSize: 13, color: "#f59e0b" }}>⚠ Укажите кабинет</span>
               )}
             </div>
           )

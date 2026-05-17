@@ -1,5 +1,11 @@
 import { API_URL } from "./apiBase";
 import { getToken } from "./auth";
+import {
+  isHomeOnlineConsultation,
+  readRoomLabel,
+  resolveConsultationMode,
+  type ConsultationMode,
+} from "./consultationMode";
 
 export type AppointmentStatus = "pending" | "active" | "done";
 
@@ -22,7 +28,19 @@ export type Appointment = {
   status: AppointmentStatus;
   wants_online?: boolean;
   wantsOnline?: boolean;
+  consultation_mode?: ConsultationMode;
+  consultationMode?: ConsultationMode;
+  room_label?: string;
+  roomLabel?: string;
+  ward_label?: string;
+  wardLabel?: string;
+  bed_label?: string;
+  bedLabel?: string;
   meeting_url?: string;
+  meeting_at?: string;
+  meetingAt?: string;
+  meeting_notified?: boolean;
+  meetingNotified?: boolean;
   created_at?: string;
   createdAt?: string;
 };
@@ -34,6 +52,15 @@ export type DoctorOption = {
   specialty: string;
   active?: boolean;
 };
+
+export class AppointmentRequestError extends Error {
+  code: "auth_required" | "server_create_failed";
+
+  constructor(code: "auth_required" | "server_create_failed") {
+    super(code);
+    this.code = code;
+  }
+}
 
 export const DOCTORS: DoctorOption[] = [
   { id: "doctor-001", name: "Айжан Нурбекова",  specialty: "Терапевт" },
@@ -60,8 +87,57 @@ const MY_APT_IDS_KEY = "healthassist_my_apt_ids_v1";
 type AssignOverride = {
   doctorId: string;
   doctorName: string;
+  date?: string;
   time?: string;
+  roomLabel?: string;
+  meetingUrl?: string;
+  meetingAt?: string;
+  meetingNotified?: boolean;
 };
+
+function mergeDoctorLists(primary: DoctorOption[], fallback: DoctorOption[]) {
+  const merged = new Map<string, DoctorOption>();
+
+  fallback.forEach((doctor) => {
+    merged.set(doctor.id, doctor);
+  });
+
+  primary.forEach((doctor) => {
+    const existing = merged.get(doctor.id);
+    merged.set(doctor.id, {
+      ...existing,
+      ...doctor,
+      active: doctor.active ?? existing?.active ?? true,
+    });
+  });
+
+  return Array.from(merged.values());
+}
+
+function isDoctorAssigned(item: Appointment) {
+  const doctorId = item.doctor_id || item.doctorId;
+  return Boolean(doctorId && doctorId !== "pending");
+}
+
+function sanitizePendingAssignment(item: Appointment): Appointment {
+  const hasGhostDoctor =
+    item.status === "pending" &&
+    isDoctorAssigned(item) &&
+    (!item.time || item.time === "00:00") &&
+    !item.meeting_at &&
+    !item.meetingAt &&
+    !readRoomLabel(item);
+
+  if (!hasGhostDoctor) return item;
+
+  return {
+    ...item,
+    doctor_id: undefined,
+    doctorId: undefined,
+    doctorName: undefined,
+    meeting_url: undefined,
+  };
+}
 
 function readAssignOverrides(): Record<string, AssignOverride> {
   try {
@@ -100,11 +176,16 @@ function applyAssignOverrides(items: Appointment[]): Appointment[] {
     const ov = overrides[item.id];
     if (!ov) return item;
     return {
-      ...item,
+      ...sanitizePendingAssignment(item),
       doctor_id: ov.doctorId,
       doctorId: ov.doctorId,
       doctorName: ov.doctorName,
+      ...(ov.date ? { date: ov.date } : {}),
       ...(ov.time ? { time: ov.time } : {}),
+      ...(ov.roomLabel ? { room_label: ov.roomLabel, roomLabel: ov.roomLabel } : {}),
+      ...(ov.meetingUrl ? { meeting_url: ov.meetingUrl } : {}),
+      ...(ov.meetingAt ? { meeting_at: ov.meetingAt, meetingAt: ov.meetingAt } : {}),
+      ...(ov.meetingNotified != null ? { meeting_notified: ov.meetingNotified, meetingNotified: ov.meetingNotified } : {}),
     };
   });
 }
@@ -127,9 +208,9 @@ function persistAppointment(item: Appointment) {
   const merged = new Map<string, Appointment>();
 
   current.forEach((entry) => {
-    merged.set(appointmentKey(entry), entry);
+    merged.set(appointmentKey(entry), sanitizePendingAssignment(entry));
   });
-  merged.set(appointmentKey(item), item);
+  merged.set(appointmentKey(item), sanitizePendingAssignment(item));
 
   writeAppointments(Array.from(merged.values()).sort(appointmentSort));
 }
@@ -151,36 +232,6 @@ function appointmentKey(item: Appointment) {
   ].join("|");
 }
 
-function mergeAppointments(serverItems: Appointment[], localItems: Appointment[]) {
-  const merged = new Map<string, Appointment>();
-
-  serverItems.forEach((item) => {
-    merged.set(appointmentKey(item), item);
-  });
-
-  localItems.forEach((item) => {
-    const key = appointmentKey(item);
-    const server = merged.get(key);
-    if (!server) {
-      merged.set(key, item);
-      return;
-    }
-    merged.set(key, {
-      ...server,
-      doctor_id: item.doctor_id || server.doctor_id,
-      doctorId: item.doctorId || server.doctorId,
-      doctorName: item.doctorName || server.doctorName,
-      time: (item.time && item.time !== "00:00") ? item.time : server.time,
-      status: item.status,
-      patientName: item.patientName || server.patientName,
-      patient_name: item.patient_name || server.patient_name,
-      patient_email: item.patient_email || server.patient_email,
-    });
-  });
-
-  return Array.from(merged.values()).sort(appointmentSort);
-}
-
 function readCurrentUser() {
   try {
     const raw = localStorage.getItem("healthassist_current_user");
@@ -194,6 +245,12 @@ function buildLocalMeetingUrl(id: string) {
   return `https://meet.jit.si/healthassist-${id.replace(/-/g, "").slice(0, 14)}`;
 }
 
+function shouldAllowLocalAppointmentFallback() {
+  if (!import.meta.env.PROD) return true;
+  if (typeof window === "undefined") return false;
+  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+}
+
 function createLocalAppointment(input: {
   doctorId?: string;
   date: string;
@@ -201,10 +258,19 @@ function createLocalAppointment(input: {
   reason: string;
   specialtyRequest?: string;
   wantsOnline?: boolean;
+  consultationMode?: ConsultationMode;
+  roomLabel?: string;
+  wardLabel?: string;
+  bedLabel?: string;
 }) {
   const user = readCurrentUser();
   const doctor = input.doctorId ? DOCTORS.find((item) => item.id === input.doctorId) : undefined;
   const id = crypto.randomUUID();
+  const consultationMode =
+    input.consultationMode || (input.wantsOnline ? "online_home" : "in_person");
+  const wantsOnline = consultationMode !== "in_person";
+  const meetingUrl =
+    consultationMode === "online_home" && input.doctorId ? buildLocalMeetingUrl(id) : undefined;
   const appointment: Appointment = {
     id,
     patient_id: user?.id || user?.email || "local-patient",
@@ -217,8 +283,17 @@ function createLocalAppointment(input: {
     time: input.time,
     reason: input.reason,
     specialty_request: input.specialtyRequest,
-    wants_online: input.wantsOnline,
-    meeting_url: buildLocalMeetingUrl(id),
+    wants_online: wantsOnline,
+    wantsOnline,
+    consultation_mode: consultationMode,
+    consultationMode,
+    room_label: input.roomLabel,
+    roomLabel: input.roomLabel,
+    ward_label: input.wardLabel,
+    wardLabel: input.wardLabel,
+    bed_label: input.bedLabel,
+    bedLabel: input.bedLabel,
+    meeting_url: meetingUrl,
     status: "pending",
     created_at: new Date().toISOString(),
   };
@@ -262,7 +337,7 @@ function authHeaders() {
 }
 
 function normalizeDoctors(data: { items?: DoctorOption[]; doctors?: DoctorOption[] }) {
-  return { items: data.items ?? data.doctors ?? [] };
+  return { items: mergeDoctorLists(data.items ?? data.doctors ?? [], DOCTORS) };
 }
 
 export async function fetchDoctors(includeInactive = false): Promise<{ items: DoctorOption[] }> {
@@ -292,36 +367,44 @@ export async function createAppointment(input: {
   reason: string;
   specialtyRequest?: string;
   wantsOnline?: boolean;
+  consultationMode?: ConsultationMode;
+  roomLabel?: string;
+  wardLabel?: string;
+  bedLabel?: string;
 }) {
-  let resolvedDoctorId = input.doctorId;
-  if (!resolvedDoctorId) {
-    try {
-      const docs = await fetchDoctors();
-      resolvedDoctorId = docs.items[0]?.id;
-    } catch {
-      // ignore, will fall back to localStorage
-    }
-  }
-
   const currentUser = readCurrentUser();
   const patientName = currentUser?.name || currentUser?.email || "";
+  const consultationMode =
+    input.consultationMode || (input.wantsOnline ? "online_home" : "in_person");
+  const wantsOnline = consultationMode !== "in_person";
 
   try {
+    const payload: Record<string, unknown> = {
+      ...input,
+      time: input.time || "00:00",
+      specialty_request: input.specialtyRequest ?? "",
+      wants_online: wantsOnline,
+      consultation_mode: consultationMode,
+      room_label: input.roomLabel ?? "",
+      ward_label: input.wardLabel ?? "",
+      bed_label: input.bedLabel ?? "",
+      patient_name: patientName,
+    };
+    if (input.doctorId) payload.doctor_id = input.doctorId;
+
     const res = await fetch(`${API_URL}/api/appointments`, {
       method: "POST",
       headers: authHeaders(),
       credentials: "include",
-      body: JSON.stringify({
-        ...input,
-        doctor_id: resolvedDoctorId ?? "",
-        time: input.time || "00:00",
-        specialty_request: input.specialtyRequest ?? "",
-        wants_online: input.wantsOnline ?? false,
-        patient_name: patientName,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (!res.ok) throw new Error("create appointment failed");
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new AppointmentRequestError("auth_required");
+      }
+      throw new AppointmentRequestError("server_create_failed");
+    }
     const data = await res.json();
     const created = data.item ?? data.appointment ?? null;
 
@@ -332,12 +415,31 @@ export async function createAppointment(input: {
         patient_name: created.patient_name || patientName || undefined,
         patientName: created.patientName || patientName || undefined,
         patient_email: created.patient_email || currentUser?.email || undefined,
+        wants_online: created.wants_online ?? created.wantsOnline ?? wantsOnline,
+        wantsOnline: created.wantsOnline ?? created.wants_online ?? wantsOnline,
+        consultation_mode:
+          created.consultation_mode ||
+          created.consultationMode ||
+          consultationMode,
+        consultationMode:
+          created.consultationMode ||
+          created.consultation_mode ||
+          consultationMode,
+        room_label: created.room_label || created.roomLabel || input.roomLabel,
+        roomLabel: created.roomLabel || created.room_label || input.roomLabel,
+        ward_label: created.ward_label || created.wardLabel || input.wardLabel,
+        wardLabel: created.wardLabel || created.ward_label || input.wardLabel,
+        bed_label: created.bed_label || created.bedLabel || input.bedLabel,
+        bedLabel: created.bedLabel || created.bed_label || input.bedLabel,
       });
       addMyAptId(created.id);
     }
 
     return data;
-  } catch {
+  } catch (error) {
+    if (error instanceof AppointmentRequestError && error.code === "auth_required") {
+      throw error;
+    }
     return createLocalAppointment(input);
   }
 }
@@ -345,20 +447,40 @@ export async function createAppointment(input: {
 export async function assignDoctorToAppointment(
   id: string,
   doctorId: string,
-  time?: string,
-  meetingUrl?: string,
+  input?: {
+    date?: string;
+    time?: string;
+    roomLabel?: string;
+    meetingUrl?: string;
+    meetingAt?: string;
+  },
 ) {
   const doctor = DOCTORS.find((d) => d.id === doctorId);
   const doctorName = doctor ? `${doctor.name} — ${doctor.specialty}` : doctorId;
+  const time = input?.time;
+  const meetingUrl = input?.meetingUrl;
+  const meetingAt = input?.meetingAt;
+  const date = input?.date;
+  const roomLabel = input?.roomLabel;
 
   // Save to separate override map — applied after every fetch, cannot be overwritten by server
-  saveAssignOverride(id, { doctorId, doctorName, time });
+  saveAssignOverride(id, { doctorId, doctorName, date, time, roomLabel, meetingUrl, meetingAt });
 
   // Also update main appointments list for consistency
   const items = readAppointments();
   const next = items.map((item) =>
     item.id === id
-      ? { ...item, doctor_id: doctorId, doctorId, doctorName, time: time ?? item.time }
+      ? {
+          ...item,
+          doctor_id: doctorId,
+          doctorId,
+          doctorName,
+          date: date ?? item.date,
+          time: time ?? item.time,
+          ...(roomLabel ? { room_label: roomLabel, roomLabel } : {}),
+          ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
+          ...(meetingAt ? { meeting_at: meetingAt, meetingAt } : {}),
+        }
       : item
   );
   writeAppointments(next);
@@ -370,8 +492,11 @@ export async function assignDoctorToAppointment(
       credentials: "include",
       body: JSON.stringify({
         doctor_id: doctorId,
+        date,
         time,
+        room_label: roomLabel,
         ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
+        ...(meetingAt ? { meeting_at: meetingAt } : {}),
       }),
     });
     if (!res.ok) throw new Error("assign failed");
@@ -381,12 +506,65 @@ export async function assignDoctorToAppointment(
   }
 }
 
+export function setAppointmentMeetingInfo(
+  id: string,
+  input: {
+    meetingUrl?: string;
+    meetingAt?: string;
+    meetingNotified?: boolean;
+  },
+) {
+  const items = readAppointments();
+  const next = items.map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          ...(input.meetingUrl ? { meeting_url: input.meetingUrl } : {}),
+          ...(input.meetingAt ? { meeting_at: input.meetingAt, meetingAt: input.meetingAt } : {}),
+          ...(input.meetingNotified != null
+            ? { meeting_notified: input.meetingNotified, meetingNotified: input.meetingNotified }
+            : {}),
+        }
+      : item,
+  );
+  writeAppointments(next);
+
+  const currentOverride = readAssignOverrides()[id];
+  if (currentOverride) {
+    saveAssignOverride(id, {
+      ...currentOverride,
+      meetingUrl: input.meetingUrl ?? currentOverride.meetingUrl,
+      meetingAt: input.meetingAt ?? currentOverride.meetingAt,
+      meetingNotified:
+        input.meetingNotified != null ? input.meetingNotified : currentOverride.meetingNotified,
+    });
+  }
+
+  return next.find((item) => item.id === id) ?? null;
+}
+
+function normalizeFetchedAppointments(items: Appointment[]) {
+  return items
+    .map((item) =>
+      sanitizePendingAssignment({
+        ...item,
+        meeting_url:
+          item.meeting_url ||
+          (isHomeOnlineConsultation(item) && isDoctorAssigned(item) ? buildLocalMeetingUrl(item.id) : undefined),
+        consultation_mode: item.consultation_mode || item.consultationMode || resolveConsultationMode(item),
+        consultationMode: item.consultationMode || item.consultation_mode || resolveConsultationMode(item),
+      }),
+    )
+    .sort(appointmentSort);
+}
+
 export async function fetchAppointments(date?: string): Promise<{ items: Appointment[] }> {
   const params = new URLSearchParams();
   if (date) params.set("date", date);
   const query = params.toString();
   const url = query ? `${API_URL}/api/appointments?${query}` : `${API_URL}/api/appointments`;
   const localItems = fetchLocalAppointments(date).items;
+  const currentUser = readCurrentUser();
 
   try {
     const res = await fetch(url, {
@@ -396,10 +574,19 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
 
     if (!res.ok) throw new Error("fetch appointments failed");
     const data = normalizeAppointmentList(await res.json());
-    // Apply overrides last — always wins over both server and merged local data
-    return { items: applyAssignOverrides(mergeAppointments(data.items ?? [], localItems)) };
+    const normalized = normalizeFetchedAppointments(data.items ?? []);
+    const keepCachedSchedule =
+      normalized.length === 0 &&
+      localItems.length > 0 &&
+      (currentUser?.role === "doctor" || currentUser?.role === "admin");
+
+    if (!keepCachedSchedule) {
+      writeAppointments(normalized);
+    }
+
+    return { items: applyAssignOverrides(keepCachedSchedule ? normalizeFetchedAppointments(localItems) : normalized) };
   } catch {
-    return { items: applyAssignOverrides(localItems) };
+    return { items: applyAssignOverrides(normalizeFetchedAppointments(localItems)) };
   }
 }
 
@@ -423,6 +610,10 @@ export function getLocalAppointmentById(id: string): Appointment | null {
   return readAppointments().find((a) => a.id === id) ?? null;
 }
 
+export function readCachedAppointments(): Appointment[] {
+  return applyAssignOverrides(normalizeFetchedAppointments(readAppointments()));
+}
+
 export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
   const user = readCurrentUser();
   try {
@@ -432,24 +623,14 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     });
     if (!res.ok) throw new Error();
     const data = normalizeAppointmentList(await res.json());
-    const localItems = readAppointments();
-    const merged = mergeAppointments(data.items, localItems);
-
-    // Persist meeting_url from server back to localStorage + backfill missing ones
-    const updated = merged.map((a) => ({
-      ...a,
-      meeting_url: a.meeting_url || buildLocalMeetingUrl(a.id),
-    }));
+    const updated = normalizeFetchedAppointments(data.items);
     writeAppointments(updated);
 
     return { items: applyAssignOverrides(updated) };
   } catch {
     const all = readAppointments();
 
-    // Backfill meeting_url for any local appointments that are missing it
-    const backfilled = all.map((a) =>
-      a.meeting_url ? a : { ...a, meeting_url: buildLocalMeetingUrl(a.id) }
-    );
+    const backfilled = normalizeFetchedAppointments(all);
     if (backfilled.some((a, i) => a.meeting_url !== all[i].meeting_url)) {
       writeAppointments(backfilled);
     }
