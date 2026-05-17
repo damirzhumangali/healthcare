@@ -51,11 +51,7 @@ https://healthcare-bmo.vercel.app
 ### Установка
 
 ```bash
-# Клонируйте репозиторий
-git clone https://github.com/damirzhumangali/healthcare-backend.git
-cd healthcare-backend
-
-# Установите зависимости
+# В корне фронтенд-проекта
 npm install
 
 # Создайте .env файл
@@ -65,42 +61,39 @@ cp .env.example .env
 ### Переменные окружения
 
 ```env
-FRONTEND_URL=http://localhost:5173
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-JWT_SECRET=your_jwt_secret
-ANTHROPIC_API_KEY=your_anthropic_api_key
-CORS_ORIGINS=http://localhost:5173
+VITE_API_BASE_URL=http://localhost:4015
+VITE_PUBLIC_APP_URL=https://healthcare.kz
+VITE_BMO_SETTINGS_URL=
 ```
 
 ### Запуск
 
 ```bash
-# Бэкенд
-node api/index.js
-
-# Фронтенд (в папке фронтенда)
+# Фронтенд в режиме разработки
 npm run dev
+
+# Локальный просмотр production-сборки
+npm run build
+npm run preview
 ```
+
+Важно:
+- Этот репозиторий содержит фронтенд на Vite. API ожидается отдельно по `VITE_API_BASE_URL`.
+- Не открывайте `index.html` или `dist/index.html` напрямую через `file://` в браузере. Приложение должно запускаться через HTTP-сервер (`npm run dev` или `npm run preview`), иначе браузер не сможет корректно загрузить `/src/main.tsx` и `/assets/...`.
 
 ## Структура проекта
 
 ```
-api/
-├── index.js                    # Точка входа
-├── middleware/
-│   ├── auth.js                 # JWT авторизация
-│   └── roles.js                # Проверка ролей
-├── controllers/
-│   └── ticketsController.js    # Логика талонов
-├── routes/
-│   └── tickets.js              # Роуты очереди
-├── services/
-│   └── ticketService.js        # Сервис очереди
-└── db/
-    ├── sqlite.js               # Подключение к БД
-    └── migrations/
-        └── 001_queue.sql       # Миграции
+src/                            # React-приложение
+├── components/                 # UI-компоненты
+├── layouts/                    # Layout-компоненты
+├── lib/                        # Клиентские сервисы и утилиты
+└── pages/                      # Страницы приложения
+
+public/                         # Статические ассеты
+scripts/                        # SEO/prerender скрипты
+dist/                           # Клиентская сборка
+dist-ssr/                       # SSR-сборка для prerender
 ```
 
 ## API

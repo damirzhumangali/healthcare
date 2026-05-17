@@ -14,11 +14,16 @@ import {
 } from "lucide-react";
 import {
   fetchAppointments,
-  fetchDoctors,
+  readCachedAppointments,
   updateAppointmentStatus,
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
+import {
+  isHomeOnlineConsultation,
+  isWardOnlineConsultation,
+  readRoomLabel,
+} from "../lib/consultationMode";
 import { hasSession, clearStoredSession } from "../lib/auth";
 import { getGoogleAuthUrl } from "../lib/apiAuth";
 import {
@@ -58,15 +63,6 @@ declare global {
   }
 }
 
-function decodeGoogleJwt(token: string): { email?: string; name?: string; picture?: string } {
-  try {
-    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    return JSON.parse(atob(b64)) as { email?: string; name?: string; picture?: string };
-  } catch {
-    return {};
-  }
-}
-
 function readCurrentUser(): StoredUser | null {
   try {
     const raw = localStorage.getItem("healthassist_current_user");
@@ -78,6 +74,11 @@ function today() { return new Date().toISOString().slice(0, 10); }
 
 function patientLabel(item: Appointment) {
   return item.patientName || item.patient_name || item.patient_email || item.patientEmail || item.patient_id || item.patientId || "Пациент";
+}
+
+function hasAssignedDoctor(item: Appointment) {
+  const doctorId = item.doctor_id || item.doctorId;
+  return Boolean(doctorId && doctorId !== "pending");
 }
 
 const STAGE_LABELS: Record<ConsultationStage, string> = {
@@ -160,13 +161,13 @@ export default function DoctorDashboard() {
     robots: "noindex, nofollow",
   });
 
-  const [sessionUser] = useState<StoredUser | null>(() => readCurrentUser());
+  const [sessionUser, setSessionUser] = useState<StoredUser | null>(() => readCurrentUser());
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [myDoctorId, setMyDoctorId] = useState<string | null>(null);
-  const googleBtnRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => sessionUser, [sessionUser]);
-  const allowed = user?.email === ALLOWED_DOCTOR_EMAIL || user?.role === "admin";
+  const allowed =
+    Boolean(user) &&
+    (user?.email === ALLOWED_DOCTOR_EMAIL || user?.role === "admin" || user?.role === "doctor");
   const doctorName = user?.name || user?.email || "Врач";
 
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
@@ -197,20 +198,18 @@ export default function DoctorDashboard() {
     setErr(null);
     setLoading(true);
     try {
-      const [apptData, doctorsData] = await Promise.all([
-        fetchAppointments(date),
-        fetchDoctors(),
-      ]);
-      const email = sessionUser?.email?.toLowerCase();
-      const myDoc = email ? doctorsData.items.find(d => d.email?.toLowerCase() === email) : null;
-      if (myDoc) setMyDoctorId(myDoc.id);
-      const all = apptData.items ?? [];
-      const mine = myDoc
-        ? all.filter(a => {
-            const did = a.doctor_id || a.doctorId;
-            return did === myDoc.id;
-          })
-        : all;
+      const apptData = await fetchAppointments();
+      const liveItems = apptData.items ?? [];
+      const all = liveItems.length > 0 ? liveItems : readCachedAppointments();
+      const mine = all
+        .filter((appointment) => {
+          if (hasAssignedDoctor(appointment)) return true;
+          return appointment.status === "active" || appointment.status === "done";
+        })
+        .sort((a, b) => {
+          const byDate = a.date.localeCompare(b.date);
+          return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
+        });
       setAppointments(mine);
       loadConsultations(date);
     } catch {
@@ -218,7 +217,7 @@ export default function DoctorDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [date, loadConsultations, sessionUser]);
+  }, [date, loadConsultations]);
 
   useEffect(() => {
     if (allowed) void load();
@@ -271,7 +270,7 @@ export default function DoctorDashboard() {
   }
 
   const todayAppts = appointments.filter(a => a.date === date);
-  const newAppts = appointments.filter(a => a.status === "pending" || a.status === "active");
+  const newAppts = appointments.filter(a => (a.status === "pending" || a.status === "active") && hasAssignedDoctor(a));
   const activeConsults = consultations.filter(c => c.stage === "live" || c.stage === "bedside_ready");
   const completedToday = appointments.filter(a => a.status === "done").length;
 
@@ -464,15 +463,19 @@ export default function DoctorDashboard() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {newAppts.map(a => {
-                      const isOnline = a.wants_online || a.wantsOnline;
-                      const meetingUrl = a.meeting_url;
+                      const isOnline = isHomeOnlineConsultation(a);
+                      const isWard = isWardOnlineConsultation(a);
+                      const meetingUrl = isOnline ? a.meeting_url : undefined;
                       const isActive = a.status === "active";
+                      const isScheduled = a.status === "pending" && hasAssignedDoctor(a);
+                      const isConfirmed = isActive || isScheduled;
+                      const roomLabel = readRoomLabel(a);
                       return (
                         <div key={a.id} style={{
                           display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
                           padding: "10px 14px", borderRadius: 10,
-                          background: isActive ? "rgba(52,211,153,0.06)" : "rgba(255,255,255,0.04)",
-                          border: isActive ? "1px solid rgba(52,211,153,0.2)" : "none",
+                          background: isConfirmed ? "rgba(52,211,153,0.06)" : "rgba(255,255,255,0.04)",
+                          border: isConfirmed ? "1px solid rgba(52,211,153,0.2)" : "none",
                         }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 14 }}>
@@ -481,6 +484,11 @@ export default function DoctorDashboard() {
                             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>
                               {a.reason || a.specialty_request || a.specialtyRequest || ""}
                             </div>
+                            {roomLabel ? (
+                              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
+                                Кабинет: {roomLabel}
+                              </div>
+                            ) : null}
                           </div>
                           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
                             {isOnline && (
@@ -489,11 +497,25 @@ export default function DoctorDashboard() {
                                 borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
                               }}>Онлайн</span>
                             )}
-                            {isActive ? (
+                            {isWard && (
                               <span style={{
                                 background: "rgba(52,211,153,0.15)", color: "#34d399",
                                 borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
-                              }}>Подтверждено</span>
+                              }}>Палата</span>
+                            )}
+                            {!isOnline && !isWard && (
+                              <span style={{
+                                background: "rgba(129,140,248,0.15)", color: "#c4b5fd",
+                                borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
+                              }}>
+                                Офлайн{readRoomLabel(a) ? ` · ${readRoomLabel(a)}` : ""}
+                              </span>
+                            )}
+                            {isConfirmed ? (
+                              <span style={{
+                                background: "rgba(52,211,153,0.15)", color: "#34d399",
+                                borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
+                              }}>{isActive ? "Идёт сейчас" : "Назначено"}</span>
                             ) : null}
                             {meetingUrl && (
                               <a
@@ -507,10 +529,10 @@ export default function DoctorDashboard() {
                                   fontWeight: 700, fontSize: 12, textDecoration: "none",
                                 }}
                               >
-                                Войти в звонок
+                                {isActive ? "Войти в звонок" : "Открыть ссылку"}
                               </a>
                             )}
-                            {!isActive && (
+                            {!isConfirmed && (
                               <button
                                 onClick={() => void setStatus(a.id, "active")}
                                 style={{ padding: "5px 14px", borderRadius: 8, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399", cursor: "pointer", fontSize: 12, fontWeight: 700 }}
@@ -612,7 +634,13 @@ export default function DoctorDashboard() {
                         <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                           <span className={`badge ${item.status === "active" ? "badge--warn" : item.status === "done" ? "badge--ok" : "badge--danger"}`}>
                             <span className="badge__dot" />
-                            {item.status === "active" ? "На приёме" : item.status === "done" ? "Завершён" : "Ожидает"}
+                            {item.status === "active"
+                              ? "На приёме"
+                              : item.status === "done"
+                                ? "Завершён"
+                                : hasAssignedDoctor(item)
+                                  ? "Назначено"
+                                  : "Ожидает"}
                           </span>
                           {item.meeting_url && (
                             <a
@@ -621,15 +649,23 @@ export default function DoctorDashboard() {
                               rel="noreferrer"
                               style={{
                                 display: "inline-flex", alignItems: "center", gap: 5,
-                                padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700,
-                                background: "rgba(34,211,238,0.18)", color: "#22d3ee",
-                                border: "1px solid rgba(34,211,238,0.4)", textDecoration: "none",
-                              }}
-                            >
-                              Войти в звонок
-                            </a>
+                              padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                              background: "rgba(34,211,238,0.18)", color: "#22d3ee",
+                              border: "1px solid rgba(34,211,238,0.4)", textDecoration: "none",
+                            }}
+                          >
+                            {item.status === "active" ? "Войти в звонок" : "Открыть ссылку"}
+                          </a>
                           )}
-                          {item.status !== "active" && item.status !== "done" && (
+                          {!isHomeOnlineConsultation(item) && !isWardOnlineConsultation(item) && (
+                            <span style={{
+                              background: "rgba(129,140,248,0.2)", color: "#c4b5fd",
+                              borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 700,
+                            }}>
+                              Офлайн{readRoomLabel(item) ? ` · ${readRoomLabel(item)}` : ""}
+                            </span>
+                          )}
+                          {item.status !== "active" && item.status !== "done" && !hasAssignedDoctor(item) && (
                             <button
                               onClick={() => void setStatus(item.id, "active")}
                               style={{ padding: "5px 13px", borderRadius: 8, background: "rgba(34,211,238,0.15)", border: "1px solid rgba(34,211,238,0.3)", color: "#22d3ee", cursor: "pointer", fontSize: 13 }}
@@ -870,6 +906,9 @@ export default function DoctorDashboard() {
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15 }}>{item.time} — {patientLabel(item)}</div>
                         <div className="muted" style={{ fontSize: 13, marginTop: 3 }}>{item.reason || "Без причины"}</div>
+                        {readRoomLabel(item) ? (
+                          <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>Кабинет: {readRoomLabel(item)}</div>
+                        ) : null}
                       </div>
                       <span className={`badge ${item.status === "active" ? "badge--warn" : item.status === "done" ? "badge--ok" : "badge--danger"}`}>
                         <span className="badge__dot" />

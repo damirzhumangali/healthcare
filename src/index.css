@@ -2089,6 +2089,12 @@ button, input{font:inherit}
   gap:18px;
   margin-bottom:20px;
 }
+.doctor-admin__panel-head-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
 .doctor-admin__panel-head h2{
   margin:0;
   font-size:25px;
@@ -2292,12 +2298,57 @@ button, input{font:inherit}
 .doctor-admin__record-main small{
   overflow-wrap:anywhere;
 }
+.doctor-admin__online-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:4px;
+}
+.doctor-admin__online-tag{
+  display:inline-flex;
+  align-items:center;
+  padding:1px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+}
+.doctor-admin__online-tag--cyan{
+  background:rgba(34,211,238,.15);
+  color:#22d3ee;
+}
+.doctor-admin__online-tag--violet{
+  background:rgba(99,102,241,.15);
+  color:#a5b4fc;
+}
+.doctor-admin__online-tag--green{
+  background:rgba(52,211,153,.15);
+  color:#6ee7b7;
+}
+.doctor-admin__online-meta{
+  display:block;
+  margin-top:4px;
+  color:rgba(255,255,255,.38);
+}
 .doctor-admin__record-actions{
   display:flex;
   align-items:center;
   justify-content:flex-end;
   flex-wrap:wrap;
   gap:8px;
+}
+.doctor-admin__online-link{
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid rgba(34,211,238,.35);
+  border-radius:8px;
+  background:rgba(34,211,238,.15);
+  color:#22d3ee;
+  padding:0 12px;
+  font-size:14px;
+  font-weight:900;
+  text-decoration:none;
 }
 .doctor-admin__record-actions button{
   min-height:36px;

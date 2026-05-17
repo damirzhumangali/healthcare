@@ -1,29 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  BedDouble,
-  Bot,
   CalendarClock,
   HeartPulse,
-  Mic,
-  Package,
-  Stethoscope,
   Video,
 } from "lucide-react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import Card from "../components/Card";
-import Button from "../components/Button";
 import { fetchMyMeasurements, readCachedMeasurements, type MeasurementItem } from "../lib/apiMeasurements";
 import {
+  AppointmentRequestError,
   DOCTORS,
+  createAppointment,
   fetchMyAppointments,
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
 import {
-  syncBedsideConsultations,
-  type BedsideConsultationView,
-  type ConsultationStage,
-} from "../lib/onlineConsultations";
+  isHomeOnlineConsultation,
+  readRoomLabel,
+  isWardOnlineConsultation,
+  readBedLabel,
+  readWardLabel,
+} from "../lib/consultationMode";
 import { createNewMyTicket, getMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 import { useAppPreferences } from "../lib/appPreferences";
 
@@ -60,6 +57,7 @@ const copy = {
     doctor: "Врач",
     reason: "Причина",
     appointmentStatusPending: "Ожидает",
+    appointmentStatusConfirmed: "Подтвержден",
     appointmentStatusActive: "На приеме",
     appointmentStatusDone: "Завершен",
     onlineTicket: "Талон",
@@ -91,7 +89,28 @@ const copy = {
     confirmedDoctor: "Врач",
     confirmedDate: "Дата",
     confirmedTime: "Время",
+    confirmedRoom: "Кабинет",
     joinMeeting: "Присоединиться к встрече",
+    homeOnlineTitle: "Онлайн-консультация из дома",
+    homeOnlineText: "Оставьте заявку на видеозвонок и после подтверждения администратор сразу отправит ссылку пациенту и врачу.",
+    homeOnlineAction: "Запросить онлайн",
+    wardBannerTitle: "Онлайн-консультация в палате",
+    wardBannerText: "Если вы уже лежите в палате, отправьте отдельную заявку. Укажите палату и койку, чтобы врач и терминал AIMAR пришли автоматически.",
+    wardSpecialty: "Нужный специалист",
+    wardDate: "Желаемая дата",
+    wardRoom: "Палата",
+    wardBed: "Койка",
+    wardReason: "Что нужно врачу",
+    wardReasonPlaceholder: "Например: нужна консультация по состоянию после операции, боли усилились, нужна связь с кардиологом...",
+    wardSubmit: "Отправить к врачу",
+    wardSubmitting: "Отправляем...",
+    wardSuccess: "Палатная онлайн-заявка отправлена. Администратор назначит врача и время.",
+    wardError: "Не удалось отправить заявку врачу. Попробуйте ещё раз.",
+    wardAuthError: "Сессия истекла. Войдите снова, чтобы заявка дошла врачу и в админку.",
+    wardShortError: "Опишите состояние подробнее — минимум 10 символов.",
+    wardStatusPending: "Заявка в обработке",
+    wardStatusAssigned: "Врач назначен",
+    wardStatusSubtitle: "Робот и звонок запустятся автоматически к указанному времени.",
   },
   kk: {
     title: "Науқас кабинеты",
@@ -118,6 +137,7 @@ const copy = {
     doctor: "Дәрігер",
     reason: "Себебі",
     appointmentStatusPending: "Күтуде",
+    appointmentStatusConfirmed: "Расталды",
     appointmentStatusActive: "Қабылдауда",
     appointmentStatusDone: "Аяқталды",
     onlineTicket: "Талон",
@@ -140,7 +160,28 @@ const copy = {
     confirmedDoctor: "Дәрігер",
     confirmedDate: "Күні",
     confirmedTime: "Уақыты",
+    confirmedRoom: "Кабинет",
     joinMeeting: "Кездесуге қосылу",
+    homeOnlineTitle: "Үйден онлайн кеңес",
+    homeOnlineText: "Бейнеқоңырауға өтінім қалдырыңыз, растаудан кейін әкімші сілтемені пациент пен дәрігерге бірден жібереді.",
+    homeOnlineAction: "Онлайн сұрау",
+    wardBannerTitle: "Палатадағы онлайн кеңес",
+    wardBannerText: "Егер сіз қазір палатада жатсаңыз, бөлек өтінім жіберіңіз. Дәрігер мен AIMAR терминалы автоматты келуі үшін палата мен кереуетті көрсетіңіз.",
+    wardSpecialty: "Қажетті маман",
+    wardDate: "Қалаулы күн",
+    wardRoom: "Палата",
+    wardBed: "Кереует",
+    wardReason: "Дәрігерге не керек",
+    wardReasonPlaceholder: "Мысалы: операциядан кейінгі жағдай бойынша кеңес керек, ауырсыну күшейді, кардиологпен байланыс қажет...",
+    wardSubmit: "Дәрігерге жіберу",
+    wardSubmitting: "Жіберілуде...",
+    wardSuccess: "Палаталық онлайн өтінім жіберілді. Әкімші дәрігер мен уақытты тағайындайды.",
+    wardError: "Өтінімді дәрігерге жіберу мүмкін болмады. Қайта көріңіз.",
+    wardAuthError: "Сессия аяқталды. Өтінім дәрігер мен әкімшіге жетуі үшін қайта кіріңіз.",
+    wardShortError: "Жағдайды толығырақ сипаттаңыз — кем дегенде 10 таңба.",
+    wardStatusPending: "Өтінім өңделуде",
+    wardStatusAssigned: "Дәрігер тағайындалды",
+    wardStatusSubtitle: "Робот пен қоңырау көрсетілген уақытта автоматты түрде іске қосылады.",
     pressure: "Қысым",
     temp: "Темп",
     pulse: "Пульс",
@@ -176,6 +217,7 @@ const copy = {
     doctor: "Doctor",
     reason: "Reason",
     appointmentStatusPending: "Pending",
+    appointmentStatusConfirmed: "Confirmed",
     appointmentStatusActive: "In progress",
     appointmentStatusDone: "Done",
     onlineTicket: "Queue Ticket",
@@ -198,7 +240,28 @@ const copy = {
     confirmedDoctor: "Doctor",
     confirmedDate: "Date",
     confirmedTime: "Time",
+    confirmedRoom: "Room",
     joinMeeting: "Join meeting",
+    homeOnlineTitle: "Online consultation from home",
+    homeOnlineText: "Send a video consultation request and, once approved, the admin will immediately send the meeting link to both patient and doctor.",
+    homeOnlineAction: "Request online call",
+    wardBannerTitle: "Online consultation in the ward",
+    wardBannerText: "If you are already staying in a ward, send a separate request. Add ward and bed details so the doctor and AIMAR terminal can connect automatically.",
+    wardSpecialty: "Specialist needed",
+    wardDate: "Preferred date",
+    wardRoom: "Ward",
+    wardBed: "Bed",
+    wardReason: "What the doctor should know",
+    wardReasonPlaceholder: "For example: need a post-op consultation, pain increased, need to connect with a cardiologist...",
+    wardSubmit: "Send to doctor",
+    wardSubmitting: "Sending...",
+    wardSuccess: "Ward online request sent. The admin will assign the doctor and time.",
+    wardError: "Could not send the request to the doctor. Please try again.",
+    wardAuthError: "Your session expired. Sign in again so the request reaches the doctor and admin.",
+    wardShortError: "Please describe the condition in more detail — at least 10 characters.",
+    wardStatusPending: "Request under review",
+    wardStatusAssigned: "Doctor assigned",
+    wardStatusSubtitle: "The robot and video call will start automatically at the scheduled time.",
     pressure: "Pressure",
     temp: "Temp",
     pulse: "Pulse",
@@ -208,114 +271,6 @@ const copy = {
     createMeasurementError: "Failed to add measurement. Try again.",
     showAll: "Show all",
     showLess: "Show less",
-  },
-} as const;
-
-const telemedCopy = {
-  ru: {
-    eyebrow: "AIMAR Ward Link",
-    title: "Онлайн-консультация в палате",
-    emptyTitle: "Палатная онлайн-сессия появится здесь",
-    emptyText:
-      "Как только врач назначит дистанционный осмотр, система покажет время, врача, палату и готовность терминала у кровати.",
-    automation:
-      "Пациенту не нужно идти в кабинет: робот или терминал сам приедет к кровати, включит связь и передаст врачу показатели.",
-    doctor: "Врач",
-    schedule: "Время",
-    location: "Палата",
-    robot: "Терминал",
-    deviceReadiness: "Готовность у кровати",
-    liveMetrics: "Данные в реальном времени",
-    timeline: "Как это пройдет",
-    vitalsHint:
-      "Температура и пульс уходят врачу автоматически, без ручного ввода со стороны пациента.",
-    camera: "Камера врача",
-    audio: "Микрофон и динамик",
-    monitoring: "Мониторинг",
-    medication: "Выдача лекарства",
-    bookVisit: "Назначить консультацию",
-    robotOnline: "связь с AIMAR готова",
-    pending: "ожидает активации",
-    stageScheduled: "Назначено",
-    stageRobot: "Робот едет",
-    stageReady: "У кровати",
-    stageLive: "Идёт онлайн",
-    stageCompleted: "Сохранено",
-    stageScheduledDesc: "Система знает врача, время и палату пациента.",
-    stageRobotDesc: "Терминал сам направляется к нужной кровати.",
-    stageReadyDesc: "Экран, камера и звук готовы к разговору.",
-    stageLiveDesc: "Врач видит пациента и показатели в одном окне.",
-    stageCompletedDesc: "Итоги, назначения и лекарства попадут в историю.",
-  },
-  kk: {
-    eyebrow: "AIMAR Ward Link",
-    title: "Палатадағы онлайн кеңес",
-    emptyTitle: "Палаталық онлайн сессия осында көрінеді",
-    emptyText:
-      "Дәрігер қашықтан қарауды тағайындаған кезде, жүйе уақытты, дәрігерді, палатаны және терминал дайындығын көрсетеді.",
-    automation:
-      "Пациентке кабинетке барудың қажеті жоқ: робот немесе терминал кереуетке өзі келіп, байланысты қосып, көрсеткіштерді дәрігерге жібереді.",
-    doctor: "Дәрігер",
-    schedule: "Уақыты",
-    location: "Палата",
-    robot: "Терминал",
-    deviceReadiness: "Кереует жанындағы дайындық",
-    liveMetrics: "Нақты уақыттағы деректер",
-    timeline: "Қалай өтеді",
-    vitalsHint:
-      "Температура мен пульс пациент ештеңе енгізбей-ақ дәрігерге автоматты түрде жіберіледі.",
-    camera: "Дәрігер камерасы",
-    audio: "Микрофон мен динамик",
-    monitoring: "Мониторинг",
-    medication: "Дәрі беру",
-    bookVisit: "Кеңес тағайындау",
-    robotOnline: "AIMAR байланысы дайын",
-    pending: "іске қосуды күтуде",
-    stageScheduled: "Тағайындалды",
-    stageRobot: "Робот келе жатыр",
-    stageReady: "Кереует жанында",
-    stageLive: "Онлайн жүріп жатыр",
-    stageCompleted: "Сақталды",
-    stageScheduledDesc: "Жүйе дәрігерді, уақытты және палатаны біледі.",
-    stageRobotDesc: "Терминал қажетті кереуетке өзі барады.",
-    stageReadyDesc: "Экран, камера және дыбыс сөйлесуге дайын.",
-    stageLiveDesc: "Дәрігер науқас пен көрсеткіштерді бір терезеде көреді.",
-    stageCompletedDesc: "Қорытынды, тағайындаулар және дәрілер тарихқа сақталады.",
-  },
-  en: {
-    eyebrow: "AIMAR Ward Link",
-    title: "Bedside online consultation",
-    emptyTitle: "Your bedside session will appear here",
-    emptyText:
-      "As soon as a doctor schedules a remote bedside review, this panel will show the time, doctor, ward, and terminal readiness.",
-    automation:
-      "The patient does not need to move: a robot or bedside terminal comes to the bed, opens the call, and streams vitals to the doctor.",
-    doctor: "Doctor",
-    schedule: "Schedule",
-    location: "Ward",
-    robot: "Terminal",
-    deviceReadiness: "Bedside readiness",
-    liveMetrics: "Live vitals",
-    timeline: "How it will work",
-    vitalsHint:
-      "Temperature and pulse are sent to the doctor automatically without patient input.",
-    camera: "Doctor camera",
-    audio: "Mic and speaker",
-    monitoring: "Monitoring",
-    medication: "Medication handoff",
-    bookVisit: "Schedule consult",
-    robotOnline: "AIMAR link ready",
-    pending: "waiting for activation",
-    stageScheduled: "Scheduled",
-    stageRobot: "Robot en route",
-    stageReady: "At bedside",
-    stageLive: "Live now",
-    stageCompleted: "Saved",
-    stageScheduledDesc: "The system knows the doctor, time, and patient ward.",
-    stageRobotDesc: "The terminal drives itself to the correct bed.",
-    stageReadyDesc: "Screen, camera, and audio are ready for the visit.",
-    stageLiveDesc: "The doctor sees the patient and vitals in one view.",
-    stageCompletedDesc: "Results, orders, and meds are archived automatically.",
   },
 } as const;
 
@@ -336,58 +291,15 @@ function readCurrentUser(): StoredUser | null {
   }
 }
 
-function appointmentBelongsToUser(item: Appointment, user: StoredUser | null) {
-  const userId = String(user?.id || "");
-  const userEmail = String(user?.email || "").toLowerCase();
-  const patientId = String(item.patient_id || item.patientId || "");
-  const patientEmail = String(item.patient_email || item.patientEmail || "").toLowerCase();
-
-  if (!patientId && !patientEmail) return true;
-  return Boolean((userId && patientId === userId) || (userEmail && patientEmail === userEmail));
-}
-
-function doctorLabel(item: Appointment) {
+function hasAssignedDoctor(item: Appointment) {
   const doctorId = item.doctor_id || item.doctorId;
-  const doctor = DOCTORS.find((doctorItem) => doctorItem.id === doctorId);
-  return item.doctorName || (doctor ? `${doctor.name} - ${doctor.specialty}` : doctorId) || "Врач";
+  return Boolean(doctorId && doctorId !== "pending");
 }
 
-function appointmentStatusClass(status: AppointmentStatus) {
-  if (status === "active") return "badge--warn";
-  if (status === "done") return "badge--ok";
-  return "badge--danger";
-}
-
-function consultationBadgeClass(stage: ConsultationStage) {
-  if (stage === "live" || stage === "completed") return "badge--ok";
-  if (stage === "bedside_ready") return "badge--ok";
-  return "badge--warn";
-}
-
-function scheduleMs(date: string, time: string) {
-  const value = Date.parse(`${date}T${time}:00`);
-  return Number.isNaN(value) ? Number.MAX_SAFE_INTEGER : value;
-}
-
-function pickPrimaryAppointment(items: Appointment[]) {
-  if (items.length === 0) return null;
-  const now = Date.now();
-  const future = items
-    .filter((item) => scheduleMs(item.date, item.time) >= now - 60 * 60 * 1000)
-    .sort((a, b) => scheduleMs(a.date, a.time) - scheduleMs(b.date, b.time));
-  return future[0] ?? items[items.length - 1] ?? null;
-}
-
-function pickPrimaryConsultation(items: BedsideConsultationView[]) {
-  if (items.length === 0) return null;
-  const now = Date.now();
-  const liveOrReady = items.filter((item) => item.stage === "live" || item.stage === "bedside_ready");
-  if (liveOrReady.length > 0) return liveOrReady[0];
-
-  const future = items
-    .filter((item) => item.stage !== "completed" && scheduleMs(item.date, item.time) >= now - 60 * 60 * 1000)
-    .sort((a, b) => scheduleMs(a.date, a.time) - scheduleMs(b.date, b.time));
-  return future[0] ?? items[items.length - 1] ?? null;
+function appointmentSortAsc(a: Appointment, b: Appointment) {
+  const byDate = a.date.localeCompare(b.date);
+  if (byDate !== 0) return byDate;
+  return (a.time || "00:00").localeCompare(b.time || "00:00");
 }
 
 export default function Dashboard() {
@@ -397,26 +309,25 @@ export default function Dashboard() {
   const isAdmin = currentUser?.role === "admin";
   const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
 
-  // Doctor account → redirect to doctor dashboard
-  if (currentUser?.email === "alixan.baktybaev@gmail.com") {
-    return <Navigate to="/doctor" replace />;
-  }
-
   const t = copy[locale];
-  const tele = telemedCopy[locale];
 
   const [items, setItems] = useState<MeasurementItem[]>(() => readCachedMeasurements());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [consultations, setConsultations] = useState<BedsideConsultationView[]>([]);
-  const [loading, setLoading] = useState(true);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
-  const [showAllMeasurements, setShowAllMeasurements] = useState(false);
   const [apptVisible, setApptVisible] = useState(5);
+  const [wardForm, setWardForm] = useState(() => ({
+    specialty: DOCTORS[0]?.specialty || "Терапевт",
+    date: new Date().toISOString().slice(0, 10),
+    wardLabel: "",
+    bedLabel: "",
+    reason: "",
+  }));
+  const [wardSubmitting, setWardSubmitting] = useState(false);
+  const [wardErr, setWardErr] = useState<string | null>(null);
+  const [wardOk, setWardOk] = useState<string | null>(null);
   const latestMeasurement = items[0] ?? null;
-  const nextAppointment = pickPrimaryAppointment(appointments);
-  const nextConsultation = pickPrimaryConsultation(consultations);
 
   const refreshTicket = useCallback(() => {
     const currentTicket = getMyTicket();
@@ -425,15 +336,12 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     setErr(null);
-    setLoading(true);
     try {
       const data = await fetchMyMeasurements();
       setItems(data.items ?? []);
     } catch {
       setItems(readCachedMeasurements());
       setErr(t.measurementError);
-    } finally {
-      setLoading(false);
     }
   }, [t.measurementError]);
 
@@ -453,12 +361,6 @@ export default function Dashboard() {
     }
   }, [t.appointmentError]);
 
-  function appointmentStatusLabel(status: AppointmentStatus) {
-    if (status === "active") return t.appointmentStatusActive;
-    if (status === "done") return t.appointmentStatusDone;
-    return t.appointmentStatusPending;
-  }
-
   useEffect(() => {
     load();
     loadAppointments();
@@ -471,40 +373,73 @@ export default function Dashboard() {
     return () => window.clearInterval(timer);
   }, [load, loadAppointments, refreshTicket]);
 
-  useEffect(() => {
-    setConsultations(syncBedsideConsultations(appointments));
-  }, [appointments]);
-
-  function consultationStageLabel(stage: ConsultationStage) {
-    if (stage === "robot_en_route") return tele.stageRobot;
-    if (stage === "bedside_ready") return tele.stageReady;
-    if (stage === "live") return tele.stageLive;
-    if (stage === "completed") return tele.stageCompleted;
-    return tele.stageScheduled;
-  }
-
-  function consultationTimeline() {
-    return [
-      { key: "scheduled" as const, label: tele.stageScheduled, desc: tele.stageScheduledDesc },
-      { key: "robot_en_route" as const, label: tele.stageRobot, desc: tele.stageRobotDesc },
-      { key: "bedside_ready" as const, label: tele.stageReady, desc: tele.stageReadyDesc },
-      { key: "live" as const, label: tele.stageLive, desc: tele.stageLiveDesc },
-      { key: "completed" as const, label: tele.stageCompleted, desc: tele.stageCompletedDesc },
-    ];
-  }
-
-  const stageRank: Record<ConsultationStage, number> = {
-    scheduled: 0,
-    robot_en_route: 1,
-    bedside_ready: 2,
-    live: 3,
-    completed: 4,
-  };
-
-  const confirmedAppts = appointments.filter(
-    (a) => a.status === "active" && (a.doctor_id || a.doctorId) && (a.doctor_id || a.doctorId) !== "pending"
+  const confirmedAppts = appointments
+    .filter((a) => a.status !== "done" && isHomeOnlineConsultation(a) && hasAssignedDoctor(a))
+    .sort(appointmentSortAsc)
+    .slice(0, 1);
+  const inPersonConfirmedAppts = appointments
+    .filter(
+      (a) =>
+        a.status !== "done" &&
+        hasAssignedDoctor(a) &&
+        !isHomeOnlineConsultation(a) &&
+        !isWardOnlineConsultation(a),
+    )
+    .sort(appointmentSortAsc)
+    .slice(0, 1);
+  const wardAppointments = appointments
+    .filter((a) => a.status !== "done" && isWardOnlineConsultation(a))
+    .sort(appointmentSortAsc)
+    .slice(0, 1);
+  const specialtyOptions = useMemo(
+    () => Array.from(new Set(DOCTORS.map((doctor) => doctor.specialty))),
+    [],
   );
-  const pendingAppts = appointments.filter((a) => a.status === "pending");
+
+  async function submitWardConsultation() {
+    setWardErr(null);
+    setWardOk(null);
+
+    if (wardForm.reason.trim().length < 10) {
+      setWardErr(t.wardShortError);
+      return;
+    }
+
+    if (!wardForm.date || !wardForm.wardLabel.trim()) {
+      setWardErr(t.wardError);
+      return;
+    }
+
+    setWardSubmitting(true);
+    try {
+      await createAppointment({
+        date: wardForm.date,
+        time: "",
+        reason: wardForm.reason.trim(),
+        specialtyRequest: wardForm.specialty,
+        wantsOnline: true,
+        consultationMode: "online_ward",
+        wardLabel: wardForm.wardLabel.trim(),
+        bedLabel: wardForm.bedLabel.trim() || "Койка не указана",
+      });
+      setWardOk(t.wardSuccess);
+      setWardForm((current) => ({
+        ...current,
+        wardLabel: "",
+        bedLabel: "",
+        reason: "",
+      }));
+      await loadAppointments();
+    } catch (error) {
+      setWardErr(error instanceof AppointmentRequestError && error.code === "auth_required" ? t.wardAuthError : t.wardError);
+    } finally {
+      setWardSubmitting(false);
+    }
+  }
+
+  if (currentUser?.email === "alixan.baktybaev@gmail.com") {
+    return <Navigate to="/doctor" replace />;
+  }
 
   const statusMeta = (status: AppointmentStatus) => {
     if (status === "active") return { label: t.appointmentStatusActive, color: "#60a5fa", bg: "rgba(96,165,250,0.12)" };
@@ -562,7 +497,7 @@ export default function Dashboard() {
 
         {/* Confirmed appointment banner */}
         {confirmedAppts.map((confirmed) => {
-          const meetingUrl = confirmed.meeting_url;
+          const meetingUrl = confirmed.meeting_url || `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
           return (
             <div key={`conf-${confirmed.id}`} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
@@ -591,8 +526,189 @@ export default function Dashboard() {
           );
         })}
 
+        {inPersonConfirmedAppts.map((confirmed) => {
+          const roomLabel = readRoomLabel(confirmed);
+          return (
+            <div
+              key={`visit-${confirmed.id}`}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
+                background: "rgba(129,140,248,0.08)", borderLeft: "3px solid #818cf8",
+                padding: "14px 20px", marginBottom: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <HeartPulse size={16} color="#818cf8" />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#c4b5fd" }}>{t.confirmedTitle}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                    {confirmed.specialty_request || confirmed.specialtyRequest || "Специалист"} · {confirmed.date}
+                    {confirmed.time && confirmed.time !== "00:00" ? ` · ${confirmed.time}` : ""}
+                    {roomLabel ? ` · ${t.confirmedRoom}: ${roomLabel}` : ""}
+                  </div>
+                </div>
+              </div>
+              <span style={{
+                background: "rgba(129,140,248,0.2)", color: "#c4b5fd",
+                borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700,
+              }}>
+                Офлайн
+              </span>
+            </div>
+          );
+        })}
+
+        {wardAppointments.map((appointment) => {
+          const assigned = hasAssignedDoctor(appointment);
+          const wardLabel = readWardLabel(appointment) || "Палата не указана";
+          const bedLabel = readBedLabel(appointment) || "Койка не указана";
+          return (
+            <div
+              key={`ward-${appointment.id}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 12,
+                background: "rgba(56,189,248,0.08)",
+                borderLeft: "3px solid #38bdf8",
+                padding: "14px 20px",
+                marginBottom: 10,
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#7dd3fc" }}>
+                  {assigned ? t.wardStatusAssigned : t.wardStatusPending}
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 3 }}>
+                  {wardLabel} · {bedLabel}
+                  {appointment.time && appointment.time !== "00:00" ? ` · ${appointment.date} · ${appointment.time}` : ` · ${appointment.date}`}
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", marginTop: 3 }}>
+                  {assigned ? t.wardStatusSubtitle : appointment.reason}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            alignItems: "start",
+            gap: 20,
+            marginTop: confirmedAppts.length > 0 || wardAppointments.length > 0 ? 24 : 0,
+            marginBottom: 28,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 12,
+              padding: "20px 22px",
+            }}
+          >
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, marginBottom: 10 }}>
+              Ward
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{t.wardBannerTitle}</div>
+            <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.65, color: "rgba(255,255,255,0.68)" }}>
+              {t.wardBannerText}
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardSpecialty}</span>
+                <select
+                  className="input"
+                  value={wardForm.specialty}
+                  onChange={(event) => setWardForm((current) => ({ ...current, specialty: event.target.value }))}
+                >
+                  {specialtyOptions.map((specialty) => (
+                    <option key={specialty} value={specialty}>
+                      {specialty}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardDate}</span>
+                <input
+                  className="input"
+                  type="date"
+                  value={wardForm.date}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(event) => setWardForm((current) => ({ ...current, date: event.target.value }))}
+                />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardRoom}</span>
+                <input
+                  className="input"
+                  value={wardForm.wardLabel}
+                  onChange={(event) => setWardForm((current) => ({ ...current, wardLabel: event.target.value }))}
+                  placeholder="Палата 305"
+                />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardBed}</span>
+                <input
+                  className="input"
+                  value={wardForm.bedLabel}
+                  onChange={(event) => setWardForm((current) => ({ ...current, bedLabel: event.target.value }))}
+                  placeholder="Койка 2"
+                />
+              </label>
+            </div>
+            <label style={{ display: "grid", gap: 6, marginTop: 10 }}>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardReason}</span>
+              <textarea
+                className="input"
+                rows={4}
+                value={wardForm.reason}
+                onChange={(event) => setWardForm((current) => ({ ...current, reason: event.target.value }))}
+                placeholder={t.wardReasonPlaceholder}
+                style={{ height: "auto", resize: "vertical" }}
+              />
+            </label>
+            {wardErr ? (
+              <div className="alert" style={{ marginTop: 12 }}>
+                {wardErr}
+              </div>
+            ) : null}
+            {wardOk ? (
+              <div className="badge badge--ok" style={{ marginTop: 12 }}>
+                <span className="badge__dot" />
+                {wardOk}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void submitWardConsultation()}
+              disabled={wardSubmitting}
+              style={{
+                marginTop: 14,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "10px 18px",
+                borderRadius: 8,
+                border: "1px solid rgba(52,211,153,0.28)",
+                background: "rgba(52,211,153,0.15)",
+                color: "#6ee7b7",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {wardSubmitting ? t.wardSubmitting : t.wardSubmit}
+            </button>
+          </div>
+        </div>
+
         {/* Two-column layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 48, marginTop: confirmedAppts.length > 0 ? 24 : 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 48, marginTop: confirmedAppts.length > 0 || inPersonConfirmedAppts.length > 0 ? 24 : 0 }}>
 
           {/* Appointments — paginated table */}
           <div>
@@ -619,7 +735,11 @@ export default function Dashboard() {
                 </div>
 
                 {appointments.slice(0, apptVisible).map((appt, idx) => {
-                  const sm = statusMeta(appt.status);
+                  const roomLabel = readRoomLabel(appt);
+                  const sm =
+                    appt.status === "pending" && hasAssignedDoctor(appt)
+                      ? { label: t.appointmentStatusConfirmed, color: "#6ee7b7", bg: "rgba(52,211,153,0.12)" }
+                      : statusMeta(appt.status);
                   const isEven = idx % 2 === 0;
                   return (
                     <div key={appt.id} style={{
@@ -634,10 +754,11 @@ export default function Dashboard() {
                         </div>
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
                           {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
+                          {roomLabel ? ` · ${t.confirmedRoom}: ${roomLabel}` : ""}
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center" }}>
-                        {appt.status === "active" && appt.meeting_url && (
+                        {hasAssignedDoctor(appt) && isHomeOnlineConsultation(appt) && appt.meeting_url && (
                           <a
                             href={appt.meeting_url}
                             target="_blank"
@@ -649,7 +770,7 @@ export default function Dashboard() {
                               fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
                             }}
                           >
-                            <Video size={11} /> Войти
+                            <Video size={11} /> {t.joinMeeting}
                           </a>
                         )}
                       </div>

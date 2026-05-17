@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchAppointments, type Appointment } from "../lib/apiAppointments";
 import { fetchAdminDoctors, type DoctorOption } from "../lib/apiAdmin";
+import { readRoomLabel } from "../lib/consultationMode";
 import { usePageSeo } from "../lib/seo";
 
 // Time slots 08:00 – 18:00 every 30 min
@@ -70,6 +71,18 @@ export default function DoctorSchedulePage() {
   const [doctors, setDoctors] = useState<DoctorOption[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadAppointments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAppointments(date);
+      setAppointments(data.items ?? []);
+    } catch {
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [date]);
+
   useEffect(() => {
     fetchAdminDoctors()
       .then((d) => setDoctors(d.items.filter((doc) => doc.active !== false)))
@@ -77,12 +90,8 @@ export default function DoctorSchedulePage() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchAppointments(date)
-      .then((data) => setAppointments(data.items ?? []))
-      .catch(() => setAppointments([]))
-      .finally(() => setLoading(false));
-  }, [date]);
+    void loadAppointments();
+  }, [loadAppointments]);
 
   function getSlot(doctorId: string, slotTime: string): Appointment | undefined {
     return appointments.find((a) => {
@@ -280,6 +289,11 @@ export default function DoctorSchedulePage() {
                               {appt.reason && (
                                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {appt.reason}
+                                </div>
+                              )}
+                              {readRoomLabel(appt) && (
+                                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {readRoomLabel(appt)}
                                 </div>
                               )}
                               <div style={{ fontSize: 10, color: statusColor(appt.status), marginTop: 2, opacity: 0.8 }}>

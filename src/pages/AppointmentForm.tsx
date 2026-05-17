@@ -1,12 +1,13 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { ArrowLeft, House, Sparkles } from "lucide-react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/Input";
-import { createAppointment } from "../lib/apiAppointments";
+import { AppointmentRequestError, createAppointment } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
 import { getCurrentUser } from "../lib/authStore";
+import { normalizeConsultationMode, type ConsultationMode } from "../lib/consultationMode";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
 import { usePageSeo } from "../lib/seo";
 
@@ -68,15 +69,18 @@ const appointmentText = {
     symptomsHint: "Минимум 10 символов. Опишите жалобы как можно точнее.",
     suggestion: "Рекомендуем специалиста:",
     applySuggestion: "Выбрать",
-    onlineConsult: "Хотите онлайн консультацию?",
-    onlineYes: "Да",
-    onlineNo: "Нет",
+    consultationType: "Формат консультации",
+    visitInClinic: "Очный приём",
+    visitOnlineHome: "Онлайн из дома",
+    consultationHintClinic: "Пациент приедет в клинику, а время назначит администратор.",
+    consultationHintOnlineHome: "После подтверждения администратор сразу создаст ссылку и отправит её пациенту и врачу.",
     fillAllError: "Заполните дату и опишите симптомы.",
     tooShortError: "Опишите симптомы подробнее — минимум 10 символов.",
     spamError: "Пожалуйста, опишите ваши реальные симптомы медицинскими словами.",
     offensiveError: "Пожалуйста, используйте корректные медицинские термины.",
     created: "Заявка отправлена. Администратор назначит врача и время.",
     createError: "Не удалось создать заявку. Попробуйте ещё раз чуть позже.",
+    createAuthError: "Сессия истекла. Войдите снова, чтобы заявка дошла врачу и в админку.",
     creating: "Отправляем...",
     submit: "Отправить заявку",
     cancel: "Отмена",
@@ -93,15 +97,18 @@ const appointmentText = {
     symptomsHint: "Кем дегенде 10 таңба. Шағымдарыңызды мүмкіндігінше нақты сипаттаңыз.",
     suggestion: "Маман ұсынылады:",
     applySuggestion: "Таңдау",
-    onlineConsult: "Онлайн кеңес алғыңыз келе ме?",
-    onlineYes: "Иә",
-    onlineNo: "Жоқ",
+    consultationType: "Кеңес форматы",
+    visitInClinic: "Клиникада қабылдау",
+    visitOnlineHome: "Үйден онлайн",
+    consultationHintClinic: "Пациент клиникаға келеді, ал уақытты әкімші тағайындайды.",
+    consultationHintOnlineHome: "Расталғаннан кейін әкімші сілтемені бірден жасап, пациент пен дәрігерге жібереді.",
     fillAllError: "Күнді толтырыңыз және симптомдарды сипаттаңыз.",
     tooShortError: "Симптомдарды толығырақ сипаттаңыз — кем дегенде 10 таңба.",
     spamError: "Нақты симптомдарыңызды медициналық сөздермен сипаттаңыз.",
     offensiveError: "Дұрыс медициналық терминдерді қолданыңыз.",
     created: "Өтінім жіберілді. Әкімші дәрігер мен уақытты тағайындайды.",
     createError: "Өтінімді жасау мүмкін болмады. Сәл кейінірек қайта көріңіз.",
+    createAuthError: "Сессия аяқталды. Өтінім дәрігер мен әкімшіге жетуі үшін қайта кіріңіз.",
     creating: "Жіберілуде...",
     submit: "Өтінім жіберу",
     cancel: "Бас тарту",
@@ -118,15 +125,18 @@ const appointmentText = {
     symptomsHint: "At least 10 characters. Describe your complaint as precisely as possible.",
     suggestion: "Recommended specialist:",
     applySuggestion: "Select",
-    onlineConsult: "Would you like an online consultation?",
-    onlineYes: "Yes",
-    onlineNo: "No",
+    consultationType: "Consultation type",
+    visitInClinic: "Clinic visit",
+    visitOnlineHome: "Online from home",
+    consultationHintClinic: "The patient will come to the clinic and the admin will assign the time.",
+    consultationHintOnlineHome: "After approval, the admin will immediately create the meeting link and send it to both patient and doctor.",
     fillAllError: "Please fill in the date and describe your symptoms.",
     tooShortError: "Please describe your symptoms in more detail — at least 10 characters.",
     spamError: "Please describe your real symptoms using medical terms.",
     offensiveError: "Please use appropriate medical terminology.",
     created: "Request sent. An admin will assign a doctor and time.",
     createError: "Could not create the request. Please try again a little later.",
+    createAuthError: "Your session expired. Sign in again so the request reaches the doctor and admin.",
     creating: "Sending...",
     submit: "Send request",
     cancel: "Cancel",
@@ -156,13 +166,17 @@ function today() {
 
 export default function AppointmentForm() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const currentUser = getCurrentUser();
+  const requestedMode = normalizeConsultationMode(searchParams.get("mode"));
   const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
   const [specialty, setSpecialty] = useState(SPECIALTIES[0] ?? "");
   const [date, setDate] = useState(today());
   const [symptoms, setSymptoms] = useState("");
   const [suggested, setSuggested] = useState<string | null>(null);
-  const [wantsOnline, setWantsOnline] = useState(false);
+  const [consultationMode, setConsultationMode] = useState<ConsultationMode>(
+    requestedMode === "online_home" ? "online_home" : "in_person",
+  );
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -220,12 +234,13 @@ export default function AppointmentForm() {
         time: "",
         reason: symptoms.trim(),
         specialtyRequest: specialty,
-        wantsOnline,
+        wantsOnline: consultationMode !== "in_person",
+        consultationMode,
       });
       setOk(t.created);
       window.setTimeout(() => nav("/app"), 1500);
-    } catch {
-      setErr(t.createError);
+    } catch (error) {
+      setErr(error instanceof AppointmentRequestError && error.code === "auth_required" ? t.createAuthError : t.createError);
     } finally {
       setLoading(false);
     }
@@ -344,17 +359,20 @@ export default function AppointmentForm() {
               onChange={(e) => setDate(e.target.value)}
             />
 
-            {/* Online consultation toggle */}
+            {/* Consultation type */}
             <div className="field">
-              <span className="field__label">{t.onlineConsult}</span>
+              <span className="field__label">{t.consultationType}</span>
               <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-                {[true, false].map((val) => {
-                  const active = wantsOnline === val;
+                {[
+                  { value: "in_person" as const, label: t.visitInClinic },
+                  { value: "online_home" as const, label: t.visitOnlineHome },
+                ].map((option) => {
+                  const active = consultationMode === option.value;
                   return (
                     <button
-                      key={String(val)}
+                      key={option.value}
                       type="button"
-                      onClick={() => setWantsOnline(val)}
+                      onClick={() => setConsultationMode(option.value)}
                       style={{
                         padding: "8px 28px", borderRadius: 8, fontSize: 14,
                         cursor: "pointer", transition: "all 0.15s",
@@ -366,11 +384,24 @@ export default function AppointmentForm() {
                         color: active ? "var(--color-primary, #38bdf8)" : "inherit",
                       }}
                     >
-                      {val ? t.onlineYes : t.onlineNo}
+                      {option.label}
                     </button>
                   );
                 })}
               </div>
+              <span
+                style={{
+                  fontSize: 12,
+                  marginTop: 8,
+                  display: "block",
+                  color: "rgba(255,255,255,0.55)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {consultationMode === "online_home"
+                  ? t.consultationHintOnlineHome
+                  : t.consultationHintClinic}
+              </span>
             </div>
 
             {err ? <div className="alert">{err}</div> : null}

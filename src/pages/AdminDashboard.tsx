@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 import {
   DOCTORS,
-  assignDoctorToAppointment,
   fetchAppointments,
+  readCachedAppointments,
   updateAppointmentStatus,
   type Appointment,
   type AppointmentStatus,
@@ -34,6 +34,14 @@ import {
 import { isAdminAccount } from "../lib/adminAccess";
 import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
 import { getToken, hasSession, setCurrentUser, setToken } from "../lib/auth";
+import {
+  isHomeOnlineConsultation,
+  isOnlineConsultation,
+  readRoomLabel,
+  isWardOnlineConsultation,
+  readBedLabel,
+  readWardLabel,
+} from "../lib/consultationMode";
 import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
 import { usePageSeo } from "../lib/seo";
 
@@ -134,6 +142,19 @@ const adminText = {
     freeDoctor: "Свободен",
     busyDoctor: "Занят",
     startMeeting: "Начать встречу",
+    onlineConsultsTitle: "Онлайн-консультации",
+    onlineConsultsSubtitle: "После назначения врача и времени ссылка Jitsi сразу сохраняется и отправляется пациенту и врачу.",
+    noOnlineConsults: "Пока нет онлайн-заявок или назначенных онлайн-консультаций.",
+    openOnlineBoard: "Открыть палатный экран",
+    openWardBoardSingle: "Палатный экран",
+    copyLink: "Скопировать ссылку",
+    linkSent: "Ссылка отправлена",
+    linkSaved: "Ссылка сохранена",
+    doctorMissing: "Врач не назначен",
+    timeMissing: "Время не указано",
+    onlineScheduled: "Назначено",
+    modeOnlineHome: "Онлайн из дома",
+    modeOnlineWard: "Онлайн в палате",
   },
   kk: {
     panelTitle: "Әкімші панелі",
@@ -219,6 +240,19 @@ const adminText = {
     freeDoctor: "Бос",
     busyDoctor: "Бос емес",
     startMeeting: "Кездесу бастау",
+    onlineConsultsTitle: "Онлайн кеңестер",
+    onlineConsultsSubtitle: "Дәрігер мен уақыт тағайындалған соң, Jitsi сілтемесі бірден сақталып, пациент пен дәрігерге жіберіледі.",
+    noOnlineConsults: "Әзірге онлайн өтінімдер немесе тағайындалған онлайн кеңестер жоқ.",
+    openOnlineBoard: "Палаталық экранды ашу",
+    openWardBoardSingle: "Палаталық экран",
+    copyLink: "Сілтемені көшіру",
+    linkSent: "Сілтеме жіберілді",
+    linkSaved: "Сілтеме сақталды",
+    doctorMissing: "Дәрігер тағайындалмаған",
+    timeMissing: "Уақыты көрсетілмеген",
+    onlineScheduled: "Тағайындалды",
+    modeOnlineHome: "Үйден онлайн",
+    modeOnlineWard: "Палатада онлайн",
   },
   en: {
     panelTitle: "Admin Panel",
@@ -304,6 +338,19 @@ const adminText = {
     freeDoctor: "Free",
     busyDoctor: "Busy",
     startMeeting: "Start meeting",
+    onlineConsultsTitle: "Online consultations",
+    onlineConsultsSubtitle: "Once a doctor and time are assigned, the Jitsi link is stored immediately and sent to both patient and doctor.",
+    noOnlineConsults: "No online requests or scheduled online consultations yet.",
+    openOnlineBoard: "Open bedside board",
+    openWardBoardSingle: "Bedside board",
+    copyLink: "Copy link",
+    linkSent: "Link sent",
+    linkSaved: "Link saved",
+    doctorMissing: "Doctor not assigned",
+    timeMissing: "Time not set",
+    onlineScheduled: "Scheduled",
+    modeOnlineHome: "Online from home",
+    modeOnlineWard: "Online in ward",
   },
 } as const;
 
@@ -441,14 +488,14 @@ function initials(name: string) {
 function statusLabel(status: AppointmentStatus, locale: Locale) {
   const t = adminText[locale];
 
-  if (status === "active") return t.statusOnline;
-  if (status === "done") return t.statusConfirmed;
+  if (status === "active") return t.statusConfirmed;
+  if (status === "done") return t.statusDoneFilter;
   return t.statusWaiting;
 }
 
 function statusTone(status: AppointmentStatus) {
-  if (status === "active") return "dark";
-  if (status === "done") return "green";
+  if (status === "active") return "green";
+  if (status === "done") return "dark";
   return "amber";
 }
 
@@ -471,6 +518,16 @@ function getBusyDoctorIds(date: string, appointments: Appointment[]): Set<string
 
 function jitsiRoomUrl(appointmentId: string) {
   return `https://meet.jit.si/healthassist-${appointmentId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
+}
+
+function hasAssignedDoctor(item: Appointment) {
+  const doctorId = item.doctor_id || item.doctorId;
+  return Boolean(doctorId && doctorId !== "pending");
+}
+
+function consultationModeLabel(item: Appointment, locale: Locale) {
+  const t = adminText[locale];
+  return isWardOnlineConsultation(item) ? t.modeOnlineWard : t.modeOnlineHome;
 }
 
 export default function AdminDashboard() {
@@ -499,10 +556,6 @@ export default function AdminDashboard() {
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
-  const [assignMap, setAssignMap] = useState<Record<string, string>>({});
-  const [assignTimeMap, setAssignTimeMap] = useState<Record<string, string>>({});
-  const [assigningId, setAssigningId] = useState<string | null>(null);
-
 
   const t = adminText[locale];
   const displayName = user?.name || user?.email || t.defaultAdminName;
@@ -538,6 +591,13 @@ export default function AdminDashboard() {
         fetchAdminDoctors(),
         fetchAdminPatients(),
       ]);
+      const cachedAppointments = readCachedAppointments();
+      const scopedAppointments =
+        (appointmentsData.items ?? []).length > 0
+          ? appointmentsData.items ?? []
+          : cachedAppointments.filter((item) => (date ? item.date === date : true));
+      const allAppointments =
+        (allAppointmentsData.items ?? []).length > 0 ? allAppointmentsData.items ?? [] : cachedAppointments;
 
       const enrichWithCurrentUser = (apts: Appointment[]) => {
         const cu = readCurrentUser();
@@ -577,8 +637,8 @@ export default function AdminDashboard() {
         });
       };
 
-      setItems(enrichWithCurrentUser(appointmentsData.items ?? []));
-      setAllItems(enrichWithCurrentUser(allAppointmentsData.items ?? []));
+      setItems(enrichWithCurrentUser(scopedAppointments));
+      setAllItems(enrichWithCurrentUser(allAppointments));
       setSummary(summaryData);
       setDoctors(
         doctorsData.items.length > 0
@@ -604,8 +664,18 @@ export default function AdminDashboard() {
   }, [doctorFilter, items, status]);
 
   const unassignedItems = useMemo(
-    () => allItems.filter((item) => item.status === "pending"),
+    () => allItems.filter((item) => item.status === "pending" && !hasAssignedDoctor(item)),
     [allItems]
+  );
+  const onlineItems = useMemo(
+    () =>
+      allItems
+        .filter((item) => isOnlineConsultation(item))
+        .sort((a, b) => {
+          const byDate = a.date.localeCompare(b.date);
+          return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
+        }),
+    [allItems],
   );
   const visibleItems = filteredItems;
   const visiblePatients =
@@ -665,24 +735,14 @@ export default function AdminDashboard() {
     }
   }
 
-  async function assignDoctor(id: string) {
-    const doctorId = assignMap[id] || doctors[0]?.id;
-    if (!doctorId) return;
-    const time = assignTimeMap[id] || "09:00";
-    setAssigningId(id);
-    try {
-      await assignDoctorToAppointment(id, doctorId, time);
-      await load();
-    } catch {
-      setErr("statusUpdate");
-    } finally {
-      setAssigningId(null);
-    }
-  }
-
   function changeLocale(nextLocale: Locale) {
     setLocale(nextLocale);
     writeStoredLocale(nextLocale);
+  }
+
+  function copyMeetingLink(url: string) {
+    if (!navigator.clipboard) return;
+    void navigator.clipboard.writeText(url);
   }
 
   useEffect(() => {
@@ -961,10 +1021,14 @@ export default function AdminDashboard() {
             <div className="doctor-admin__record-list">
               {unassignedItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback, patients);
-                const isOnline = item.wants_online || item.wantsOnline;
+                const isOnline = isOnlineConsultation(item);
+                const isWardOnline = isWardOnlineConsultation(item);
                 const busyIds = getBusyDoctorIds(item.date, items);
                 const freeDocs = doctors.filter((d) => !busyIds.has(d.id));
                 const specialtyNeeded = item.specialty_request || item.specialtyRequest;
+                const wardMeta = isWardOnline
+                  ? [readWardLabel(item), readBedLabel(item)].filter(Boolean).join(" · ")
+                  : "";
 
                 return (
                   <div
@@ -989,7 +1053,12 @@ export default function AdminDashboard() {
                         ) : null}
                         {isOnline ? (
                           <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
-                            {t.wantsOnlineLabel}
+                            {consultationModeLabel(item, locale)}
+                          </span>
+                        ) : null}
+                        {wardMeta ? (
+                          <span style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 600 }}>
+                            {wardMeta}
                           </span>
                         ) : null}
                         <span style={{ fontSize: 12, color: freeDocs.length > 0 ? "#34d399" : "#f59e0b" }}>
@@ -1040,6 +1109,7 @@ export default function AdminDashboard() {
               ) : (
                 visibleItems.map((item) => {
                   const name = patientLabel(item, t.patientFallback, patients);
+                  const isPendingUnassigned = item.status === "pending" && !hasAssignedDoctor(item);
 
                   return (
                     <div className="doctor-admin__appointment" key={item.id}>
@@ -1052,6 +1122,32 @@ export default function AdminDashboard() {
                       <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
                         {statusLabel(item.status, locale)}
                       </span>
+                      {isPendingUnassigned && (
+                        <button
+                          onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                          style={{
+                            padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer",
+                            background: "linear-gradient(135deg, #34d399, #10b981)",
+                            color: "#0a0f1a", fontWeight: 700, fontSize: 12,
+                          }}
+                        >
+                          {t.actionAccept}
+                        </button>
+                      )}
+                      {item.status !== "done" && (
+                        <button
+                          disabled={isPendingUnassigned}
+                          onClick={() => void changeStatus(item.id, "done")}
+                          style={{
+                            padding: "4px 12px", borderRadius: 6, border: "none", cursor: isPendingUnassigned ? "not-allowed" : "pointer",
+                            background: isPendingUnassigned ? "rgba(255,255,255,0.06)" : "rgba(52,211,153,0.15)",
+                            color: isPendingUnassigned ? "rgba(255,255,255,0.25)" : "#34d399",
+                            fontWeight: 700, fontSize: 12,
+                          }}
+                        >
+                          {t.actionComplete}
+                        </button>
+                      )}
                     </div>
                   );
                 })
@@ -1099,6 +1195,154 @@ export default function AdminDashboard() {
           </article>
         </section>
 
+        <section className="doctor-admin__panel doctor-admin__online-consults" id="online-consults">
+          <div className="doctor-admin__panel-head">
+            <div>
+              <h2>{t.onlineConsultsTitle}</h2>
+              <p className="doctor-admin__panel-subtitle">{t.onlineConsultsSubtitle}</p>
+            </div>
+            <div className="doctor-admin__panel-head-actions">
+              {onlineItems.length > 0 ? <span>{onlineItems.length}</span> : null}
+              <button
+                className="doctor-admin__refresh doctor-admin__refresh--secondary"
+                type="button"
+                onClick={() => nav("/admin/ward-consults")}
+              >
+                <MonitorSmartphone size={16} />
+                {t.openOnlineBoard}
+              </button>
+            </div>
+          </div>
+
+          <div className="doctor-admin__record-list">
+            {isInitialLoading ? (
+              <div className="doctor-admin__panel-loading" aria-live="polite">
+                <LoaderCircle className="doctor-admin__spin" size={18} />
+                {t.loading}
+              </div>
+            ) : onlineItems.length === 0 ? (
+              <p className="doctor-admin__empty">{t.noOnlineConsults}</p>
+            ) : (
+              onlineItems.map((item) => {
+                const name = patientLabel(item, t.patientFallback, patients);
+                const assigned = hasAssignedDoctor(item);
+                const isHomeOnline = isHomeOnlineConsultation(item);
+                const isWardOnline = isWardOnlineConsultation(item);
+                const meetingUrl = isHomeOnline ? item.meeting_url || jitsiRoomUrl(item.id) : "";
+                const meetingAt = item.meeting_at || item.meetingAt || `${item.date}T${item.time || "00:00"}:00`;
+                const notified = item.meeting_notified ?? item.meetingNotified;
+                const specialty = item.specialty_request || item.specialtyRequest;
+                const roomLabel = readRoomLabel(item);
+                const wardMeta = isWardOnline
+                  ? [readWardLabel(item), readBedLabel(item)].filter(Boolean).join(" · ")
+                  : "";
+                const statusTone =
+                  item.status === "active" ? "ok" : item.status === "done" ? "green" : assigned ? "green" : "amber";
+                const statusLabelText =
+                  item.status === "active"
+                    ? t.statusOnline
+                    : item.status === "done"
+                      ? t.statusConfirmed
+                      : assigned
+                        ? t.onlineScheduled
+                        : t.statusWaiting;
+
+                return (
+                  <div className="doctor-admin__record" key={`${item.id}-online`}>
+                    <div className="doctor-admin__record-date">
+                      <strong>{item.date}</strong>
+                      <span>{item.time || t.timeMissing}</span>
+                    </div>
+                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                    <div className="doctor-admin__record-main">
+                      <strong>{name}</strong>
+                      <span>
+                        {assigned ? doctorLabel(item, doctors, t.doctorFallback) : t.doctorMissing}
+                      </span>
+                      <div className="doctor-admin__online-tags">
+                        <span className="doctor-admin__online-tag doctor-admin__online-tag--cyan">
+                          {consultationModeLabel(item, locale)}
+                        </span>
+                        {specialty ? (
+                          <span className="doctor-admin__online-tag doctor-admin__online-tag--violet">
+                            {specialty}
+                          </span>
+                        ) : null}
+                        {wardMeta ? (
+                          <span className="doctor-admin__online-tag">
+                            {wardMeta}
+                          </span>
+                        ) : null}
+                        {roomLabel ? (
+                          <span className="doctor-admin__online-tag">
+                            {roomLabel}
+                          </span>
+                        ) : null}
+                        {assigned && isHomeOnline ? (
+                          <span className="doctor-admin__online-tag doctor-admin__online-tag--green">
+                            {notified ? t.linkSent : t.linkSaved}
+                          </span>
+                        ) : null}
+                      </div>
+                      <small>{item.reason || t.appointmentFallback}</small>
+                      {assigned ? (
+                        <small className="doctor-admin__online-meta">
+                          {formatDateTime(meetingAt, locale)}
+                        </small>
+                      ) : null}
+                    </div>
+                    <div className="doctor-admin__record-actions">
+                      <span className={`doctor-admin__status doctor-admin__status--${statusTone}`}>
+                        {statusLabelText}
+                      </span>
+                      {!assigned ? (
+                        <button
+                          type="button"
+                          onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                        >
+                          {t.actionAccept}
+                        </button>
+                      ) : (
+                        <>
+                          {isHomeOnline ? (
+                            <>
+                              <a
+                                href={meetingUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="doctor-admin__online-link"
+                              >
+                                <Video size={13} />
+                                {t.startMeeting}
+                              </a>
+                              <button type="button" onClick={() => copyMeetingLink(meetingUrl)}>
+                                {t.copyLink}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => nav("/admin/ward-consults")}
+                            >
+                              {t.openWardBoardSingle}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                          >
+                            {t.actionEdit}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
         <section className="doctor-admin__panel doctor-admin__records" id="appointments">
           <div className="doctor-admin__panel-head">
             <div>
@@ -1119,9 +1363,17 @@ export default function AdminDashboard() {
             ) : (
               visibleItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback, patients);
-                const isOnline = item.wants_online || item.wantsOnline;
+                const isOnline = isOnlineConsultation(item);
                 const docId = item.doctor_id || item.doctorId;
-                const hasDoctor = item.status !== "pending" && Boolean(docId) && docId !== "pending";
+                const hasDoctor = Boolean(docId) && docId !== "pending";
+                const isHomeOnline = isHomeOnlineConsultation(item);
+                const isWardOnline = isWardOnlineConsultation(item);
+                const meetingUrl = isHomeOnline ? item.meeting_url || jitsiRoomUrl(item.id) : "";
+                const isScheduledOnline = isOnline && hasDoctor && item.status === "pending";
+                const roomLabel = readRoomLabel(item);
+                const wardMeta = isWardOnline
+                  ? [readWardLabel(item), readBedLabel(item)].filter(Boolean).join(" · ")
+                  : "";
 
                 return (
                   <div className="doctor-admin__record" key={`${item.id}-record`}>
@@ -1142,7 +1394,23 @@ export default function AdminDashboard() {
                             background: "rgba(34,211,238,0.15)", color: "#22d3ee",
                             borderRadius: 5, padding: "1px 7px", fontSize: 11, fontWeight: 700,
                           }}>
-                            {t.wantsOnlineLabel}
+                            {consultationModeLabel(item, locale)}
+                          </span>
+                        ) : null}
+                        {wardMeta ? (
+                          <span style={{
+                            background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)",
+                            borderRadius: 5, padding: "1px 7px", fontSize: 11, fontWeight: 600,
+                          }}>
+                            {wardMeta}
+                          </span>
+                        ) : null}
+                        {roomLabel ? (
+                          <span style={{
+                            background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)",
+                            borderRadius: 5, padding: "1px 7px", fontSize: 11, fontWeight: 600,
+                          }}>
+                            {roomLabel}
                           </span>
                         ) : null}
                         {(item.specialty_request || item.specialtyRequest) ? (
@@ -1157,24 +1425,25 @@ export default function AdminDashboard() {
                       <small>{item.reason || t.appointmentFallback}</small>
                     </div>
                     <div className="doctor-admin__record-actions">
-                      {isOnline ? (
+                      {isHomeOnline && meetingUrl ? (
                         <a
-                          href={jitsiRoomUrl(item.id)}
+                          href={meetingUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{
-                            display: "inline-flex", alignItems: "center", gap: 5,
-                            background: "rgba(34,211,238,0.15)", color: "#22d3ee",
-                            border: "1px solid rgba(34,211,238,0.35)",
-                            borderRadius: 8, padding: "5px 12px",
-                            fontWeight: 700, fontSize: 12, textDecoration: "none",
-                          }}
+                          className="doctor-admin__online-link"
                         >
                           <Video size={13} />
                           {t.startMeeting}
                         </a>
+                      ) : isWardOnline ? (
+                        <button
+                          type="button"
+                          onClick={() => nav("/admin/ward-consults")}
+                        >
+                          {t.openWardBoardSingle}
+                        </button>
                       ) : null}
-                      {item.status === "pending" && (
+                      {item.status === "pending" && !hasDoctor && (
                         <button
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
@@ -1188,7 +1457,7 @@ export default function AdminDashboard() {
                           {t.actionAccept}
                         </button>
                       )}
-                      {(item.status === "active" || item.status === "done") && (
+                      {(item.status === "active" || item.status === "done" || isScheduledOnline) && (
                         <button
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}

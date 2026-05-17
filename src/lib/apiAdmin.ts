@@ -3,6 +3,7 @@ import { getToken } from "./auth";
 import {
   DOCTORS,
   fetchDoctors,
+  setAppointmentMeetingInfo,
   type Appointment,
   type DoctorOption,
 } from "./apiAppointments";
@@ -315,8 +316,18 @@ export async function notifyOnlineMeeting(
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    setAppointmentMeetingInfo(appointmentId, {
+      meetingUrl,
+      meetingAt,
+      meetingNotified: data.notified ?? true,
+    });
     return { notified: data.notified ?? true, notifyError: data.notify_error ?? null };
   } catch (err) {
+    setAppointmentMeetingInfo(appointmentId, {
+      meetingUrl,
+      meetingAt,
+      meetingNotified: false,
+    });
     return { notified: false, notifyError: String(err) };
   }
 }

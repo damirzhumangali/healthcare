@@ -1,4 +1,5 @@
 import { DOCTORS, type Appointment, type AppointmentStatus } from "./apiAppointments";
+import { isWardOnlineConsultation, readBedLabel, readWardLabel } from "./consultationMode";
 
 export type ConsultationStage =
   | "scheduled"
@@ -127,10 +128,13 @@ function createConsultationFromAppointment(appointment: Appointment): Consultati
   const bed = 1 + (Math.floor(seed / 7) % 3);
   const robotIndex = 1 + (Math.floor(seed / 11) % 4);
   const reason = appointment.reason?.trim();
+  const appointmentId = appointment.id || key;
+  const wardLabel = readWardLabel(appointment) || `Палата ${room}`;
+  const bedLabel = readBedLabel(appointment) || `Койка ${bed}`;
 
   return {
     id: `consult-${key}`,
-    appointmentId: appointment.id || key,
+    appointmentId,
     patientId: appointment.patient_id || appointment.patientId,
     patientEmail: appointment.patient_email || appointment.patientEmail,
     patientName:
@@ -145,13 +149,14 @@ function createConsultationFromAppointment(appointment: Appointment): Consultati
     specialty: doctor.specialty,
     date: appointment.date,
     time: appointment.time,
-    wardLabel: `Палата ${room}`,
-    bedLabel: `Койка ${bed}`,
+    wardLabel,
+    bedLabel,
     robotUnit: `AIMAR-${robotIndex}`,
     notes: reason || "Плановая дистанционная консультация у кровати пациента.",
     createdAt: appointment.created_at || appointment.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     stage: deriveStageFromAppointment(appointment.status, appointment.date, appointment.time),
+    meetRoomId: `healthassist-ward-${appointmentId.replace(/[^a-zA-Z0-9]/g, "").slice(-12)}`,
   };
 }
 
@@ -208,6 +213,7 @@ export function syncBedsideConsultations(appointments: Appointment[]): BedsideCo
   const relevantIds = new Set<string>();
 
   appointments.forEach((appointment) => {
+    if (!isWardOnlineConsultation(appointment)) return;
     const appointmentId = appointment.id || appointmentKey(appointment);
     relevantIds.add(appointmentId);
     const current = mapped.get(appointmentId);
@@ -231,7 +237,10 @@ export function syncBedsideConsultations(appointments: Appointment[]): BedsideCo
       specialty: doctor.specialty || created.specialty,
       date: appointment.date,
       time: appointment.time,
+      wardLabel: readWardLabel(appointment) || created.wardLabel,
+      bedLabel: readBedLabel(appointment) || created.bedLabel,
       notes: appointment.reason?.trim() || created.notes,
+      meetRoomId: current?.meetRoomId || created.meetRoomId,
       stage: reconcileStage(created.stage, appointment.status, appointment.date, appointment.time),
       updatedAt: new Date().toISOString(),
     });
