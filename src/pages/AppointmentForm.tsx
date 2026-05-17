@@ -1,10 +1,10 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, House, Sparkles } from "lucide-react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/Input";
-import { AppointmentRequestError, createAppointment } from "../lib/apiAppointments";
+import { AppointmentRequestError, createAppointment, pingBackend } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
 import { getCurrentUser } from "../lib/authStore";
 import { normalizeConsultationMode, type ConsultationMode } from "../lib/consultationMode";
@@ -181,6 +181,8 @@ export default function AppointmentForm() {
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const t = appointmentText[locale];
+
+  useEffect(() => { pingBackend(); }, []);
 
   usePageSeo({
     title: locale === "kk" ? "Дәрігерге жазылу — HealthAssist" : locale === "en" ? "Doctor appointment — HealthAssist" : "Запись к врачу — HealthAssist",

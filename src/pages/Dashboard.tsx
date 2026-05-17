@@ -11,6 +11,7 @@ import {
   DOCTORS,
   createAppointment,
   fetchMyAppointments,
+  pingBackend,
   type Appointment,
   type AppointmentStatus,
 } from "../lib/apiAppointments";
@@ -360,6 +361,8 @@ export default function Dashboard() {
       setAppointmentsLoading(false);
     }
   }, [t.appointmentError]);
+
+  useEffect(() => { pingBackend(); }, []);
 
   useEffect(() => {
     load();
