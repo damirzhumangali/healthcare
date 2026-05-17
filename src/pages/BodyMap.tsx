@@ -61,7 +61,6 @@ const FEMALE_PARTS: BodyPartKey[] = [
   "head",
   "neck",
   "chest",
-  "breasts",
   "belly",
   "femalePelvis",
   "back",
@@ -85,6 +84,7 @@ const copy = {
     sexLabel: "Пол",
     maleLabel: "Мужской",
     femaleLabel: "Женский",
+    femaleChestLabel: "Грудь / молочные железы",
     pregnancyLabel: "Беременна",
     pregnancyHint: "Если отмечено, рекомендация врача смещается к акушеру-гинекологу.",
     recommendationTitle: "Рекомендуемый специалист",
@@ -135,6 +135,7 @@ const copy = {
     sexLabel: "Жынысы",
     maleLabel: "Ер",
     femaleLabel: "Әйел",
+    femaleChestLabel: "Кеуде / сүт бездері",
     pregnancyLabel: "Жүкті",
     pregnancyHint: "Белгіленсе, маман ұсынысы акушер-гинекологқа ауысады.",
     recommendationTitle: "Ұсынылатын маман",
@@ -185,6 +186,7 @@ const copy = {
     sexLabel: "Sex",
     maleLabel: "Male",
     femaleLabel: "Female",
+    femaleChestLabel: "Chest / breasts",
     pregnancyLabel: "Pregnant",
     pregnancyHint: "If checked, the specialist recommendation shifts to obstetric gynecology.",
     recommendationTitle: "Suggested specialist",
@@ -254,10 +256,33 @@ function parseAnswerSections(answer: string): AnswerSection[] {
   return sections;
 }
 
+function hasBreastComplaintSymptoms(symptoms: string) {
+  const normalized = symptoms.toLowerCase();
+
+  return [
+    /молоч/u,
+    /сос(ок|ки|ка)?/u,
+    /лактац/u,
+    /мастит/u,
+    /уплотн/u,
+    /выделен/u,
+    /емшек/u,
+    /с[үу]т без/u,
+    /еміз/u,
+    /nipple/u,
+    /breast/u,
+    /lump/u,
+    /discharge/u,
+    /mastitis/u,
+    /lactat/u,
+  ].some((pattern) => pattern.test(normalized));
+}
+
 function getLocalSpecialistRecommendation(
   selected: BodyPartKey | null,
   sex: BodySex,
   pregnant: boolean,
+  symptoms: string,
   t: RecommendationCopy,
 ) {
   if (sex === "female" && pregnant) {
@@ -275,6 +300,13 @@ function getLocalSpecialistRecommendation(
   }
 
   if (selected === "breasts") {
+    return {
+      specialty: t.specialists.mammologistGynecologist,
+      reason: t.recommendationReasons.breasts,
+    };
+  }
+
+  if (sex === "female" && selected === "chest" && hasBreastComplaintSymptoms(symptoms)) {
     return {
       specialty: t.specialists.mammologistGynecologist,
       reason: t.recommendationReasons.breasts,
@@ -373,8 +405,16 @@ export default function BodyMap() {
   );
 
   const localRecommendation = useMemo(
-    () => getLocalSpecialistRecommendation(selected, sex, pregnant, t),
-    [selected, sex, pregnant, t],
+    () => getLocalSpecialistRecommendation(selected, sex, pregnant, symptoms, t),
+    [selected, sex, pregnant, symptoms, t],
+  );
+
+  const displayLabels = useMemo(
+    () =>
+      sex === "female"
+        ? { ...t.parts, chest: t.femaleChestLabel }
+        : t.parts,
+    [sex, t],
   );
 
   useEffect(() => {
@@ -495,7 +535,7 @@ export default function BodyMap() {
               setAnswer(null);
               setError(null);
             }}
-            labels={t.parts}
+            labels={displayLabels}
             visibleParts={availableParts}
           />
         </div>
@@ -600,7 +640,7 @@ export default function BodyMap() {
 
             {selected && (
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">
-                {t.parts[selected]}
+                {displayLabels[selected]}
               </div>
             )}
 
@@ -627,7 +667,7 @@ export default function BodyMap() {
                           : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50"
                     }`}
                   >
-                    {t.parts[part]}
+                    {displayLabels[part]}
                   </button>
                 );
               })}
