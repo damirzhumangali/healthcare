@@ -547,6 +547,8 @@ export default function AdminDashboard() {
     window.location.hash.replace("#", "") || "overview"
   );
   const [date, setDate] = useState(today());
+  const [scheduleShowAll, setScheduleShowAll] = useState(false);
+  const [completedShowAll, setCompletedShowAll] = useState(false);
   const [status, setStatusFilter] = useState<StatusFilter>("all");
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilter>("all");
   const [items, setItems] = useState<Appointment[]>([]);
@@ -665,6 +667,16 @@ export default function AdminDashboard() {
 
   const unassignedItems = useMemo(
     () => allItems.filter((item) => item.status === "pending" && !hasAssignedDoctor(item)),
+    [allItems]
+  );
+  const inProgressItems = useMemo(
+    () => allItems.filter((item) => item.status === "pending" && hasAssignedDoctor(item)),
+    [allItems]
+  );
+  const completedItems = useMemo(
+    () => allItems
+      .filter((item) => item.status === "active" || item.status === "done")
+      .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)),
     [allItems]
   );
   const onlineItems = useMemo(
@@ -1071,25 +1083,124 @@ export default function AdminDashboard() {
                         </div>
                       ) : null}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                      style={{
-                        flexShrink: 0,
-                        background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                        color: "#0a1628", border: "none",
-                        borderRadius: 9, padding: "8px 20px",
-                        fontWeight: 800, cursor: "pointer", fontSize: 13,
-                      }}
-                    >
-                      Принять
-                    </button>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                        style={{
+                          background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                          color: "#0a1628", border: "none",
+                          borderRadius: 9, padding: "7px 18px",
+                          fontWeight: 800, cursor: "pointer", fontSize: 13,
+                        }}
+                      >
+                        {t.actionAccept}
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: 9, padding: "7px 18px",
+                          fontWeight: 700, cursor: "not-allowed", fontSize: 13,
+                        }}
+                      >
+                        {t.actionComplete}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
           </section>
         ) : null}
+
+        {inProgressItems.length > 0 && (
+          <section className="doctor-admin__panel" style={{ marginBottom: 0 }} id="in-progress">
+            <div className="doctor-admin__panel-head">
+              <div>
+                <h2>В работе</h2>
+                <p className="doctor-admin__panel-subtitle">Врач назначен — нажмите «Завершить», чтобы подтвердить запись.</p>
+              </div>
+              <span style={{
+                background: "rgba(34,211,238,0.18)", color: "#22d3ee",
+                borderRadius: 20, padding: "2px 12px", fontSize: 13, fontWeight: 700,
+              }}>
+                {inProgressItems.length}
+              </span>
+            </div>
+            <div className="doctor-admin__record-list">
+              {inProgressItems.map((item) => {
+                const name = patientLabel(item, t.patientFallback, patients);
+                const isOnline = isOnlineConsultation(item);
+                return (
+                  <div
+                    key={`prog-${item.id}`}
+                    style={{
+                      borderRadius: 12,
+                      border: "1px solid rgba(34,211,238,0.25)",
+                      borderLeft: "4px solid #22d3ee",
+                      background: "rgba(34,211,238,0.04)",
+                      padding: "12px 18px",
+                      display: "flex", alignItems: "center", gap: 14,
+                    }}
+                  >
+                    <div className="doctor-admin__mini-avatar" style={{ flexShrink: 0 }}>{initials(name)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
+                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
+                        {doctorLabel(item, doctors, t.doctorFallback)}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
+                        {isOnline ? (
+                          <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
+                            Онлайн
+                          </span>
+                        ) : (
+                          <span style={{ background: "rgba(129,140,248,0.15)", color: "#c4b5fd", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
+                            Офлайн
+                          </span>
+                        )}
+                        {item.date ? (
+                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                            {item.date}{item.time && item.time !== "00:00" ? ` · ${item.time}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                        style={{
+                          background: "rgba(255,255,255,0.07)",
+                          color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: 9, padding: "7px 16px",
+                          fontWeight: 700, cursor: "pointer", fontSize: 13,
+                        }}
+                      >
+                        {t.actionEdit}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void changeStatus(item.id, "active")}
+                        style={{
+                          background: "linear-gradient(135deg, #34d399, #22d3ee)",
+                          color: "#0a1628", border: "none",
+                          borderRadius: 9, padding: "7px 18px",
+                          fontWeight: 800, cursor: "pointer", fontSize: 13,
+                        }}
+                      >
+                        {t.actionComplete}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <section className="doctor-admin__content">
           <article className="doctor-admin__panel doctor-admin__schedule" id="schedule">
@@ -1107,50 +1218,65 @@ export default function AdminDashboard() {
               ) : visibleItems.length === 0 ? (
                 <p className="doctor-admin__empty">{t.noAppointments}</p>
               ) : (
-                visibleItems.map((item) => {
-                  const name = patientLabel(item, t.patientFallback, patients);
-                  const isPendingUnassigned = item.status === "pending" && !hasAssignedDoctor(item);
+                <>
+                  {(scheduleShowAll ? visibleItems : visibleItems.slice(0, 3)).map((item) => {
+                    const name = patientLabel(item, t.patientFallback, patients);
+                    const isPendingUnassigned = item.status === "pending" && !hasAssignedDoctor(item);
 
-                  return (
-                    <div className="doctor-admin__appointment" key={item.id}>
-                      <time>{item.time}</time>
-                      <div className="doctor-admin__mini-avatar">{initials(name)}</div>
-                      <div className="doctor-admin__appointment-main">
-                        <strong>{name}</strong>
-                        <span>{item.reason || t.appointmentFallback}</span>
+                    return (
+                      <div className="doctor-admin__appointment" key={item.id}>
+                        <time>{item.time}</time>
+                        <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                        <div className="doctor-admin__appointment-main">
+                          <strong>{name}</strong>
+                          <span>{item.reason || t.appointmentFallback}</span>
+                        </div>
+                        <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
+                          {statusLabel(item.status, locale)}
+                        </span>
+                        {isPendingUnassigned && (
+                          <button
+                            onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
+                            style={{
+                              padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer",
+                              background: "linear-gradient(135deg, #34d399, #10b981)",
+                              color: "#0a0f1a", fontWeight: 700, fontSize: 12,
+                            }}
+                          >
+                            {t.actionAccept}
+                          </button>
+                        )}
+                        {item.status !== "done" && (
+                          <button
+                            disabled={isPendingUnassigned}
+                            onClick={() => void changeStatus(item.id, "done")}
+                            style={{
+                              padding: "4px 12px", borderRadius: 6, border: "none", cursor: isPendingUnassigned ? "not-allowed" : "pointer",
+                              background: isPendingUnassigned ? "rgba(255,255,255,0.06)" : "rgba(52,211,153,0.15)",
+                              color: isPendingUnassigned ? "rgba(255,255,255,0.25)" : "#34d399",
+                              fontWeight: 700, fontSize: 12,
+                            }}
+                          >
+                            {t.actionComplete}
+                          </button>
+                        )}
                       </div>
-                      <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
-                        {statusLabel(item.status, locale)}
-                      </span>
-                      {isPendingUnassigned && (
-                        <button
-                          onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                          style={{
-                            padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer",
-                            background: "linear-gradient(135deg, #34d399, #10b981)",
-                            color: "#0a0f1a", fontWeight: 700, fontSize: 12,
-                          }}
-                        >
-                          {t.actionAccept}
-                        </button>
-                      )}
-                      {item.status !== "done" && (
-                        <button
-                          disabled={isPendingUnassigned}
-                          onClick={() => void changeStatus(item.id, "done")}
-                          style={{
-                            padding: "4px 12px", borderRadius: 6, border: "none", cursor: isPendingUnassigned ? "not-allowed" : "pointer",
-                            background: isPendingUnassigned ? "rgba(255,255,255,0.06)" : "rgba(52,211,153,0.15)",
-                            color: isPendingUnassigned ? "rgba(255,255,255,0.25)" : "#34d399",
-                            fontWeight: 700, fontSize: 12,
-                          }}
-                        >
-                          {t.actionComplete}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                  {visibleItems.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setScheduleShowAll(!scheduleShowAll)}
+                      style={{
+                        width: "100%", padding: "8px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
+                        background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)",
+                        cursor: "pointer", fontSize: 13, marginTop: 4,
+                      }}
+                    >
+                      {scheduleShowAll ? "Свернуть" : `Показать ещё ${visibleItems.length - 3}`}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </article>
@@ -1203,14 +1329,6 @@ export default function AdminDashboard() {
             </div>
             <div className="doctor-admin__panel-head-actions">
               {onlineItems.length > 0 ? <span>{onlineItems.length}</span> : null}
-              <button
-                className="doctor-admin__refresh doctor-admin__refresh--secondary"
-                type="button"
-                onClick={() => nav("/admin/ward-consults")}
-              >
-                <MonitorSmartphone size={16} />
-                {t.openOnlineBoard}
-              </button>
             </div>
           </div>
 
@@ -1349,7 +1467,7 @@ export default function AdminDashboard() {
               <h2>{t.allAppointments}</h2>
               <p className="doctor-admin__panel-subtitle">{t.recordsSubtitle}</p>
             </div>
-            {visibleItems.length > 0 ? <span>{visibleItems.length}</span> : null}
+            {completedItems.length > 0 ? <span>{completedItems.length}</span> : null}
           </div>
 
           <div className="doctor-admin__record-list">
@@ -1358,10 +1476,11 @@ export default function AdminDashboard() {
                 <LoaderCircle className="doctor-admin__spin" size={18} />
                 {t.loading}
               </div>
-            ) : visibleItems.length === 0 ? (
+            ) : completedItems.length === 0 ? (
               <p className="doctor-admin__empty">{t.noRecords}</p>
             ) : (
-              visibleItems.map((item) => {
+              <>
+              {(completedShowAll ? completedItems : completedItems.slice(0, 3)).map((item) => {
                 const name = patientLabel(item, t.patientFallback, patients);
                 const isOnline = isOnlineConsultation(item);
                 const docId = item.doctor_id || item.doctorId;
@@ -1481,7 +1600,21 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 );
-              })
+              })}
+              {completedItems.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setCompletedShowAll(!completedShowAll)}
+                  style={{
+                    width: "100%", padding: "9px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)",
+                    cursor: "pointer", fontSize: 13, marginTop: 4,
+                  }}
+                >
+                  {completedShowAll ? "Свернуть" : `Показать все (${completedItems.length})`}
+                </button>
+              )}
+              </>
             )}
           </div>
         </section>

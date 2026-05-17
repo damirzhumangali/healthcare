@@ -121,7 +121,6 @@ export default function AdminRequestPage() {
         meetingUrl,
         meetingAt,
       });
-      await updateAppointmentStatus(request.id, "active");
 
       const doctorName = selectedDoctor
         ? `${selectedDoctor.name} — ${selectedDoctor.specialty}`

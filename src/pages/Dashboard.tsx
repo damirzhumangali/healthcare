@@ -374,13 +374,13 @@ export default function Dashboard() {
   }, [load, loadAppointments, refreshTicket]);
 
   const confirmedAppts = appointments
-    .filter((a) => a.status !== "done" && isHomeOnlineConsultation(a) && hasAssignedDoctor(a))
+    .filter((a) => a.status === "active" && isHomeOnlineConsultation(a) && hasAssignedDoctor(a))
     .sort(appointmentSortAsc)
     .slice(0, 1);
   const inPersonConfirmedAppts = appointments
     .filter(
       (a) =>
-        a.status !== "done" &&
+        a.status === "active" &&
         hasAssignedDoctor(a) &&
         !isHomeOnlineConsultation(a) &&
         !isWardOnlineConsultation(a),
