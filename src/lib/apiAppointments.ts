@@ -190,6 +190,10 @@ function readCurrentUser() {
   }
 }
 
+function buildLocalMeetingUrl(id: string) {
+  return `https://meet.jit.si/healthassist-${id.replace(/-/g, "").slice(0, 14)}`;
+}
+
 function createLocalAppointment(input: {
   doctorId?: string;
   date: string;
@@ -200,8 +204,9 @@ function createLocalAppointment(input: {
 }) {
   const user = readCurrentUser();
   const doctor = input.doctorId ? DOCTORS.find((item) => item.id === input.doctorId) : undefined;
+  const id = crypto.randomUUID();
   const appointment: Appointment = {
-    id: crypto.randomUUID(),
+    id,
     patient_id: user?.id || user?.email || "local-patient",
     patient_email: user?.email,
     patientName: user?.name || user?.email || "Пациент",
@@ -213,6 +218,7 @@ function createLocalAppointment(input: {
     reason: input.reason,
     specialty_request: input.specialtyRequest,
     wants_online: input.wantsOnline,
+    meeting_url: buildLocalMeetingUrl(id),
     status: "pending",
     created_at: new Date().toISOString(),
   };
@@ -426,13 +432,30 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     });
     if (!res.ok) throw new Error();
     const data = normalizeAppointmentList(await res.json());
-    // Merge server list with local so enriched fields (patient_email etc.) survive
     const localItems = readAppointments();
-    return { items: applyAssignOverrides(mergeAppointments(data.items, localItems)) };
+    const merged = mergeAppointments(data.items, localItems);
+
+    // Persist meeting_url from server back to localStorage + backfill missing ones
+    const updated = merged.map((a) => ({
+      ...a,
+      meeting_url: a.meeting_url || buildLocalMeetingUrl(a.id),
+    }));
+    writeAppointments(updated);
+
+    return { items: applyAssignOverrides(updated) };
   } catch {
     const all = readAppointments();
+
+    // Backfill meeting_url for any local appointments that are missing it
+    const backfilled = all.map((a) =>
+      a.meeting_url ? a : { ...a, meeting_url: buildLocalMeetingUrl(a.id) }
+    );
+    if (backfilled.some((a, i) => a.meeting_url !== all[i].meeting_url)) {
+      writeAppointments(backfilled);
+    }
+
     // Try strict email/id match first
-    const byId = all.filter((a) => {
+    const byId = backfilled.filter((a) => {
       const pid = a.patient_id || a.patientId || "";
       const pemail = (a.patient_email || a.patientEmail || "").toLowerCase();
       return (
@@ -442,10 +465,9 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     });
     if (byId.length > 0) return { items: applyAssignOverrides(byId) };
 
-    // Fall back to IDs recorded at booking time — avoids exposing admin-fetched records
     const myIds = readMyAptIds();
     if (myIds.size > 0) {
-      const byMyIds = all.filter((a) => myIds.has(a.id));
+      const byMyIds = backfilled.filter((a) => myIds.has(a.id));
       return { items: applyAssignOverrides(byMyIds) };
     }
 
