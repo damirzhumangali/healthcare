@@ -8,17 +8,68 @@ import { usePageSeo } from "../lib/seo";
 
 type Locale = "ru" | "kk" | "en";
 type Theme = "dark" | "light";
+type BodySex = "male" | "female";
 
 type BodyPartKey =
   | "head"
   | "neck"
   | "chest"
+  | "breasts"
   | "belly"
+  | "maleGroin"
+  | "femalePelvis"
   | "back"
   | "leftArm"
   | "rightArm"
   | "leftLeg"
   | "rightLeg";
+
+type RecommendationCopy = {
+  readonly specialists: {
+    readonly urologist: string;
+    readonly mammologistGynecologist: string;
+    readonly gynecologist: string;
+    readonly obstetricGynecologist: string;
+  };
+  readonly recommendationReasons: {
+    readonly pregnancy: string;
+    readonly maleGroin: string;
+    readonly breasts: string;
+    readonly femalePelvis: string;
+  };
+};
+
+type AnswerSection = {
+  title?: string;
+  content: string;
+};
+
+const MALE_PARTS: BodyPartKey[] = [
+  "head",
+  "neck",
+  "chest",
+  "belly",
+  "maleGroin",
+  "back",
+  "leftArm",
+  "rightArm",
+  "leftLeg",
+  "rightLeg",
+];
+
+const FEMALE_PARTS: BodyPartKey[] = [
+  "head",
+  "neck",
+  "chest",
+  "breasts",
+  "belly",
+  "femalePelvis",
+  "back",
+  "leftArm",
+  "rightArm",
+  "leftLeg",
+  "rightLeg",
+];
 
 const copy = {
   ru: {
@@ -31,17 +82,39 @@ const copy = {
     aiTitle: "AI‑подсказка",
     aiHint:
       "Это не диагноз. При серьёзных симптомах вызывайте скорую или обратитесь к врачу.",
-    selectPart: "Выберите часть тела",
+    sexLabel: "Пол",
+    maleLabel: "Мужской",
+    femaleLabel: "Женский",
+    pregnancyLabel: "Беременна",
+    pregnancyHint: "Если отмечено, рекомендация врача смещается к акушеру-гинекологу.",
+    recommendationTitle: "Рекомендуемый специалист",
+    recommendationHint: "Автоподбор учитывает выбранную анатомическую зону.",
     symptomsLabel: "Симптомы (необязательно)",
     painLabel: "Уровень боли",
     symptomsPh: "Например: боль острая, температура 38, тошнота…",
     askBtn: "Спросить",
     loading: "Думаю…",
+    requestError: "AI временно недоступен. Попробуйте чуть позже.",
+    specialists: {
+      urologist: "Уролог",
+      mammologistGynecologist: "Маммолог / Гинеколог",
+      gynecologist: "Гинеколог",
+      obstetricGynecologist: "Акушер-гинеколог",
+    },
+    recommendationReasons: {
+      pregnancy: "беременность требует учёта акушерско-гинекологического профиля",
+      maleGroin: "жалобы в паховой области и мочеполовой системе чаще относятся к урологии",
+      breasts: "жалобы по молочным железам лучше оценивать у маммолога или гинеколога",
+      femalePelvis: "жалобы в области малого таза чаще относятся к гинекологии",
+    },
     parts: {
       head: "Голова",
       neck: "Шея",
       chest: "Грудь",
+      breasts: "Молочные железы",
       belly: "Живот",
+      maleGroin: "Паховая область",
+      femalePelvis: "Малый таз / гинекология",
       back: "Спина",
       leftArm: "Левая рука",
       rightArm: "Правая рука",
@@ -59,17 +132,39 @@ const copy = {
     aiTitle: "AI‑кеңес",
     aiHint:
       "Бұл диагноз емес. Қауіпті белгілер болса — жедел жәрдем шақырыңыз немесе дәрігерге көрініңіз.",
-    selectPart: "Дене бөлігін таңдаңыз",
+    sexLabel: "Жынысы",
+    maleLabel: "Ер",
+    femaleLabel: "Әйел",
+    pregnancyLabel: "Жүкті",
+    pregnancyHint: "Белгіленсе, маман ұсынысы акушер-гинекологқа ауысады.",
+    recommendationTitle: "Ұсынылатын маман",
+    recommendationHint: "Автоұсыныс таңдалған анатомиялық аймаққа сүйенеді.",
     symptomsLabel: "Симптомдар (міндетті емес)",
     painLabel: "Ауырсыну деңгейі",
     symptomsPh: "Мысалы: өткір ауырсыну, температура 38, жүрек айну…",
     askBtn: "Сұрау",
     loading: "Ойлануда…",
+    requestError: "AI уақытша қолжетімсіз. Сәл кейінірек қайталап көріңіз.",
+    specialists: {
+      urologist: "Уролог",
+      mammologistGynecologist: "Маммолог / Гинеколог",
+      gynecologist: "Гинеколог",
+      obstetricGynecologist: "Акушер-гинеколог",
+    },
+    recommendationReasons: {
+      pregnancy: "жүктілік кезінде акушер-гинеколог профилін ескеру қажет",
+      maleGroin: "шат аймағы мен несеп-жыныс шағымдары көбіне урологияға жатады",
+      breasts: "сүт безі бойынша шағымдарды маммолог не гинеколог қарағаны дұрыс",
+      femalePelvis: "кіші жамбас аймағындағы шағымдар көбіне гинекологияға жатады",
+    },
     parts: {
       head: "Бас",
       neck: "Мойын",
       chest: "Кеуде",
+      breasts: "Сүт бездері",
       belly: "Іш",
+      maleGroin: "Шат аймағы",
+      femalePelvis: "Кіші жамбас / гинекология",
       back: "Арқа",
       leftArm: "Сол қол",
       rightArm: "Оң қол",
@@ -87,17 +182,39 @@ const copy = {
     aiTitle: "AI guidance",
     aiHint:
       "Not a diagnosis. If symptoms are severe, seek urgent medical care.",
-    selectPart: "Select a body part",
+    sexLabel: "Sex",
+    maleLabel: "Male",
+    femaleLabel: "Female",
+    pregnancyLabel: "Pregnant",
+    pregnancyHint: "If checked, the specialist recommendation shifts to obstetric gynecology.",
+    recommendationTitle: "Suggested specialist",
+    recommendationHint: "Autopick follows the selected anatomical zone.",
     symptomsLabel: "Symptoms (optional)",
     painLabel: "Pain level",
     symptomsPh: "Example: sharp pain, fever 38C, nausea…",
     askBtn: "Ask",
     loading: "Thinking…",
+    requestError: "AI is temporarily unavailable. Please try again a bit later.",
+    specialists: {
+      urologist: "Urologist",
+      mammologistGynecologist: "Mammologist / Gynecologist",
+      gynecologist: "Gynecologist",
+      obstetricGynecologist: "Obstetric gynecologist",
+    },
+    recommendationReasons: {
+      pregnancy: "pregnancy should be reviewed with an obstetric gynecology specialist",
+      maleGroin: "groin and genitourinary complaints usually point to urology",
+      breasts: "breast complaints are best reviewed by a mammologist or gynecologist",
+      femalePelvis: "pelvic complaints usually point to gynecology",
+    },
     parts: {
       head: "Head",
       neck: "Neck",
       chest: "Chest",
+      breasts: "Breasts",
       belly: "Belly",
+      maleGroin: "Groin / genitals",
+      femalePelvis: "Pelvis / gynecology",
       back: "Back",
       leftArm: "Left arm",
       rightArm: "Right arm",
@@ -106,23 +223,6 @@ const copy = {
     },
   },
 } as const;
-
-const bodyPartButtons: BodyPartKey[] = [
-  "head",
-  "neck",
-  "chest",
-  "belly",
-  "back",
-  "leftArm",
-  "rightArm",
-  "leftLeg",
-  "rightLeg",
-];
-
-type AnswerSection = {
-  title?: string;
-  content: string;
-};
 
 function cleanAnswerText(value: string) {
   return value.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
@@ -152,6 +252,43 @@ function parseAnswerSections(answer: string): AnswerSection[] {
 
   if (sections.length === 0) return [{ content: answer }];
   return sections;
+}
+
+function getLocalSpecialistRecommendation(
+  selected: BodyPartKey | null,
+  sex: BodySex,
+  pregnant: boolean,
+  t: RecommendationCopy,
+) {
+  if (sex === "female" && pregnant) {
+    return {
+      specialty: t.specialists.obstetricGynecologist,
+      reason: t.recommendationReasons.pregnancy,
+    };
+  }
+
+  if (selected === "maleGroin") {
+    return {
+      specialty: t.specialists.urologist,
+      reason: t.recommendationReasons.maleGroin,
+    };
+  }
+
+  if (selected === "breasts") {
+    return {
+      specialty: t.specialists.mammologistGynecologist,
+      reason: t.recommendationReasons.breasts,
+    };
+  }
+
+  if (selected === "femalePelvis") {
+    return {
+      specialty: t.specialists.gynecologist,
+      reason: t.recommendationReasons.femalePelvis,
+    };
+  }
+
+  return null;
 }
 
 function AnswerContent({ answer }: { answer: string }) {
@@ -202,6 +339,8 @@ export default function BodyMap() {
     if (v === "en" || v === "kk" || v === "ru") return v;
     return "ru";
   });
+  const [sex, setSex] = useState<BodySex>("male");
+  const [pregnant, setPregnant] = useState(false);
 
   const t = copy[locale];
 
@@ -223,9 +362,28 @@ export default function BodyMap() {
   useEffect(() => {
     window.localStorage.setItem("ha_theme", theme);
   }, [theme]);
+
   useEffect(() => {
     window.localStorage.setItem("ha_locale", locale);
   }, [locale]);
+
+  const availableParts = useMemo(
+    () => (sex === "female" ? FEMALE_PARTS : MALE_PARTS),
+    [sex],
+  );
+
+  const localRecommendation = useMemo(
+    () => getLocalSpecialistRecommendation(selected, sex, pregnant, t),
+    [selected, sex, pregnant, t],
+  );
+
+  useEffect(() => {
+    if (selected && !availableParts.includes(selected)) {
+      setSelected(null);
+      setAnswer(null);
+      setError(null);
+    }
+  }, [availableParts, selected]);
 
   const pageBg =
     theme === "dark"
@@ -254,6 +412,8 @@ export default function BodyMap() {
           symptoms,
           painLevel,
           locale,
+          sex,
+          pregnant: sex === "female" ? pregnant : false,
         }),
       });
 
@@ -264,13 +424,14 @@ export default function BodyMap() {
 
       setAnswer(data.answer);
     } catch {
-      setError("AI временно недоступен. Попробуйте чуть позже.");
+      setError(t.requestError);
     } finally {
       setLoading(false);
     }
   };
 
   const title = useMemo(() => t.title, [t.title]);
+  const recommendationTone = theme === "dark" ? "text-emerald-100" : "text-emerald-900";
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${pageBg}`}>
@@ -332,8 +493,10 @@ export default function BodyMap() {
             onSelectPart={(part) => {
               setSelected(part as BodyPartKey);
               setAnswer(null);
+              setError(null);
             }}
             labels={t.parts}
+            visibleParts={availableParts}
           />
         </div>
 
@@ -349,7 +512,92 @@ export default function BodyMap() {
             <Brain className="h-5 w-5 text-sky-400" />
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-4">
+            <div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {t.sexLabel}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: "male" as const, label: t.maleLabel },
+                  { value: "female" as const, label: t.femaleLabel },
+                ]).map((option) => {
+                  const active = sex === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setSex(option.value);
+                        if (option.value !== "female") {
+                          setPregnant(false);
+                        }
+                        setAnswer(null);
+                        setError(null);
+                      }}
+                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                        active
+                          ? theme === "dark"
+                            ? "border-sky-300/70 bg-sky-300/15 text-sky-100"
+                            : "border-sky-400 bg-sky-100 text-sky-900"
+                          : theme === "dark"
+                            ? "border-white/10 bg-white/5 text-slate-200 hover:border-sky-300/30 hover:bg-sky-300/10"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {sex === "female" && (
+              <label
+                className={`flex items-start gap-3 rounded-2xl border px-3 py-3 ${
+                  theme === "dark"
+                    ? "border-emerald-300/20 bg-emerald-300/10"
+                    : "border-emerald-200 bg-emerald-50"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={pregnant}
+                  onChange={(e) => {
+                    setPregnant(e.target.checked);
+                    setAnswer(null);
+                    setError(null);
+                  }}
+                  className="mt-1 h-4 w-4 rounded accent-emerald-400"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">{t.pregnancyLabel}</span>
+                  <span className={`mt-1 block text-xs ${muted}`}>{t.pregnancyHint}</span>
+                </span>
+              </label>
+            )}
+
+            {localRecommendation && (
+              <div
+                className={`rounded-2xl border p-4 ${
+                  theme === "dark"
+                    ? "border-emerald-300/25 bg-emerald-300/10"
+                    : "border-emerald-200 bg-emerald-50"
+                }`}
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">
+                  {t.recommendationTitle}
+                </div>
+                <div className={`mt-2 text-base font-semibold sm:text-lg ${recommendationTone}`}>
+                  {localRecommendation.specialty}
+                </div>
+                <p className={`mt-1 text-sm leading-6 ${muted}`}>{localRecommendation.reason}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.16em] text-sky-400">
+                  {t.recommendationHint}
+                </p>
+              </div>
+            )}
+
             {selected && (
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">
                 {t.parts[selected]}
@@ -357,7 +605,7 @@ export default function BodyMap() {
             )}
 
             <div className="grid grid-cols-2 gap-2">
-              {bodyPartButtons.map((part) => {
+              {availableParts.map((part) => {
                 const active = selected === part;
 
                 return (
@@ -367,6 +615,7 @@ export default function BodyMap() {
                     onClick={() => {
                       setSelected(part);
                       setAnswer(null);
+                      setError(null);
                     }}
                     className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${
                       active

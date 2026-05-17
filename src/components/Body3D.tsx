@@ -8,6 +8,7 @@ type Body3DProps = {
   selectedPart?: string | null;
   onSelectPart?: (part: string) => void;
   labels?: Readonly<Record<string, string>>;
+  visibleParts?: ReadonlyArray<string>;
 };
 
 type HotspotConfig = {
@@ -25,7 +26,10 @@ const HOTSPOTS: HotspotConfig[] = [
   { part: "head", position: "0m 1.75m 0.02m", normal: "0 1 0" },
   { part: "neck", position: "0m 1.55m 0.02m", normal: "0 1 0" },
   { part: "chest", position: "0m 1.35m 0.05m", normal: "0 1 0" },
+  { part: "breasts", position: "0m 1.23m 0.14m", normal: "0 1 0" },
   { part: "belly", position: "0m 1.05m 0.05m", normal: "0 1 0" },
+  { part: "femalePelvis", position: "0m 0.86m 0.11m", normal: "0 1 0" },
+  { part: "maleGroin", position: "0m 0.82m 0.11m", normal: "0 1 0" },
   { part: "back", position: "0m 1.2m -0.25m", normal: "0 0 -1" },
   { part: "leftArm", position: "-0.45m 1.25m 0.02m", normal: "-1 0 0" },
   { part: "rightArm", position: "0.45m 1.25m 0.02m", normal: "1 0 0" },
@@ -108,8 +112,10 @@ export default function Body3D({
   selectedPart,
   onSelectPart,
   labels,
+  visibleParts,
 }: Body3DProps) {
   const styles = themeStyles[theme];
+  const visiblePartSet = visibleParts ? new Set(visibleParts) : null;
 
   useEffect(() => {
     void loadModelViewerScript();
@@ -145,34 +151,36 @@ export default function Body3D({
           background: styles.surface,
         }}
       >
-        {HOTSPOTS.map(({ part, position, normal }) => {
-          const active = selectedPart === part;
-          const label = labels?.[part] ?? part;
+        {HOTSPOTS.filter(({ part }) => !visiblePartSet || visiblePartSet.has(part)).map(
+          ({ part, position, normal }) => {
+            const active = selectedPart === part;
+            const label = labels?.[part] ?? part;
 
-          return (
-            <button
-              key={part}
-              type="button"
-              slot={`hotspot-${part}`}
-              data-position={position}
-              data-normal={normal}
-              aria-label={label}
-              title={label}
-              onClick={() => onSelectPart?.(part)}
-              style={{
-                width: active ? 22 : 18,
-                height: active ? 22 : 18,
-                borderRadius: 999,
-                border: `2px solid ${styles.dotBorder}`,
-                background: active ? styles.activeBackground : styles.dotBackground,
-                boxShadow: active ? styles.activeShadow : styles.dotShadow,
-                cursor: "pointer",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
-                transform: active ? "scale(1.15)" : "scale(1)",
-              }}
-            />
-          );
-        })}
+            return (
+              <button
+                key={part}
+                type="button"
+                slot={`hotspot-${part}`}
+                data-position={position}
+                data-normal={normal}
+                aria-label={label}
+                title={label}
+                onClick={() => onSelectPart?.(part)}
+                style={{
+                  width: active ? 22 : 18,
+                  height: active ? 22 : 18,
+                  borderRadius: 999,
+                  border: `2px solid ${styles.dotBorder}`,
+                  background: active ? styles.activeBackground : styles.dotBackground,
+                  boxShadow: active ? styles.activeShadow : styles.dotShadow,
+                  cursor: "pointer",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
+                  transform: active ? "scale(1.15)" : "scale(1)",
+                }}
+              />
+            );
+          },
+        )}
       </model-viewer>
 
       {hint && (
