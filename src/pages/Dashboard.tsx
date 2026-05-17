@@ -637,7 +637,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center" }}>
-                        {appt.meeting_url && (
+                        {appt.status === "active" && appt.meeting_url && (
                           <a
                             href={appt.meeting_url}
                             target="_blank"
