@@ -465,9 +465,7 @@ export default function DoctorDashboard() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {newAppts.map(a => {
                       const isOnline = a.wants_online || a.wantsOnline;
-                      const jitsiUrl = isOnline
-                        ? `https://meet.jit.si/healthassist-${a.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`
-                        : null;
+                      const meetingUrl = a.meeting_url;
                       const isActive = a.status === "active";
                       return (
                         <div key={a.id} style={{
@@ -497,9 +495,9 @@ export default function DoctorDashboard() {
                                 borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 700,
                               }}>Подтверждено</span>
                             ) : null}
-                            {isOnline && jitsiUrl && (
+                            {meetingUrl && (
                               <a
-                                href={jitsiUrl}
+                                href={meetingUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 style={{
@@ -616,9 +614,9 @@ export default function DoctorDashboard() {
                             <span className="badge__dot" />
                             {item.status === "active" ? "На приёме" : item.status === "done" ? "Завершён" : "Ожидает"}
                           </span>
-                          {(item.wants_online || item.wantsOnline) && item.status === "active" && (
+                          {item.meeting_url && (
                             <a
-                              href={`https://meet.jit.si/healthassist-${item.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`}
+                              href={item.meeting_url}
                               target="_blank"
                               rel="noreferrer"
                               style={{

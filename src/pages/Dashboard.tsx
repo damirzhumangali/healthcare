@@ -562,8 +562,7 @@ export default function Dashboard() {
 
         {/* Confirmed appointment banner */}
         {confirmedAppts.map((confirmed) => {
-          const isOnline = confirmed.wants_online || confirmed.wantsOnline;
-          const jitsiUrl = `https://meet.jit.si/healthassist-${confirmed.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
+          const meetingUrl = confirmed.meeting_url;
           return (
             <div key={`conf-${confirmed.id}`} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
@@ -579,8 +578,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              {isOnline && (
-                <a href={jitsiUrl} target="_blank" rel="noreferrer" style={{
+              {meetingUrl && (
+                <a href={meetingUrl} target="_blank" rel="noreferrer" style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
                   background: "#34d399", color: "#0a0f1a", borderRadius: 6,
                   padding: "7px 16px", fontWeight: 700, fontSize: 12, textDecoration: "none",
@@ -613,9 +612,9 @@ export default function Dashboard() {
             ) : (
               <>
                 {/* Table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 12, padding: "0 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 4 }}>
-                  {["Специальность · Дата", "Статус"].map((h) => (
-                    <div key={h} style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 110px", gap: 12, padding: "0 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 4 }}>
+                  {["Специальность · Дата", "", "Статус"].map((h, i) => (
+                    <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</div>
                   ))}
                 </div>
 
@@ -624,7 +623,7 @@ export default function Dashboard() {
                   const isEven = idx % 2 === 0;
                   return (
                     <div key={appt.id} style={{
-                      display: "grid", gridTemplateColumns: "1fr 110px", gap: 12,
+                      display: "grid", gridTemplateColumns: "1fr auto 110px", gap: 12,
                       padding: "11px 8px",
                       background: isEven ? "rgba(255,255,255,0.02)" : "transparent",
                       borderBottom: "1px solid rgba(255,255,255,0.04)",
@@ -636,6 +635,23 @@ export default function Dashboard() {
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
                           {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
                         </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        {appt.meeting_url && (
+                          <a
+                            href={appt.meeting_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.35)",
+                              color: "#6ee7b7", borderRadius: 6, padding: "4px 10px",
+                              fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
+                            }}
+                          >
+                            <Video size={11} /> Войти
+                          </a>
+                        )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center" }}>
                         <span style={{

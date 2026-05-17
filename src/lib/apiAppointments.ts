@@ -22,6 +22,7 @@ export type Appointment = {
   status: AppointmentStatus;
   wants_online?: boolean;
   wantsOnline?: boolean;
+  meeting_url?: string;
   created_at?: string;
   createdAt?: string;
 };
