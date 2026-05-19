@@ -141,9 +141,55 @@ function buildEntry(
   } satisfies PatientMeasurementEntry;
 }
 
+function buildVitalsEntries(
+  patientId: string,
+  eventId: string,
+  source: MeasurementSource,
+  values: {
+    tempC?: number | null;
+    hr?: number | null;
+    systolic?: number | null;
+    diastolic?: number | null;
+    spo2?: number | null;
+  },
+  options: {
+    createdAt: string;
+    actorName?: string | null;
+    deviceId?: string | null;
+  },
+) {
+  return [
+    buildEntry(patientId, eventId, "temperature", normalizeNumber(values.tempC), {
+      createdAt: options.createdAt,
+      source,
+      actorName: options.actorName,
+      deviceId: options.deviceId,
+    }),
+    buildEntry(patientId, eventId, "pulse", normalizeNumber(values.hr), {
+      createdAt: options.createdAt,
+      source,
+      actorName: options.actorName,
+      deviceId: options.deviceId,
+    }),
+    buildEntry(patientId, eventId, "pressure", normalizeNumber(values.systolic), {
+      createdAt: options.createdAt,
+      source,
+      actorName: options.actorName,
+      deviceId: options.deviceId,
+      secondaryValue: normalizeNumber(values.diastolic),
+    }),
+    buildEntry(patientId, eventId, "spo2", normalizeNumber(values.spo2), {
+      createdAt: options.createdAt,
+      source,
+      actorName: options.actorName,
+      deviceId: options.deviceId,
+    }),
+  ].filter((item): item is PatientMeasurementEntry => Boolean(item));
+}
+
 export function listPatientMeasurements(patientId: string) {
   return readAll()
-    .filter((item) => item.patientId === patientId && (item.metric === "temperature" || item.metric === "pulse"))
+    .filter((item) => item.patientId === patientId)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
@@ -165,30 +211,80 @@ export function recordPatientVitals(input: {
 
   const createdAt = input.createdAt || new Date().toISOString();
   const eventId = input.eventId || `event-${createId()}`;
-  const entries = [
-    buildEntry(patientId, eventId, "temperature", normalizeNumber(input.tempC), {
+  const entries = buildVitalsEntries(
+    patientId,
+    eventId,
+    input.source,
+    {
+      tempC: input.tempC,
+      hr: input.hr,
+      systolic: input.systolic,
+      diastolic: input.diastolic,
+      spo2: input.spo2,
+    },
+    {
       createdAt,
-      source: input.source,
       actorName: input.actorName,
       deviceId: input.deviceId,
-    }),
-    buildEntry(patientId, eventId, "pulse", normalizeNumber(input.hr), {
-      createdAt,
-      source: input.source,
-      actorName: input.actorName,
-      deviceId: input.deviceId,
-    }),
-  ].filter((item): item is PatientMeasurementEntry => Boolean(item));
+    },
+  );
 
   if (entries.length === 0) return [];
   upsertEntries(entries);
   return entries;
 }
 
+export function replaceApiMeasurementsForPatientHistory(patientId: string, items: MeasurementItem[]) {
+  const normalizedPatientId = String(patientId || "").trim();
+  if (!normalizedPatientId) return [];
+
+  const apiEntries = items.flatMap((item) => {
+    const measurementOwner = String(item.userId ?? "").trim();
+    if (measurementOwner && measurementOwner !== normalizedPatientId) {
+      return [];
+    }
+
+    return buildVitalsEntries(
+      normalizedPatientId,
+      `api-${item.id}`,
+      "aimar",
+      {
+        tempC: item.tempC,
+        hr: item.hr,
+        systolic: item.systolic,
+        diastolic: item.diastolic,
+        spo2: item.spo2,
+      },
+      {
+        createdAt: item.createdAt,
+        deviceId: item.deviceId,
+      },
+    );
+  });
+
+  const persisted = readAll().filter(
+    (entry) => !(entry.patientId === normalizedPatientId && entry.eventId.startsWith("api-")),
+  );
+
+  writeAll(
+    [...persisted, ...apiEntries].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+  );
+
+  return listPatientMeasurements(normalizedPatientId);
+}
+
 export function syncApiMeasurementsToPatientHistory(patientId: string, items: MeasurementItem[]) {
+  const normalizedPatientId = String(patientId || "").trim();
+  if (!normalizedPatientId) return;
+
   items.forEach((item) => {
+    const measurementOwner = String(item.userId ?? "").trim();
+    if (measurementOwner && measurementOwner !== normalizedPatientId) {
+      return;
+    }
+
     recordPatientVitals({
-      patientId,
+      patientId: normalizedPatientId,
       source: "aimar",
       tempC: item.tempC,
       hr: item.hr,
