@@ -25,19 +25,19 @@ export const PRERENDER_ROUTES: PublicSeoRoute[] = [
 const publicSeoMap: PublicSeoMap = {
   "/": {
     ru: {
-      title: "HealthAssist — AI-платформа для пациентов и клиник Казахстана",
+      title: "HealthAssist — Умная медицинская станция и AI-платформа | Казахстан",
       description:
-        "HealthAssist помогает пациентам проверять симптомы, находить клиники, использовать 3D-карту тела и подключаться к QR-станциям для измерения температуры и пульса.",
+        "HealthAssist — автоматическая умная медицинская станция измерений. Проверяйте симптомы с AI, используйте 3D-карту тела и измеряйте температуру и пульс по QR-коду в клиниках Казахстана.",
     },
     kk: {
-      title: "HealthAssist — Қазақстанға арналған AI-медициналық платформа",
+      title: "HealthAssist — Ақылды медициналық станция және AI-платформасы | Қазақстан",
       description:
-        "HealthAssist пациенттерге белгілерді тексеруге, емханаларды табуға, 3D дене картасын қолдануға және QR-станциялар арқылы өлшеулер жасауға көмектеседі.",
+        "HealthAssist — автоматты ақылды медициналық өлшеу станциясы. Симптомдарды тексеріңіз, 3D дене картасын қолданыңыз және Қазақстан емханаларында QR-код арқылы температура мен пульсті өлшеңіз.",
     },
     en: {
-      title: "HealthAssist — AI healthcare platform for patients and clinics",
+      title: "HealthAssist — Smart Medical Station and AI Platform | Kazakhstan",
       description:
-        "HealthAssist helps patients check symptoms, find clinics, use a 3D body map, and connect to QR-based stations for temperature and pulse measurements.",
+        "HealthAssist — automated smart medical station. Check symptoms with AI, use a 3D body map, and measure temperature and pulse via QR code in clinics.",
     },
   },
   "/body": {
