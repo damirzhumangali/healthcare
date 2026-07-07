@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import QrCode from "../components/QrCode";
 import {
   closeDeviceSession,
@@ -12,6 +13,7 @@ import {
   type DeviceSessionState,
 } from "../lib/devicePairing";
 import { getCurrentUser, hasSession, logout } from "../lib/auth";
+import { syncExternalMeasurementsToPatientHistory } from "../lib/patientMeasurements";
 import { usePageSeo } from "../lib/seo";
 import { API_URL } from "../lib/apiBase";
 
@@ -598,6 +600,13 @@ export default function ScanDevice() {
       .finally(() => setAiLoading(false));
   }, [latestMeasurement?.id]);
 
+  useEffect(() => {
+    const patientId = deviceSession?.session.patientId;
+    const measurements = deviceSession?.measurements ?? [];
+    if (!patientId || measurements.length === 0) return;
+    syncExternalMeasurementsToPatientHistory(patientId, measurements, "aimar");
+  }, [deviceSession?.measurements, deviceSession?.session.patientId]);
+
   async function handleCreatePairing(forceNew = false) {
     setPairingError(null);
     setErr(null);
@@ -655,21 +664,7 @@ export default function ScanDevice() {
   return (
     <div className="center station-screen min-h-screen relative">
       <div className="absolute top-4 right-4 z-10">
-        <div className="flex rounded-full border border-white/20 overflow-hidden bg-slate-900/50 backdrop-blur-sm">
-          {(["ru", "kk", "en"] as Locale[]).map((lang) => (
-            <button
-              key={lang}
-              onClick={() => setLocale(lang)}
-              className={`px-3 py-1.5 text-xs font-medium transition ${
-                locale === lang
-                  ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              {lang.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <LanguageSwitcher locale={locale} onChange={setLocale} variant="segmented" ariaLabel="Язык интерфейса" />
       </div>
 
       <div className="stack station-shell station-screen__content">
@@ -722,7 +717,7 @@ export default function ScanDevice() {
                 <div className="station-board">
                   <div className="station-board__instruction">
                     <img
-                      src="/images/device-tap.png"
+                      src="/images/device-tap.webp"
                       alt=""
                       aria-hidden="true"
                       className="station-board__device-illustration"
@@ -966,7 +961,7 @@ export default function ScanDevice() {
                   {/* Phone illustration — cropped to show only hand+phone portion */}
                   <div className="station-pairing__phone-wrap">
                     <img
-                      src="/images/scan-phone-qr-frame.png"
+                      src="/images/scan-phone-qr-frame.webp"
                       alt=""
                       aria-hidden="true"
                       className="station-pairing__illustration"

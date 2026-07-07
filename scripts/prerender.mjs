@@ -24,13 +24,24 @@ function updateTag(source, pattern, replacement) {
 }
 
 function injectSeo(template, seo) {
-  const imageUrl = `${publicUrl}/icon-192.png`;
+  const imageUrl = `${publicUrl}/favicon-healthassist-20260521.webp`;
 
   let html = template;
   html = updateTag(html, /<title>.*?<\/title>/s, `<title>${seo.title}</title>`);
   html = updateTag(html, /<meta name="description" content=".*?" \/>/s, `<meta name="description" content="${seo.description}" />`);
   html = updateTag(html, /<meta name="robots" content=".*?" \/>/s, `<meta name="robots" content="${seo.robots ?? "index, follow"}" />`);
   html = updateTag(html, /<link rel="canonical" href=".*?" \/>/s, `<link rel="canonical" href="${seo.canonicalUrl}" />`);
+
+  // Update localized alternates
+  const ruUrl = seo.canonicalUrl;
+  const kkUrl = seo.canonicalUrl.includes("?") ? `${seo.canonicalUrl}&lang=kk` : `${seo.canonicalUrl}?lang=kk`;
+  const enUrl = seo.canonicalUrl.includes("?") ? `${seo.canonicalUrl}&lang=en` : `${seo.canonicalUrl}?lang=en`;
+
+  html = updateTag(html, /<link rel="alternate" hreflang="ru" href=".*?" \/>/s, `<link rel="alternate" hreflang="ru" href="${ruUrl}" />`);
+  html = updateTag(html, /<link rel="alternate" hreflang="kk" href=".*?" \/>/s, `<link rel="alternate" hreflang="kk" href="${kkUrl}" />`);
+  html = updateTag(html, /<link rel="alternate" hreflang="en" href=".*?" \/>/s, `<link rel="alternate" hreflang="en" href="${enUrl}" />`);
+  html = updateTag(html, /<link rel="alternate" hreflang="x-default" href=".*?" \/>/s, `<link rel="alternate" hreflang="x-default" href="${ruUrl}" />`);
+
   html = updateTag(html, /<meta property="og:title" content=".*?" \/>/s, `<meta property="og:title" content="${seo.title}" />`);
   html = updateTag(html, /<meta property="og:description" content=".*?" \/>/s, `<meta property="og:description" content="${seo.description}" />`);
   html = updateTag(html, /<meta property="og:image" content=".*?" \/>/s, `<meta property="og:image" content="${imageUrl}" />`);

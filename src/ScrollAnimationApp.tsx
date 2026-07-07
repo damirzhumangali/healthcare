@@ -33,7 +33,7 @@ const App: React.FC = () => {
 
       {/* Main Scroll Animation Section */}
       <ScrollAnimationSection 
-        frameCount={150}
+        frameCount={240}
         sectionHeight="400vh"
         className="relative"
         data-scroll-container

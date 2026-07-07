@@ -16,7 +16,7 @@ export default function NotFound() {
     <div className="nf">
       {/* Right panel — doctor photo */}
       <div className="nf__photo-panel">
-        <img src="/images/doctor-bg.jpg" alt="" aria-hidden="true" className="nf__photo" />
+        <img src="/images/doctor-bg.webp" alt="" aria-hidden="true" className="nf__photo" />
         <div className="nf__photo-overlay" />
       </div>
 
@@ -26,7 +26,7 @@ export default function NotFound() {
           <div className="kicker" style={{ marginBottom: 16 }}>HealthAssist</div>
 
           <div className="nf__robot-wrap">
-            <img src="/images/robot-404.png" alt="" aria-hidden="true" className="nf__robot" />
+            <img src="/images/robot-404.webp" alt="" aria-hidden="true" className="nf__robot" />
           </div>
 
           <h1 className="nf__code">404</h1>

@@ -1,20 +1,26 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowRight,
+  BarChart3,
   CalendarClock,
+  Check,
+  ChevronDown,
   ClipboardList,
   Cpu,
-  House,
   LayoutDashboard,
   LayoutGrid,
   LoaderCircle,
+  LogOut,
   MonitorSmartphone,
   Settings,
   SlidersHorizontal,
   Users,
-  Video,
 } from "lucide-react";
+import AdminMobileNav from "../components/AdminMobileNav";
+import AvatarCircle from "../components/AvatarCircle";
+import DayDateNavigator, { getTodayDateInput } from "../components/DayDateNavigator";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import ProfileAvatarDialog from "../components/ProfileAvatarDialog";
 import {
   DOCTORS,
   fetchAppointments,
@@ -26,6 +32,7 @@ import {
   type DoctorOption,
 } from "../lib/apiAppointments";
 import {
+  AdminApiError,
   fetchAdminDoctors,
   fetchAdminPatients,
   fetchAdminSummary,
@@ -34,23 +41,32 @@ import {
 } from "../lib/apiAdmin";
 import { isAdminAccount } from "../lib/adminAccess";
 import { API_URL, BMO_SETTINGS_URL } from "../lib/apiBase";
-import { getToken, hasSession, setCurrentUser, setToken } from "../lib/auth";
+import { getToken, hasSession, SESSION_USER_UPDATED_EVENT, setCurrentUser, setToken } from "../lib/auth";
+import { resolveAvatarUrl } from "../lib/avatar";
 import {
   isHomeOnlineConsultation,
   isOnlineConsultation,
+  isWardOnlineRequest,
   readRoomLabel,
-  isWardOnlineConsultation,
   readBedLabel,
   readWardLabel,
 } from "../lib/consultationMode";
-import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
+import { type AppLocale } from "../lib/locale";
 import { usePageSeo } from "../lib/seo";
+import { countNewBedsideConsultations, listAllBedsideConsultations, syncBedsideConsultations } from "../lib/onlineConsultations";
+import { recommendSpecialist } from "../lib/specialistRecommendation";
+import { useSoundOnNewIds } from "../lib/notificationSound";
+import { resolvePatientDisplayName } from "../lib/patientName";
+import { useSyncedLocale } from "../lib/useSyncedLocale";
 
 type StoredUser = {
   id?: string;
   email?: string;
   name?: string;
   role?: string;
+  picture?: string | null;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
 };
 
 type StatusFilter = AppointmentStatus | "all";
@@ -65,6 +81,9 @@ const adminText = {
     navSchedule: "Расписание",
     navAppointments: "Записи",
     navPatients: "Пациенты",
+    navWardConsults: "Палатные консультации",
+    navAnalytics: "Аналитика",
+    navWardsMobile: "Палаты",
     navSettings: "Настроить BMO",
     navAimar: "Настроить Aimar",
     aimarSubtitle: "Управление замком двери",
@@ -99,10 +118,20 @@ const adminText = {
     prescriptionsIssued: "Рецептов выписано",
     activeDoctors: "Врачей активны",
     todayDelta: "+2 vs вчера",
+    todayEmptyDelta: "на выбранную дату пусто",
     patientsDelta: "+5 за неделю",
     pendingDelta: "сообщений",
     prescriptionsDelta: "за эту неделю",
     doctorsDelta: "в системе",
+    overviewQuickTitle: "Быстрый доступ",
+    overviewQuickSubtitle: "Полные списки перенесены в отдельные разделы, чтобы обзор оставался коротким.",
+    scheduleSummary: "Расписание",
+    scheduleSummaryHint: "Записи на выбранную дату",
+    recordsSummary: "Записи",
+    recordsSummaryHint: "Подтверждённые и завершённые приёмы",
+    onlineSummary: "Онлайн из дома",
+    onlineSummaryHint: "Только уже назначенные видеозвонки",
+    openSection: "Открыть",
     scheduleForDate: "Расписание на дату",
     allAppointments: "Все записи",
     all: "Все",
@@ -123,10 +152,14 @@ const adminText = {
     loadError: "Не удалось загрузить админ-данные. Проверь backend и VITE_API_BASE_URL.",
     statusUpdateError: "Не удалось изменить статус записи.",
     serverAuthError:
-      "Локальный email/пароль вход работает только как demo. Войдите через Google с админ-почтой для доступа к данным сервера.",
+      "Сервер не подтвердил права admin. Войдите через Google с почтой администратора, добавленной в backend ADMIN_EMAILS.",
     patientFallback: "Пациент",
     doctorFallback: "Врач",
     appointmentFallback: "Прием",
+    todayButton: "Сегодня",
+    prevDay: "Предыдущий день",
+    nextDay: "Следующий день",
+    jumpToday: "Перейти к сегодня",
     statusOnline: "Онлайн",
     statusConfirmed: "Подтвержден",
     statusWaiting: "Ожидает",
@@ -143,9 +176,9 @@ const adminText = {
     freeDoctor: "Свободен",
     busyDoctor: "Занят",
     startMeeting: "Начать встречу",
-    onlineConsultsTitle: "Онлайн-консультации",
-    onlineConsultsSubtitle: "После назначения врача и времени ссылка Jitsi сразу сохраняется и отправляется пациенту и врачу.",
-    noOnlineConsults: "Пока нет онлайн-заявок или назначенных онлайн-консультаций.",
+    onlineConsultsTitle: "Онлайн-консультации из дома",
+    onlineConsultsSubtitle: "Здесь остаются только домашние видеозвонки: после назначения врача и времени ссылка Jitsi сразу сохраняется и отправляется пациенту и врачу.",
+    noOnlineConsults: "Пока нет домашних онлайн-заявок или назначенных видеозвонков.",
     openOnlineBoard: "Открыть палатный экран",
     openWardBoardSingle: "Палатный экран",
     copyLink: "Скопировать ссылку",
@@ -163,6 +196,9 @@ const adminText = {
     navSchedule: "Кесте",
     navAppointments: "Жазылулар",
     navPatients: "Пациенттер",
+    navWardConsults: "Палаталық кеңестер",
+    navAnalytics: "Аналитика",
+    navWardsMobile: "Палаталар",
     navSettings: "BMO баптау",
     navAimar: "Aimar баптау",
     aimarSubtitle: "Есік құлпын басқару",
@@ -197,10 +233,20 @@ const adminText = {
     prescriptionsIssued: "Жазылған рецепт",
     activeDoctors: "Белсенді дәрігер",
     todayDelta: "+2 кешегімен салыстырғанда",
+    todayEmptyDelta: "таңдалған күнде бос",
     patientsDelta: "+5 апта ішінде",
     pendingDelta: "хабарлама",
     prescriptionsDelta: "осы аптада",
     doctorsDelta: "жүйеде",
+    overviewQuickTitle: "Жылдам өту",
+    overviewQuickSubtitle: "Шолу қысқа болуы үшін толық тізімдер бөлек бөлімдерге көшірілді.",
+    scheduleSummary: "Кесте",
+    scheduleSummaryHint: "Таңдалған күнге жазылулар",
+    recordsSummary: "Жазылулар",
+    recordsSummaryHint: "Расталған және аяқталған қабылдаулар",
+    onlineSummary: "Үйден онлайн",
+    onlineSummaryHint: "Тек тағайындалған бейнеқоңыраулар",
+    openSection: "Ашу",
     scheduleForDate: "Күнге арналған кесте",
     allAppointments: "Барлық жазылулар",
     all: "Барлығы",
@@ -221,10 +267,14 @@ const adminText = {
     loadError: "Әкімші деректерін жүктеу мүмкін болмады. Backend пен VITE_API_BASE_URL тексеріңіз.",
     statusUpdateError: "Жазылу мәртебесін өзгерту мүмкін болмады.",
     serverAuthError:
-      "Жергілікті email/құпиясөз кіруі тек demo режимінде. Сервер деректерін көру үшін Google арқылы әкімші поштасымен кіріңіз.",
+      "Сервер admin құқығын растаған жоқ. Backend ADMIN_EMAILS ішінде тұрған әкімші поштасымен Google арқылы кіріңіз.",
     patientFallback: "Пациент",
     doctorFallback: "Дәрігер",
     appointmentFallback: "Қабылдау",
+    todayButton: "Бүгін",
+    prevDay: "Алдыңғы күн",
+    nextDay: "Келесі күн",
+    jumpToday: "Бүгінге өту",
     statusOnline: "Онлайн",
     statusConfirmed: "Расталды",
     statusWaiting: "Күтіп тұр",
@@ -241,9 +291,9 @@ const adminText = {
     freeDoctor: "Бос",
     busyDoctor: "Бос емес",
     startMeeting: "Кездесу бастау",
-    onlineConsultsTitle: "Онлайн кеңестер",
-    onlineConsultsSubtitle: "Дәрігер мен уақыт тағайындалған соң, Jitsi сілтемесі бірден сақталып, пациент пен дәрігерге жіберіледі.",
-    noOnlineConsults: "Әзірге онлайн өтінімдер немесе тағайындалған онлайн кеңестер жоқ.",
+    onlineConsultsTitle: "Үйден онлайн кеңестер",
+    onlineConsultsSubtitle: "Мұнда тек үйден болатын бейнеқоңыраулар қалады: дәрігер мен уақыт тағайындалған соң, Jitsi сілтемесі бірден сақталып, пациент пен дәрігерге жіберіледі.",
+    noOnlineConsults: "Әзірге үйден онлайн өтінімдер немесе тағайындалған бейнеқоңыраулар жоқ.",
     openOnlineBoard: "Палаталық экранды ашу",
     openWardBoardSingle: "Палаталық экран",
     copyLink: "Сілтемені көшіру",
@@ -261,6 +311,9 @@ const adminText = {
     navSchedule: "Schedule",
     navAppointments: "Appointments",
     navPatients: "Patients",
+    navWardConsults: "Ward consultations",
+    navAnalytics: "Analytics",
+    navWardsMobile: "Wards",
     navSettings: "Configure BMO",
     navAimar: "Configure Aimar",
     aimarSubtitle: "Door lock control",
@@ -295,10 +348,20 @@ const adminText = {
     prescriptionsIssued: "Prescriptions issued",
     activeDoctors: "Active doctors",
     todayDelta: "+2 vs yesterday",
+    todayEmptyDelta: "nothing on this date",
     patientsDelta: "+5 this week",
     pendingDelta: "messages",
     prescriptionsDelta: "this week",
     doctorsDelta: "in system",
+    overviewQuickTitle: "Quick access",
+    overviewQuickSubtitle: "Full lists were moved into dedicated sections so the overview stays short.",
+    scheduleSummary: "Schedule",
+    scheduleSummaryHint: "Appointments for the selected date",
+    recordsSummary: "Appointments",
+    recordsSummaryHint: "Confirmed and completed visits",
+    onlineSummary: "Online from home",
+    onlineSummaryHint: "Only already scheduled video calls",
+    openSection: "Open",
     scheduleForDate: "Schedule for date",
     allAppointments: "All appointments",
     all: "All",
@@ -319,10 +382,14 @@ const adminText = {
     loadError: "Could not load admin data. Check the backend and VITE_API_BASE_URL.",
     statusUpdateError: "Could not change the appointment status.",
     serverAuthError:
-      "Local email/password login works only as a demo. Sign in with Google using an admin email to access backend data.",
+      "The server did not confirm admin access. Sign in with a Google account that is listed in backend ADMIN_EMAILS.",
     patientFallback: "Patient",
     doctorFallback: "Doctor",
     appointmentFallback: "Appointment",
+    todayButton: "Today",
+    prevDay: "Previous day",
+    nextDay: "Next day",
+    jumpToday: "Go to today",
     statusOnline: "Online",
     statusConfirmed: "Confirmed",
     statusWaiting: "Waiting",
@@ -339,9 +406,9 @@ const adminText = {
     freeDoctor: "Free",
     busyDoctor: "Busy",
     startMeeting: "Start meeting",
-    onlineConsultsTitle: "Online consultations",
-    onlineConsultsSubtitle: "Once a doctor and time are assigned, the Jitsi link is stored immediately and sent to both patient and doctor.",
-    noOnlineConsults: "No online requests or scheduled online consultations yet.",
+    onlineConsultsTitle: "Online consultations from home",
+    onlineConsultsSubtitle: "Only home video calls stay here: once a doctor and time are assigned, the Jitsi link is stored immediately and sent to both patient and doctor.",
+    noOnlineConsults: "No home online requests or scheduled video calls yet.",
     openOnlineBoard: "Open bedside board",
     openWardBoardSingle: "Bedside board",
     copyLink: "Copy link",
@@ -362,7 +429,7 @@ const localeDateMap: Record<Locale, string> = {
 };
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return getTodayDateInput();
 }
 
 function isJwtLikeToken(token: string | null) {
@@ -452,25 +519,17 @@ function parseJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 function patientLabel(item: Appointment, fallback: string, patients: AdminPatient[] = []) {
-  // Direct name fields win — they come from enrichment or the original booking
-  if (item.patientName) return item.patientName;
-  if (item.patient_name) return item.patient_name;
-
   const pid = item.patient_id || item.patientId || item.patient_email || item.patientEmail || "";
   const fromPatients = patients.find(
     (p) => p.id === pid || p.email === pid || p.email === item.patient_email || p.email === item.patientEmail
   );
-  const idTail = String(pid).slice(-4);
-  // Skip auto-generated fallback names that look like "Пациент XXXX"
-  const fromPatientName = fromPatients?.name && !/^Пациент\s+\S+$/.test(fromPatients.name)
-    ? fromPatients.name
-    : undefined;
-  return (
-    fromPatientName ||
-    item.patient_email ||
-    item.patientEmail ||
-    (idTail ? `${fallback} ${idTail}` : fallback)
-  );
+
+  return resolvePatientDisplayName({
+    names: [fromPatients?.name, item.patientName, item.patient_name],
+    source: pid || item.patient_email || item.patientEmail || item.id,
+    fallback,
+    requireFullName: true,
+  });
 }
 
 function doctorLabel(item: Appointment, doctors: DoctorOption[], fallback: string) {
@@ -478,12 +537,6 @@ function doctorLabel(item: Appointment, doctors: DoctorOption[], fallback: strin
   const doctor = doctors.find((doctorItem) => doctorItem.id === doctorId);
   const raw = item.doctorName || (doctor ? `${doctor.name} — ${doctor.specialty}` : doctorId) || fallback;
   return raw.replace(/^Др\.\s*/i, "");
-}
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
 function statusLabel(status: AppointmentStatus, locale: Locale) {
@@ -528,7 +581,7 @@ function hasAssignedDoctor(item: Appointment) {
 
 function consultationModeLabel(item: Appointment, locale: Locale) {
   const t = adminText[locale];
-  return isWardOnlineConsultation(item) ? t.modeOnlineWard : t.modeOnlineHome;
+  return isWardOnlineRequest(item) ? t.modeOnlineWard : t.modeOnlineHome;
 }
 
 export default function AdminDashboard() {
@@ -541,9 +594,10 @@ export default function AdminDashboard() {
   });
 
   const nav = useNavigate();
-  const user = useMemo(() => readCurrentUser(), []);
+  const location = useLocation();
+  const [user, setUser] = useState<StoredUser | null>(() => readCurrentUser());
   const allowed = isAdminAccount(user) || isLocalDemoHost();
-  const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
+  const [locale, setLocale] = useSyncedLocale();
   const [activeSection, setActiveSection] = useState(() =>
     window.location.hash.replace("#", "") || "overview"
   );
@@ -559,17 +613,68 @@ export default function AdminDashboard() {
   const [patients, setPatients] = useState<AdminPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<ErrorState>(null);
+  const [wardRequestCount, setWardRequestCount] = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileProfileMenuOpen, setMobileProfileMenuOpen] = useState(false);
+  const [openFilterMenu, setOpenFilterMenu] = useState<"status" | "doctor" | null>(null);
+  const statusFilterRef = useRef<HTMLDivElement | null>(null);
+  const doctorFilterRef = useRef<HTMLDivElement | null>(null);
 
   const t = adminText[locale];
   const displayName = user?.name || user?.email || t.defaultAdminName;
+  const userAvatar = resolveAvatarUrl(user ? { ...user, role: user.role || "admin" } : null);
   const navItems = [
     { id: "overview", label: t.navDashboard, icon: LayoutDashboard },
     { id: "schedule", label: t.navSchedule, icon: CalendarClock },
     { id: "appointments", label: t.navAppointments, icon: ClipboardList },
     { id: "patients", label: t.navPatients, icon: Users },
   ] as const;
+  const mobileNavItems = [
+    { id: "overview", label: t.navDashboard, icon: LayoutDashboard, type: "hash" as const },
+    { id: "schedule", label: t.navSchedule, icon: CalendarClock, type: "hash" as const },
+    { id: "appointments", label: t.navAppointments, icon: ClipboardList, type: "hash" as const },
+    {
+      id: "ward-consults",
+      label: t.navWardsMobile,
+      icon: MonitorSmartphone,
+      type: "route" as const,
+      badge: wardRequestCount,
+    },
+  ] as const;
 
   const aimarNavItem = { id: "aimar", label: t.navAimar, icon: Cpu };
+
+  useEffect(() => {
+    const syncUser = () => setUser(readCurrentUser());
+    window.addEventListener(SESSION_USER_UPDATED_EVENT, syncUser);
+    return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, syncUser);
+  }, []);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (
+        statusFilterRef.current?.contains(target) ||
+        doctorFilterRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setOpenFilterMenu(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenFilterMenu(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -601,6 +706,8 @@ export default function AdminDashboard() {
           : cachedAppointments.filter((item) => (date ? item.date === date : true));
       const allAppointments =
         (allAppointmentsData.items ?? []).length > 0 ? allAppointmentsData.items ?? [] : cachedAppointments;
+      syncBedsideConsultations(allAppointments);
+      setWardRequestCount(countNewBedsideConsultations());
 
       const enrichWithCurrentUser = (apts: Appointment[]) => {
         const cu = readCurrentUser();
@@ -649,71 +756,154 @@ export default function AdminDashboard() {
           : DOCTORS.map((doctor) => ({ ...doctor, active: true }))
       );
       setPatients(patientsData.items ?? []);
-    } catch {
-      setErr("load");
+    } catch (error) {
+      syncBedsideConsultations(readCachedAppointments());
+      setWardRequestCount(countNewBedsideConsultations());
+      setErr(error instanceof AdminApiError && (error.code === "unauthorized" || error.code === "forbidden") ? "serverAuth" : "load");
     } finally {
       setLoading(false);
     }
   }, [date]);
 
+  const dashboardItems = useMemo(
+    () => items.filter((item) => !isWardOnlineRequest(item)),
+    [items],
+  );
+  const dashboardAllItems = useMemo(
+    () => allItems.filter((item) => !isWardOnlineRequest(item)),
+    [allItems],
+  );
+  const isOverviewSection = activeSection === "overview";
+  const isScheduleSection = activeSection === "schedule";
+  const isAppointmentsSection = activeSection === "appointments";
+  const isPatientsSection = activeSection === "patients";
+
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    return dashboardItems.filter((item) => {
       const matchesStatus = status === "all" ? true : item.status === status;
       const matchesDoctor =
         doctorFilter === "all" ? true : (item.doctor_id || item.doctorId) === doctorFilter;
 
       return matchesStatus && matchesDoctor;
     });
-  }, [doctorFilter, items, status]);
+  }, [dashboardItems, doctorFilter, status]);
 
   const unassignedItems = useMemo(
-    () => allItems.filter((item) => item.status === "pending" && !hasAssignedDoctor(item)),
-    [allItems]
+    () => dashboardAllItems.filter((item) => item.status === "pending" && !hasAssignedDoctor(item)),
+    [dashboardAllItems]
+  );
+  const wardPendingIds = useMemo(
+    () => listAllBedsideConsultations().filter((consult) => !consult.deliveryMode).map((consult) => consult.id),
+    [wardRequestCount],
   );
   const inProgressItems = useMemo(
-    () => allItems.filter((item) => item.status === "pending" && hasAssignedDoctor(item)),
-    [allItems]
+    () => dashboardAllItems.filter((item) => item.status === "pending" && hasAssignedDoctor(item)),
+    [dashboardAllItems]
   );
   const completedItems = useMemo(
-    () => allItems
+    () => dashboardAllItems
       .filter((item) => item.status === "active" || item.status === "done")
       .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)),
-    [allItems]
+    [dashboardAllItems]
   );
   const onlineItems = useMemo(
     () =>
-      allItems
-        .filter((item) => isOnlineConsultation(item))
+      dashboardAllItems
+        .filter(
+          (item) =>
+            isHomeOnlineConsultation(item) &&
+            hasAssignedDoctor(item) &&
+            item.status !== "done",
+        )
         .sort((a, b) => {
           const byDate = a.date.localeCompare(b.date);
           return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
         }),
-    [allItems],
+    [dashboardAllItems],
   );
   const visibleItems = filteredItems;
-  const visiblePatients =
-    patients.length > 0
-      ? patients
-      : visibleItems.map((item) => ({
-          id: item.patient_id || item.patientId || item.id,
-          email: item.patient_email || item.patientEmail || null,
-          name: patientLabel(item, t.patientFallback, patients),
-          role: "patient",
-          last_appointment_at: item.created_at || item.createdAt || null,
-          appointment_count: 1,
-        }));
+  const visiblePatients = useMemo(() => {
+    const dashboardPatientIds = new Set(
+      dashboardAllItems.map((item) => item.patient_id || item.patientId || item.patient_email || item.patientEmail || item.id),
+    );
+
+    if (patients.length > 0) {
+      return patients.filter((patient) => dashboardPatientIds.has(patient.id) || (patient.email ? dashboardPatientIds.has(patient.email) : false));
+    }
+
+    return visibleItems.map((item) => ({
+      id: item.patient_id || item.patientId || item.id,
+      email: item.patient_email || item.patientEmail || null,
+      name: patientLabel(item, t.patientFallback, patients),
+      role: "patient",
+      last_appointment_at: item.created_at || item.createdAt || null,
+      appointment_count: 1,
+    }));
+  }, [dashboardAllItems, patients, visibleItems, t.patientFallback]);
+
+  const patientPictureMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const patient of patients) {
+      if (!patient.picture) continue;
+      map.set(patient.id, patient.picture);
+      if (patient.email) {
+        map.set(patient.email, patient.picture);
+      }
+    }
+    return map;
+  }, [patients]);
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "all" as StatusFilter, label: t.allStatuses },
+      { value: "pending" as StatusFilter, label: t.statusPendingFilter },
+      { value: "active" as StatusFilter, label: t.statusActiveFilter },
+      { value: "done" as StatusFilter, label: t.statusDoneFilter },
+    ],
+    [t.allStatuses, t.statusActiveFilter, t.statusDoneFilter, t.statusPendingFilter],
+  );
+
+  const doctorOptions = useMemo(
+    () => [
+      { value: "all" as DoctorFilter, label: t.allDoctors },
+      ...doctors.map((doctor) => ({ value: doctor.id as DoctorFilter, label: doctor.name })),
+    ],
+    [doctors, t.allDoctors],
+  );
+
+  const selectedStatusLabel =
+    statusOptions.find((option) => option.value === status)?.label || t.allStatuses;
+  const selectedDoctorLabel =
+    doctorOptions.find((option) => option.value === doctorFilter)?.label || t.allDoctors;
+
+  function appointmentAvatar(item: Appointment) {
+    const picture =
+      patientPictureMap.get(item.patient_id || item.patientId || "") ||
+      patientPictureMap.get(item.patient_email || item.patientEmail || "") ||
+      null;
+    return resolveAvatarUrl(
+      {
+        id: item.patient_id || item.patientId || null,
+        email: item.patient_email || item.patientEmail || null,
+        role: "patient",
+        picture,
+      },
+      { patientFallback: true },
+    );
+  }
 
   const stats = useMemo(() => {
+    const dashboardPatientIds = new Set(
+      dashboardAllItems.map((item) => item.patient_id || item.patientId || item.patient_email || item.patientEmail || item.id),
+    );
     return {
-      today: summary?.appointmentsToday ?? visibleItems.length,
-      patients: summary?.patients ?? visiblePatients.length,
-      pending:
-        summary?.pending ??
-        visibleItems.filter((item) => item.status === "pending").length,
-      done: summary?.done ?? visibleItems.filter((item) => item.status === "done").length,
+      today: dashboardAllItems.filter((item) => item.date === today()).length,
+      patients: dashboardPatientIds.size || visiblePatients.length,
+      pending: dashboardAllItems.filter((item) => item.status === "pending").length,
+      done: dashboardAllItems.filter((item) => item.status === "done").length,
       doctors: summary?.doctors ?? doctors.filter((doctor) => doctor.active !== false).length,
     };
-  }, [doctors, summary, visibleItems, visiblePatients]);
+  }, [dashboardAllItems, doctors, summary, visiblePatients]);
 
   const isInitialLoading =
     loading &&
@@ -724,17 +914,42 @@ export default function AdminDashboard() {
     !isInitialLoading &&
     !loading &&
     visibleItems.length === 0 &&
-    patients.length === 0 &&
-    (summary?.appointmentsToday ?? 0) === 0 &&
-    (summary?.patients ?? 0) === 0 &&
-    (summary?.pending ?? 0) === 0 &&
-    (summary?.done ?? 0) === 0;
+    visiblePatients.length === 0 &&
+    stats.today === 0 &&
+    stats.patients === 0 &&
+    stats.pending === 0 &&
+    stats.done === 0;
   const metricCards = [
-    { key: "today", label: t.appointmentsToday, value: stats.today, tone: "green", delta: t.todayDelta },
-    { key: "patients", label: t.patientsTotal, value: stats.patients, tone: "green", delta: t.patientsDelta },
-    { key: "pending", label: t.awaitingResponse, value: stats.pending, tone: "red", delta: t.pendingDelta },
-    { key: "done", label: t.prescriptionsIssued, value: stats.done, tone: "green", delta: t.prescriptionsDelta },
-    { key: "doctors", label: t.activeDoctors, value: stats.doctors, tone: "green", delta: t.doctorsDelta },
+    { key: "today", label: locale === "ru" ? "Приемов" : locale === "kk" ? "Қабылдау" : "Visits", value: stats.today, tone: "green", delta: stats.today > 0 ? t.todayDelta : t.todayEmptyDelta },
+    { key: "pending", label: locale === "ru" ? "Ожидают" : locale === "kk" ? "Күтуде" : "Waiting", value: stats.pending, tone: "red", delta: t.pendingDelta },
+    { key: "done", label: locale === "ru" ? "Рецептов" : locale === "kk" ? "Рецепт" : "Scripts", value: stats.done, tone: "green", delta: t.prescriptionsDelta },
+    { key: "doctors", label: locale === "ru" ? "Врачи" : locale === "kk" ? "Дәрігер" : "Doctors", value: stats.doctors, tone: "green", delta: t.doctorsDelta },
+  ] as const;
+
+  useSoundOnNewIds(unassignedItems.map((item) => item.id), "admin-new-appointments");
+  useSoundOnNewIds(wardPendingIds, "admin-ward-requests");
+  const overviewSummaryCards = [
+    {
+      key: "schedule",
+      label: t.scheduleSummary,
+      hint: t.scheduleSummaryHint,
+      value: visibleItems.length,
+      section: "schedule" as const,
+    },
+    {
+      key: "appointments",
+      label: t.recordsSummary,
+      hint: t.recordsSummaryHint,
+      value: completedItems.length,
+      section: "appointments" as const,
+    },
+    {
+      key: "online",
+      label: t.onlineSummary,
+      hint: t.onlineSummaryHint,
+      value: onlineItems.length,
+      section: "appointments" as const,
+    },
   ] as const;
 
   async function changeStatus(id: string, nextStatus: AppointmentStatus) {
@@ -748,14 +963,9 @@ export default function AdminDashboard() {
     }
   }
 
-  function changeLocale(nextLocale: Locale) {
-    setLocale(nextLocale);
-    writeStoredLocale(nextLocale);
-  }
-
-  function copyMeetingLink(url: string) {
-    if (!navigator.clipboard) return;
-    void navigator.clipboard.writeText(url);
+  function openSection(section: "overview" | "schedule" | "appointments" | "patients") {
+    setActiveSection(section);
+    window.location.hash = section;
   }
 
   useEffect(() => {
@@ -763,6 +973,14 @@ export default function AdminDashboard() {
       pingBackend(); // warm up Render backend before patient requests arrive
       void load();
     }
+  }, [allowed, load]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    const timer = window.setInterval(() => {
+      void load();
+    }, 15_000);
+    return () => window.clearInterval(timer);
   }, [allowed, load]);
 
 
@@ -777,6 +995,23 @@ export default function AdminDashboard() {
     return () => {
       window.removeEventListener("hashchange", syncActiveSection);
     };
+  }, []);
+
+  // React Router navigate() uses history.pushState which doesn't fire hashchange.
+  // Watch location.hash via useLocation() to catch sheet-item navigation.
+  useEffect(() => {
+    const section = location.hash.replace("#", "") || "overview";
+    setActiveSection(section);
+  }, [location.hash]);
+
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setMobileLocaleOpen(false);
+      setMobileProfileMenuOpen(false);
+    };
+
+    document.addEventListener("click", handleDocumentClick);
+    return () => document.removeEventListener("click", handleDocumentClick);
   }, []);
 
   if (!hasSession()) {
@@ -834,7 +1069,20 @@ export default function AdminDashboard() {
             onClick={() => nav("/admin/ward-consults")}
           >
             <MonitorSmartphone size={18} />
-            Онлайн в палатах
+            <span className="doctor-admin__nav-item-copy">
+              <span>{t.navWardConsults}</span>
+              {wardRequestCount > 0 ? (
+                <span className="doctor-admin__nav-item-badge">{wardRequestCount}</span>
+              ) : null}
+            </span>
+          </button>
+          <button
+            className="doctor-admin__nav-item"
+            type="button"
+            onClick={() => nav("/admin/analytics")}
+          >
+            <BarChart3 size={18} />
+            {t.navAnalytics}
           </button>
           <button
             className="doctor-admin__nav-item"
@@ -874,30 +1122,99 @@ export default function AdminDashboard() {
           </div>
 
           <div className="doctor-admin__profile">
-            <div className="doctor-admin__locale" aria-label="Language switcher">
-              {APP_LOCALES.map((lang) => (
-                <button
-                  key={lang}
-                  className={`doctor-admin__locale-button ${
-                    locale === lang ? "doctor-admin__locale-button--active" : ""
-                  }`}
-                  type="button"
-                  onClick={() => changeLocale(lang)}
-                >
-                  {lang === "kk" ? "KZ" : lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
-            <Link className="doctor-admin__home" to="/">
-              <House size={18} />
-              {t.home}
-            </Link>
-            <div className="doctor-admin__identity">
-              <div className="doctor-admin__avatar">{initials(displayName)}</div>
+            <LanguageSwitcher
+              locale={locale}
+              onChange={setLocale}
+              variant="segmented"
+              ariaLabel="Язык интерфейса"
+              title="Язык интерфейса"
+            />
+            <button
+              type="button"
+              className="doctor-admin__identity doctor-admin__identity-trigger"
+              onClick={() => setProfileOpen(true)}
+            >
+              <AvatarCircle
+                name={displayName}
+                src={userAvatar}
+                size={64}
+                className="doctor-admin__avatar"
+                alt={displayName}
+              />
               <div className="doctor-admin__doctor">
                 <strong>{displayName}</strong>
                 <span>{t.adminRole}</span>
               </div>
+            </button>
+          </div>
+          <div className="doctor-admin__mobile-head-actions">
+            <LanguageSwitcher
+              locale={locale}
+              onChange={setLocale}
+              variant="segmented"
+              ariaLabel="Язык интерфейса"
+              title="Язык интерфейса"
+            />
+            <div className="doctor-admin__mobile-menu-group">
+              <button
+                type="button"
+                className="doctor-admin__mobile-avatar-trigger"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMobileProfileMenuOpen((current) => !current);
+                }}
+                aria-label="Открыть меню профиля"
+              >
+                <AvatarCircle
+                  name={displayName}
+                  src={userAvatar}
+                  size={38}
+                  className="doctor-admin__avatar doctor-admin__avatar--small"
+                  alt={displayName}
+                />
+              </button>
+              {mobileProfileMenuOpen ? (
+                <div className="doctor-admin__mobile-popover doctor-admin__mobile-popover--profile" onClick={(event) => event.stopPropagation()}>
+                  <div className="doctor-admin__mobile-popover-copy">
+                    <strong>{displayName}</strong>
+                    <span>{t.adminRole}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="doctor-admin__mobile-popover-item"
+                    onClick={() => {
+                      setMobileProfileMenuOpen(false);
+                      nav("/admin/aimar");
+                    }}
+                  >
+                    <Cpu size={14} />
+                    {t.navAimar}
+                  </button>
+                  <button
+                    type="button"
+                    className="doctor-admin__mobile-popover-item"
+                    onClick={() => {
+                      setMobileProfileMenuOpen(false);
+                      setProfileOpen(true);
+                    }}
+                  >
+                    Фото профиля
+                  </button>
+                  <button
+                    type="button"
+                    className="doctor-admin__mobile-popover-item doctor-admin__mobile-popover-item--danger"
+                    onClick={() => {
+                      setMobileProfileMenuOpen(false);
+                      setCurrentUser(null);
+                      setToken("");
+                      nav("/login", { replace: true });
+                    }}
+                  >
+                    <LogOut size={14} />
+                    Выйти
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </header>
@@ -912,6 +1229,7 @@ export default function AdminDashboard() {
           </div>
         ) : null}
 
+        {!isOverviewSection ? (
         <section className="doctor-admin__panel doctor-admin__filters">
           <div className="doctor-admin__panel-head">
             <div>
@@ -926,35 +1244,93 @@ export default function AdminDashboard() {
           <div className="doctor-admin__filters-grid">
             <label className="doctor-admin__field">
               <span>{t.filterDateLabel}</span>
-              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+              <DayDateNavigator
+                date={date}
+                onChange={setDate}
+                todayLabel={t.todayButton}
+                prevTitle={t.prevDay}
+                nextTitle={t.nextDay}
+                todayTitle={t.jumpToday}
+                className="doctor-admin__date-nav doctor-admin__date-nav--field"
+              />
             </label>
             <label className="doctor-admin__field">
               <span>{t.filterStatusLabel}</span>
-              <select
-                className="doctor-admin__select"
-                value={status}
-                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-              >
-                <option value="all">{t.allStatuses}</option>
-                <option value="pending">{t.statusPendingFilter}</option>
-                <option value="active">{t.statusActiveFilter}</option>
-                <option value="done">{t.statusDoneFilter}</option>
-              </select>
+              <div className="doctor-admin__filter-select-wrap" ref={statusFilterRef}>
+                <button
+                  type="button"
+                  className="doctor-admin__filter-trigger"
+                  onClick={() =>
+                    setOpenFilterMenu((current) => (current === "status" ? null : "status"))
+                  }
+                  aria-haspopup="listbox"
+                  aria-expanded={openFilterMenu === "status"}
+                >
+                  <span>{selectedStatusLabel}</span>
+                  <ChevronDown size={16} />
+                </button>
+                {openFilterMenu === "status" ? (
+                  <div className="doctor-admin__filter-menu" role="listbox" aria-label={t.filterStatusLabel}>
+                    {statusOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={status === option.value}
+                        className={`doctor-admin__filter-option ${
+                          status === option.value ? "doctor-admin__filter-option--active" : ""
+                        }`}
+                        onClick={() => {
+                          setStatusFilter(option.value);
+                          setOpenFilterMenu(null);
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        {status === option.value ? <Check size={15} /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </label>
             <label className="doctor-admin__field">
               <span>{t.filterDoctorLabel}</span>
-              <select
-                className="doctor-admin__select"
-                value={doctorFilter}
-                onChange={(event) => setDoctorFilter(event.target.value)}
-              >
-                <option value="all">{t.allDoctors}</option>
-                {doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
-                    {doctor.name}
-                  </option>
-                ))}
-              </select>
+              <div className="doctor-admin__filter-select-wrap" ref={doctorFilterRef}>
+                <button
+                  type="button"
+                  className="doctor-admin__filter-trigger"
+                  onClick={() =>
+                    setOpenFilterMenu((current) => (current === "doctor" ? null : "doctor"))
+                  }
+                  aria-haspopup="listbox"
+                  aria-expanded={openFilterMenu === "doctor"}
+                >
+                  <span>{selectedDoctorLabel}</span>
+                  <ChevronDown size={16} />
+                </button>
+                {openFilterMenu === "doctor" ? (
+                  <div className="doctor-admin__filter-menu" role="listbox" aria-label={t.filterDoctorLabel}>
+                    {doctorOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={doctorFilter === option.value}
+                        className={`doctor-admin__filter-option ${
+                          doctorFilter === option.value ? "doctor-admin__filter-option--active" : ""
+                        }`}
+                        onClick={() => {
+                          setDoctorFilter(option.value);
+                          setOpenFilterMenu(null);
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        {doctorFilter === option.value ? <Check size={15} /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </label>
             <div className="doctor-admin__filters-actions">
               <button
@@ -969,8 +1345,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         </section>
+        ) : null}
 
-        {showEmptyDashboard ? (
+        {isOverviewSection && showEmptyDashboard ? (
           <section className="doctor-admin__panel doctor-admin__empty-state">
             <div className="doctor-admin__empty-illustration" aria-hidden="true">
               <span className="doctor-admin__empty-orb doctor-admin__empty-orb--blue">
@@ -1000,17 +1377,18 @@ export default function AdminDashboard() {
           </section>
         ) : null}
 
-        <section className="doctor-admin__metrics">
+        {isOverviewSection ? (
+        <section className="doctor-admin__metrics doctor-admin__metrics--admin">
           {isInitialLoading
-            ? Array.from({ length: 5 }).map((_, index) => (
-                <article className="doctor-admin__metric doctor-admin__metric--loading" key={`metric-skeleton-${index}`}>
+            ? Array.from({ length: 4 }).map((_, index) => (
+                <article className="doctor-admin__metric doctor-admin__metric--admin doctor-admin__metric--loading" key={`metric-skeleton-${index}`}>
                   <span className="doctor-admin__skeleton doctor-admin__skeleton--label" aria-hidden="true" />
                   <strong className="doctor-admin__skeleton doctor-admin__skeleton--value" aria-hidden="true" />
                   <small className="doctor-admin__skeleton doctor-admin__skeleton--meta" aria-hidden="true" />
                 </article>
               ))
             : metricCards.map((metric) => (
-                <article className="doctor-admin__metric" key={metric.key}>
+                <article className="doctor-admin__metric doctor-admin__metric--admin" key={metric.key}>
                   <span>{metric.label}</span>
                   <strong>{metric.value}</strong>
                   <small className={metric.tone === "red" ? "doctor-admin__red" : "doctor-admin__green"}>
@@ -1019,98 +1397,85 @@ export default function AdminDashboard() {
                 </article>
               ))}
         </section>
+        ) : null}
 
-        {unassignedItems.length > 0 ? (
+        {isOverviewSection && unassignedItems.length > 0 ? (
           <section className="doctor-admin__panel" style={{ marginBottom: 0 }} id="requests">
-            <div className="doctor-admin__panel-head">
-              <div>
+            <div className="doctor-admin__panel-head doctor-admin__panel-head--requests">
+              <div className="doctor-admin__panel-title-row">
                 <h2>{t.requestsTitle}</h2>
-                <p className="doctor-admin__panel-subtitle">{t.requestsSubtitle}</p>
+                <span className="doctor-admin__panel-count doctor-admin__panel-count--amber">
+                  {unassignedItems.length}
+                </span>
               </div>
-              <span style={{
-                background: "rgba(251,191,36,0.18)", color: "#f59e0b",
-                borderRadius: 20, padding: "2px 12px", fontSize: 13, fontWeight: 700,
-              }}>
-                {unassignedItems.length}
-              </span>
+              <p className="doctor-admin__panel-subtitle">{t.requestsSubtitle}</p>
             </div>
             <div className="doctor-admin__record-list">
               {unassignedItems.map((item) => {
                 const name = patientLabel(item, t.patientFallback, patients);
                 const isOnline = isOnlineConsultation(item);
-                const isWardOnline = isWardOnlineConsultation(item);
+                const isWardOnline = isWardOnlineRequest(item);
                 const busyIds = getBusyDoctorIds(item.date, items);
                 const freeDocs = doctors.filter((d) => !busyIds.has(d.id));
                 const specialtyNeeded = item.specialty_request || item.specialtyRequest;
+                const recommended = recommendSpecialist(item.reason);
                 const wardMeta = isWardOnline
                   ? [readWardLabel(item), readBedLabel(item)].filter(Boolean).join(" · ")
                   : "";
 
                 return (
-                  <div
-                    key={`req-${item.id}`}
-                    style={{
-                      borderRadius: 12,
-                      border: "1px solid rgba(251,191,36,0.25)",
-                      borderLeft: "4px solid #f59e0b",
-                      background: "rgba(251,191,36,0.04)",
-                      padding: "14px 18px",
-                      display: "flex", alignItems: "center", gap: 14,
-                    }}
-                  >
-                    <div className="doctor-admin__mini-avatar" style={{ flexShrink: 0 }}>{initials(name)}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
-                        {specialtyNeeded ? (
-                          <span style={{ background: "rgba(99,102,241,0.18)", color: "#a5b4fc", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
-                            {specialtyNeeded}
-                          </span>
-                        ) : null}
-                        {isOnline ? (
-                          <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
-                            {consultationModeLabel(item, locale)}
-                          </span>
-                        ) : null}
-                        {wardMeta ? (
-                          <span style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 600 }}>
-                            {wardMeta}
-                          </span>
-                        ) : null}
-                        <span style={{ fontSize: 12, color: freeDocs.length > 0 ? "#34d399" : "#f59e0b" }}>
-                          {freeDocs.length > 0 ? `✓ ${freeDocs.length} свободн.` : "⚠ Все заняты"}
-                        </span>
-                      </div>
-                      {item.reason ? (
-                        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {item.reason}
-                        </div>
-                      ) : null}
+                  <div className="doctor-admin__record doctor-admin__record--request" key={`req-${item.id}`}>
+                    {/* Row 1: Avatar + Name */}
+                    <div className="doctor-admin__req-header">
+                      <AvatarCircle
+                        name={name}
+                        src={appointmentAvatar(item)}
+                        size={44}
+                        className="doctor-admin__mini-avatar"
+                        alt={name}
+                      />
+                      <strong className="doctor-admin__req-name">{name}</strong>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    {/* Row 2: Tags */}
+                    <div className="doctor-admin__online-tags doctor-admin__req-tags">
+                      {specialtyNeeded ? (
+                        <span className="doctor-admin__online-tag doctor-admin__online-tag--violet">
+                          {specialtyNeeded}
+                        </span>
+                      ) : null}
+                      <span className={`doctor-admin__online-tag ${isOnline ? "doctor-admin__online-tag--cyan" : ""}`}>
+                        {isOnline ? consultationModeLabel(item, locale) : "Очный приём"}
+                      </span>
+                      {wardMeta ? (
+                        <span className="doctor-admin__online-tag">
+                          {wardMeta}
+                        </span>
+                      ) : null}
+                      <span className="doctor-admin__online-tag doctor-admin__online-tag--green">
+                        Рекомендуем: {recommended.specialty}
+                      </span>
+                      <span className={`doctor-admin__online-tag ${freeDocs.length > 0 ? "doctor-admin__online-tag--green" : ""}`}>
+                        {freeDocs.length > 0 ? `✓ ${freeDocs.length} свободн.` : "⚠ Все заняты"}
+                      </span>
+                    </div>
+                    {/* Row 3: Complaint */}
+                    {item.reason ? (
+                      <div className="doctor-admin__record-complaint">
+                        <span className="doctor-admin__record-complaint-label">Жалоба</span>
+                        <small className="doctor-admin__record-note doctor-admin__record-note--plain">{item.reason}</small>
+                      </div>
+                    ) : null}
+                    {/* Row 4: Date + Button */}
+                    <div className="doctor-admin__req-footer">
+                      <span className="doctor-admin__req-datetime">
+                        {item.date} · {item.time || t.timeMissing}
+                      </span>
                       <button
+                        className="doctor-admin__action-btn doctor-admin__action-btn--primary"
                         type="button"
                         onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                        style={{
-                          background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                          color: "#0a1628", border: "none",
-                          borderRadius: 9, padding: "7px 18px",
-                          fontWeight: 800, cursor: "pointer", fontSize: 13,
-                        }}
                       >
                         {t.actionAccept}
-                      </button>
-                      <button
-                        type="button"
-                        disabled
-                        style={{
-                          background: "rgba(255,255,255,0.05)",
-                          color: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.1)",
-                          borderRadius: 9, padding: "7px 18px",
-                          fontWeight: 700, cursor: "not-allowed", fontSize: 13,
-                        }}
-                      >
-                        {t.actionComplete}
                       </button>
                     </div>
                   </div>
@@ -1120,17 +1485,14 @@ export default function AdminDashboard() {
           </section>
         ) : null}
 
-        {inProgressItems.length > 0 && (
+        {isOverviewSection && inProgressItems.length > 0 && (
           <section className="doctor-admin__panel" style={{ marginBottom: 0 }} id="in-progress">
             <div className="doctor-admin__panel-head">
               <div>
                 <h2>В работе</h2>
                 <p className="doctor-admin__panel-subtitle">Врач назначен — нажмите «Завершить», чтобы подтвердить запись.</p>
               </div>
-              <span style={{
-                background: "rgba(34,211,238,0.18)", color: "#22d3ee",
-                borderRadius: 20, padding: "2px 12px", fontSize: 13, fontWeight: 700,
-              }}>
+              <span className="doctor-admin__panel-count doctor-admin__panel-count--cyan">
                 {inProgressItems.length}
               </span>
             </div>
@@ -1139,62 +1501,44 @@ export default function AdminDashboard() {
                 const name = patientLabel(item, t.patientFallback, patients);
                 const isOnline = isOnlineConsultation(item);
                 return (
-                  <div
-                    key={`prog-${item.id}`}
-                    style={{
-                      borderRadius: 12,
-                      border: "1px solid rgba(34,211,238,0.25)",
-                      borderLeft: "4px solid #22d3ee",
-                      background: "rgba(34,211,238,0.04)",
-                      padding: "12px 18px",
-                      display: "flex", alignItems: "center", gap: 14,
-                    }}
-                  >
-                    <div className="doctor-admin__mini-avatar" style={{ flexShrink: 0 }}>{initials(name)}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
-                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
-                        {doctorLabel(item, doctors, t.doctorFallback)}
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
+                  <div className="doctor-admin__record doctor-admin__record--progress" key={`prog-${item.id}`}>
+                    <div className="doctor-admin__record-date">
+                      <strong>{item.date}</strong>
+                      <span>{item.time || t.timeMissing}</span>
+                    </div>
+                    <AvatarCircle
+                      name={name}
+                      src={appointmentAvatar(item)}
+                      size={48}
+                      className="doctor-admin__mini-avatar"
+                      alt={name}
+                    />
+                    <div className="doctor-admin__record-main">
+                      <strong>{name}</strong>
+                      <div className="doctor-admin__online-tags">
                         {isOnline ? (
-                          <span style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
+                          <span className="doctor-admin__online-tag doctor-admin__online-tag--cyan">
                             Онлайн
                           </span>
                         ) : (
-                          <span style={{ background: "rgba(129,140,248,0.15)", color: "#c4b5fd", borderRadius: 6, padding: "2px 9px", fontSize: 12, fontWeight: 700 }}>
+                          <span className="doctor-admin__online-tag doctor-admin__online-tag--violet">
                             Офлайн
                           </span>
                         )}
-                        {item.date ? (
-                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
-                            {item.date}{item.time && item.time !== "00:00" ? ` · ${item.time}` : ""}
-                          </span>
-                        ) : null}
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <div className="doctor-admin__record-actions">
                       <button
+                        className="doctor-admin__action-btn doctor-admin__action-btn--secondary"
                         type="button"
                         onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                        style={{
-                          background: "rgba(255,255,255,0.07)",
-                          color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)",
-                          borderRadius: 9, padding: "7px 16px",
-                          fontWeight: 700, cursor: "pointer", fontSize: 13,
-                        }}
                       >
                         {t.actionEdit}
                       </button>
                       <button
+                        className="doctor-admin__action-btn doctor-admin__action-btn--primary"
                         type="button"
                         onClick={() => void changeStatus(item.id, "active")}
-                        style={{
-                          background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                          color: "#0a1628", border: "none",
-                          borderRadius: 9, padding: "7px 18px",
-                          fontWeight: 800, cursor: "pointer", fontSize: 13,
-                        }}
                       >
                         {t.actionComplete}
                       </button>
@@ -1206,7 +1550,35 @@ export default function AdminDashboard() {
           </section>
         )}
 
+        {isOverviewSection ? (
+          <section className="doctor-admin__panel doctor-admin__overview-summary">
+            <div className="doctor-admin__panel-head">
+              <div>
+                <h2>{t.overviewQuickTitle}</h2>
+                <p className="doctor-admin__panel-subtitle">{t.overviewQuickSubtitle}</p>
+              </div>
+            </div>
+            <div className="doctor-admin__overview-links">
+              {overviewSummaryCards.map((card) => (
+                <button
+                  key={card.key}
+                  type="button"
+                  className="doctor-admin__overview-link"
+                  onClick={() => openSection(card.section)}
+                >
+                  <span>{card.label}</span>
+                  <strong>{card.value}</strong>
+                  <small>{card.hint}</small>
+                  <em>{t.openSection}</em>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {isScheduleSection || isPatientsSection ? (
         <section className="doctor-admin__content">
+          {isScheduleSection ? (
           <article className="doctor-admin__panel doctor-admin__schedule" id="schedule">
             <div className="doctor-admin__panel-head">
               <h2>{date ? t.scheduleForDate : t.allAppointments}</h2>
@@ -1230,40 +1602,37 @@ export default function AdminDashboard() {
                     return (
                       <div className="doctor-admin__appointment" key={item.id}>
                         <time>{item.time}</time>
-                        <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                        <AvatarCircle
+                          name={name}
+                          src={appointmentAvatar(item)}
+                          size={48}
+                          className="doctor-admin__mini-avatar"
+                          alt={name}
+                        />
                         <div className="doctor-admin__appointment-main">
                           <strong>{name}</strong>
                           <span>{item.reason || t.appointmentFallback}</span>
+                          <div className="doctor-admin__online-tags">
+                            {(item.specialty_request || item.specialtyRequest) ? (
+                              <span className="doctor-admin__online-tag doctor-admin__online-tag--violet">
+                                {item.specialty_request || item.specialtyRequest}
+                              </span>
+                            ) : null}
+                            {readRoomLabel(item) ? (
+                              <span className="doctor-admin__online-tag">
+                                {readRoomLabel(item)}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                        <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
-                          {statusLabel(item.status, locale)}
-                        </span>
-                        {isPendingUnassigned && (
-                          <button
-                            onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                            style={{
-                              padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer",
-                              background: "linear-gradient(135deg, #34d399, #10b981)",
-                              color: "#0a0f1a", fontWeight: 700, fontSize: 12,
-                            }}
-                          >
-                            {t.actionAccept}
-                          </button>
-                        )}
-                        {item.status !== "done" && (
-                          <button
-                            disabled={isPendingUnassigned}
-                            onClick={() => void changeStatus(item.id, "done")}
-                            style={{
-                              padding: "4px 12px", borderRadius: 6, border: "none", cursor: isPendingUnassigned ? "not-allowed" : "pointer",
-                              background: isPendingUnassigned ? "rgba(255,255,255,0.06)" : "rgba(52,211,153,0.15)",
-                              color: isPendingUnassigned ? "rgba(255,255,255,0.25)" : "#34d399",
-                              fontWeight: 700, fontSize: 12,
-                            }}
-                          >
-                            {t.actionComplete}
-                          </button>
-                        )}
+                        <div className="doctor-admin__appointment-actions">
+                          <span className={`doctor-admin__status doctor-admin__status--${statusTone(item.status)}`}>
+                            {statusLabel(item.status, locale)}
+                          </span>
+                          {isPendingUnassigned ? (
+                            <span className="doctor-admin__appointment-note">Откройте заявку выше</span>
+                          ) : null}
+                        </div>
                       </div>
                     );
                   })}
@@ -1271,11 +1640,7 @@ export default function AdminDashboard() {
                     <button
                       type="button"
                       onClick={() => setScheduleShowAll(!scheduleShowAll)}
-                      style={{
-                        width: "100%", padding: "8px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
-                        background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)",
-                        cursor: "pointer", fontSize: 13, marginTop: 4,
-                      }}
+                      className="doctor-admin__show-more"
                     >
                       {scheduleShowAll ? "Свернуть" : `Показать ещё ${visibleItems.length - 3}`}
                     </button>
@@ -1284,13 +1649,12 @@ export default function AdminDashboard() {
               )}
             </div>
           </article>
+          ) : null}
 
+          {isPatientsSection ? (
           <article className="doctor-admin__panel doctor-admin__patients" id="patients">
             <div className="doctor-admin__panel-head doctor-admin__panel-head--row">
               <h2>{t.latestPatients}</h2>
-              <Link to="/appointments/new">
-                {t.all} <ArrowRight size={18} />
-              </Link>
             </div>
 
             <div className="doctor-admin__patient-list">
@@ -1307,24 +1671,38 @@ export default function AdminDashboard() {
 
                   return (
                     <div className="doctor-admin__patient" key={`${patient.id}-patient`}>
-                      <div className="doctor-admin__mini-avatar doctor-admin__mini-avatar--soft">
-                        {initials(name)}
-                      </div>
+                      <AvatarCircle
+                        name={name}
+                        src={resolveAvatarUrl(
+                          {
+                            id: patient.id,
+                            email: patient.email,
+                            role: "patient",
+                            picture: patient.picture || null,
+                          },
+                          { patientFallback: true },
+                        )}
+                        size={48}
+                        className="doctor-admin__mini-avatar doctor-admin__mini-avatar--soft"
+                        alt={name}
+                      />
                       <div>
                         <strong>{name}</strong>
                         <span>
                           {patient.email || t.noEmail} • {appointmentCountLabel(locale, patient.appointment_count)}
                         </span>
                       </div>
-                      <button type="button">{t.patientCard}</button>
                     </div>
                   );
                 })
               )}
             </div>
           </article>
+          ) : null}
         </section>
+        ) : null}
 
+        {isAppointmentsSection ? (
         <section className="doctor-admin__panel doctor-admin__online-consults" id="online-consults">
           <div className="doctor-admin__panel-head">
             <div>
@@ -1349,15 +1727,10 @@ export default function AdminDashboard() {
                 const name = patientLabel(item, t.patientFallback, patients);
                 const assigned = hasAssignedDoctor(item);
                 const isHomeOnline = isHomeOnlineConsultation(item);
-                const isWardOnline = isWardOnlineConsultation(item);
-                const meetingUrl = isHomeOnline ? item.meeting_url || jitsiRoomUrl(item.id) : "";
                 const meetingAt = item.meeting_at || item.meetingAt || `${item.date}T${item.time || "00:00"}:00`;
                 const notified = item.meeting_notified ?? item.meetingNotified;
                 const specialty = item.specialty_request || item.specialtyRequest;
                 const roomLabel = readRoomLabel(item);
-                const wardMeta = isWardOnline
-                  ? [readWardLabel(item), readBedLabel(item)].filter(Boolean).join(" · ")
-                  : "";
                 const statusTone =
                   item.status === "active" ? "ok" : item.status === "done" ? "green" : assigned ? "green" : "amber";
                 const statusLabelText =
@@ -1370,29 +1743,30 @@ export default function AdminDashboard() {
                         : t.statusWaiting;
 
                 return (
-                  <div className="doctor-admin__record" key={`${item.id}-online`}>
+                  <div className="doctor-admin__record doctor-admin__record--online" key={`${item.id}-online`}>
                     <div className="doctor-admin__record-date">
                       <strong>{item.date}</strong>
                       <span>{item.time || t.timeMissing}</span>
                     </div>
-                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                    <AvatarCircle
+                      name={name}
+                      src={appointmentAvatar(item)}
+                      size={48}
+                      className="doctor-admin__mini-avatar"
+                      alt={name}
+                    />
                     <div className="doctor-admin__record-main">
-                      <strong>{name}</strong>
-                      <span>
+                      <strong className="doctor-admin__record-title">{name}</strong>
+                      <span className="doctor-admin__record-subtitle">
                         {assigned ? doctorLabel(item, doctors, t.doctorFallback) : t.doctorMissing}
                       </span>
-                      <div className="doctor-admin__online-tags">
+                      <div className="doctor-admin__online-tags doctor-admin__online-tags--aligned">
                         <span className="doctor-admin__online-tag doctor-admin__online-tag--cyan">
                           {consultationModeLabel(item, locale)}
                         </span>
                         {specialty ? (
                           <span className="doctor-admin__online-tag doctor-admin__online-tag--violet">
                             {specialty}
-                          </span>
-                        ) : null}
-                        {wardMeta ? (
-                          <span className="doctor-admin__online-tag">
-                            {wardMeta}
                           </span>
                         ) : null}
                         {roomLabel ? (
@@ -1406,9 +1780,11 @@ export default function AdminDashboard() {
                           </span>
                         ) : null}
                       </div>
-                      <small>{item.reason || t.appointmentFallback}</small>
+                      <small className="doctor-admin__record-note doctor-admin__record-note--plain">
+                        {item.reason || t.appointmentFallback}
+                      </small>
                       {assigned ? (
-                        <small className="doctor-admin__online-meta">
+                        <small className="doctor-admin__record-meta">
                           {formatDateTime(meetingAt, locale)}
                         </small>
                       ) : null}
@@ -1417,46 +1793,14 @@ export default function AdminDashboard() {
                       <span className={`doctor-admin__status doctor-admin__status--${statusTone}`}>
                         {statusLabelText}
                       </span>
-                      {!assigned ? (
-                        <button
-                          type="button"
-                          onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                        >
-                          {t.actionAccept}
-                        </button>
-                      ) : (
-                        <>
-                          {isHomeOnline ? (
-                            <>
-                              <a
-                                href={meetingUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="doctor-admin__online-link"
-                              >
-                                <Video size={13} />
-                                {t.startMeeting}
-                              </a>
-                              <button type="button" onClick={() => copyMeetingLink(meetingUrl)}>
-                                {t.copyLink}
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => nav("/admin/ward-consults")}
-                            >
-                              {t.openWardBoardSingle}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                          >
-                            {t.actionEdit}
-                          </button>
-                        </>
-                      )}
+                      <button
+                        className="doctor-admin__action-btn doctor-admin__action-btn--secondary"
+                        type="button"
+                        onClick={() => void changeStatus(item.id, "done")}
+                        disabled={item.status === "done"}
+                      >
+                        {t.actionComplete}
+                      </button>
                     </div>
                   </div>
                 );
@@ -1464,7 +1808,9 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
+        ) : null}
 
+        {isAppointmentsSection ? (
         <section className="doctor-admin__panel doctor-admin__records" id="appointments">
           <div className="doctor-admin__panel-head">
             <div>
@@ -1490,8 +1836,7 @@ export default function AdminDashboard() {
                 const docId = item.doctor_id || item.doctorId;
                 const hasDoctor = Boolean(docId) && docId !== "pending";
                 const isHomeOnline = isHomeOnlineConsultation(item);
-                const isWardOnline = isWardOnlineConsultation(item);
-                const meetingUrl = isHomeOnline ? item.meeting_url || jitsiRoomUrl(item.id) : "";
+                const isWardOnline = isWardOnlineRequest(item);
                 const isScheduledOnline = isOnline && hasDoctor && item.status === "pending";
                 const roomLabel = readRoomLabel(item);
                 const wardMeta = isWardOnline
@@ -1504,7 +1849,13 @@ export default function AdminDashboard() {
                       <strong>{item.date}</strong>
                       <span>{item.time || "—"}</span>
                     </div>
-                    <div className="doctor-admin__mini-avatar">{initials(name)}</div>
+                    <AvatarCircle
+                      name={name}
+                      src={appointmentAvatar(item)}
+                      size={48}
+                      className="doctor-admin__mini-avatar"
+                      alt={name}
+                    />
                     <div className="doctor-admin__record-main">
                       <strong>{name}</strong>
                       {hasDoctor
@@ -1548,18 +1899,9 @@ export default function AdminDashboard() {
                       <small>{item.reason || t.appointmentFallback}</small>
                     </div>
                     <div className="doctor-admin__record-actions">
-                      {isHomeOnline && meetingUrl ? (
-                        <a
-                          href={meetingUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="doctor-admin__online-link"
-                        >
-                          <Video size={13} />
-                          {t.startMeeting}
-                        </a>
-                      ) : isWardOnline ? (
+                      {isWardOnline ? (
                         <button
+                          className="doctor-admin__action-btn doctor-admin__action-btn--secondary"
                           type="button"
                           onClick={() => nav("/admin/ward-consults")}
                         >
@@ -1568,33 +1910,24 @@ export default function AdminDashboard() {
                       ) : null}
                       {item.status === "pending" && !hasDoctor && (
                         <button
+                          className="doctor-admin__action-btn doctor-admin__action-btn--primary"
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                          style={{
-                            background: "linear-gradient(135deg, #34d399, #22d3ee)",
-                            color: "#0a1628", border: "none",
-                            borderRadius: 8, padding: "6px 16px",
-                            fontWeight: 800, cursor: "pointer", fontSize: 13,
-                          }}
                         >
                           {t.actionAccept}
                         </button>
                       )}
                       {(item.status === "active" || item.status === "done" || isScheduledOnline) && (
                         <button
+                          className="doctor-admin__action-btn doctor-admin__action-btn--secondary"
                           type="button"
                           onClick={() => nav(`/admin/request/${item.id}`, { state: { appointment: item } })}
-                          style={{
-                            background: "rgba(255,255,255,0.08)",
-                            color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)",
-                            borderRadius: 8, padding: "6px 16px",
-                            fontWeight: 700, cursor: "pointer", fontSize: 13,
-                          }}
                         >
                           {t.actionEdit}
                         </button>
                       )}
                       <button
+                        className="doctor-admin__action-btn doctor-admin__action-btn--secondary"
                         type="button"
                         onClick={() => changeStatus(item.id, "done")}
                         disabled={item.status !== "active"}
@@ -1609,11 +1942,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setCompletedShowAll(!completedShowAll)}
-                  style={{
-                    width: "100%", padding: "9px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)",
-                    cursor: "pointer", fontSize: 13, marginTop: 4,
-                  }}
+                  className="doctor-admin__show-more"
                 >
                   {completedShowAll ? "Свернуть" : `Показать все (${completedItems.length})`}
                 </button>
@@ -1622,6 +1951,7 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
+        ) : null}
 
 
         <section className="doctor-admin__quick">
@@ -1638,33 +1968,17 @@ export default function AdminDashboard() {
         </section>
       </main>
 
-      <nav className="doctor-admin__mobile-nav" aria-label={`${t.panelTitle} mobile navigation`}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <a
-              key={`mobile-${item.id}`}
-              className={`doctor-admin__mobile-nav-item ${
-                activeSection === item.id ? "doctor-admin__mobile-nav-item--active" : ""
-              }`}
-              href={`#${item.id}`}
-              onClick={() => setActiveSection(item.id)}
-            >
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </a>
-          );
-        })}
-        <button
-          className="doctor-admin__mobile-nav-item"
-          type="button"
-          onClick={() => nav("/admin/aimar")}
-        >
-          <Cpu size={18} />
-          <span>{aimarNavItem.label}</span>
-        </button>
-      </nav>
+      <AdminMobileNav
+        activeItem={activeSection === "overview" ? "dashboard" : "more"}
+        wardBadge={wardRequestCount}
+        onDashboardClick={() => setActiveSection("overview")}
+      />
+      <ProfileAvatarDialog
+        open={profileOpen}
+        user={user}
+        onClose={() => setProfileOpen(false)}
+        onSaved={(next) => setUser(next)}
+      />
     </div>
   );
 }

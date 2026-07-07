@@ -1,7 +1,7 @@
 import type { MeasurementItem } from "./apiMeasurements";
 
 export type MeasurementSource = "patient" | "doctor" | "aimar";
-export type PatientMeasurementMetric = "temperature" | "pulse" | "pressure" | "spo2";
+export type PatientMeasurementMetric = "temperature" | "pulse";
 
 export type PatientMeasurementEntry = {
   id: string;
@@ -10,10 +10,10 @@ export type PatientMeasurementEntry = {
   metric: PatientMeasurementMetric;
   createdAt: string;
   source: MeasurementSource;
-  actorName?: string | null;
-  deviceId?: string | null;
+  actorName: string | null;
+  deviceId: string | null;
   value: number;
-  secondaryValue?: number | null;
+  secondaryValue: number | null;
 };
 
 type ExternalMeasurementPayload = {
@@ -22,9 +22,6 @@ type ExternalMeasurementPayload = {
   deviceId?: string | null;
   tempC?: number | null;
   hr?: number | null;
-  systolic?: number | null;
-  diastolic?: number | null;
-  spo2?: number | null;
 };
 
 const KEY = "healthassist_patient_measurement_history_v1";
@@ -49,9 +46,7 @@ function normalizeNumber(value: unknown) {
 }
 
 function normalizeMetric(value: unknown): PatientMeasurementMetric | null {
-  return value === "temperature" || value === "pulse" || value === "pressure" || value === "spo2"
-    ? value
-    : null;
+  return value === "temperature" || value === "pulse" ? value : null;
 }
 
 function normalizeSource(value: unknown): MeasurementSource {
@@ -92,10 +87,14 @@ function readAll(): PatientMeasurementEntry[] {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown[];
-    return parsed
+    const next = parsed
       .map((item) => normalizeEntry(item))
       .filter((item): item is PatientMeasurementEntry => Boolean(item))
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    if (next.length !== parsed.length) {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    }
+    return next;
   } catch {
     return [];
   }
@@ -125,7 +124,7 @@ function buildEntry(
     deviceId?: string | null;
     secondaryValue?: number | null;
   },
-) {
+): PatientMeasurementEntry | null {
   if (value == null) return null;
   return {
     id: `${eventId}:${metric}`,
@@ -148,43 +147,36 @@ function buildVitalsEntries(
   values: {
     tempC?: number | null;
     hr?: number | null;
-    systolic?: number | null;
-    diastolic?: number | null;
-    spo2?: number | null;
   },
   options: {
     createdAt: string;
     actorName?: string | null;
     deviceId?: string | null;
   },
-) {
-  return [
-    buildEntry(patientId, eventId, "temperature", normalizeNumber(values.tempC), {
+) : PatientMeasurementEntry[] {
+  const entries: PatientMeasurementEntry[] = [];
+
+  const temperatureEntry = buildEntry(patientId, eventId, "temperature", normalizeNumber(values.tempC), {
       createdAt: options.createdAt,
       source,
       actorName: options.actorName,
       deviceId: options.deviceId,
-    }),
-    buildEntry(patientId, eventId, "pulse", normalizeNumber(values.hr), {
+    });
+  if (temperatureEntry) {
+    entries.push(temperatureEntry);
+  }
+
+  const pulseEntry = buildEntry(patientId, eventId, "pulse", normalizeNumber(values.hr), {
       createdAt: options.createdAt,
       source,
       actorName: options.actorName,
       deviceId: options.deviceId,
-    }),
-    buildEntry(patientId, eventId, "pressure", normalizeNumber(values.systolic), {
-      createdAt: options.createdAt,
-      source,
-      actorName: options.actorName,
-      deviceId: options.deviceId,
-      secondaryValue: normalizeNumber(values.diastolic),
-    }),
-    buildEntry(patientId, eventId, "spo2", normalizeNumber(values.spo2), {
-      createdAt: options.createdAt,
-      source,
-      actorName: options.actorName,
-      deviceId: options.deviceId,
-    }),
-  ].filter((item): item is PatientMeasurementEntry => Boolean(item));
+    });
+  if (pulseEntry) {
+    entries.push(pulseEntry);
+  }
+
+  return entries;
 }
 
 export function listPatientMeasurements(patientId: string) {
@@ -198,9 +190,6 @@ export function recordPatientVitals(input: {
   source: MeasurementSource;
   tempC?: number | null;
   hr?: number | null;
-  systolic?: number | null;
-  diastolic?: number | null;
-  spo2?: number | null;
   actorName?: string | null;
   deviceId?: string | null;
   createdAt?: string;
@@ -218,9 +207,6 @@ export function recordPatientVitals(input: {
     {
       tempC: input.tempC,
       hr: input.hr,
-      systolic: input.systolic,
-      diastolic: input.diastolic,
-      spo2: input.spo2,
     },
     {
       createdAt,
@@ -238,7 +224,7 @@ export function replaceApiMeasurementsForPatientHistory(patientId: string, items
   const normalizedPatientId = String(patientId || "").trim();
   if (!normalizedPatientId) return [];
 
-  const apiEntries = items.flatMap((item) => {
+  const apiEntries = items.flatMap((item): PatientMeasurementEntry[] => {
     const measurementOwner = String(item.userId ?? "").trim();
     if (measurementOwner && measurementOwner !== normalizedPatientId) {
       return [];
@@ -251,9 +237,6 @@ export function replaceApiMeasurementsForPatientHistory(patientId: string, items
       {
         tempC: item.tempC,
         hr: item.hr,
-        systolic: item.systolic,
-        diastolic: item.diastolic,
-        spo2: item.spo2,
       },
       {
         createdAt: item.createdAt,
@@ -288,9 +271,6 @@ export function syncApiMeasurementsToPatientHistory(patientId: string, items: Me
       source: "aimar",
       tempC: item.tempC,
       hr: item.hr,
-      systolic: item.systolic,
-      diastolic: item.diastolic,
-      spo2: item.spo2,
       deviceId: item.deviceId,
       createdAt: item.createdAt,
       eventId: `api-${item.id}`,
@@ -309,9 +289,6 @@ export function syncExternalMeasurementsToPatientHistory(
       source,
       tempC: item.tempC,
       hr: item.hr,
-      systolic: item.systolic,
-      diastolic: item.diastolic,
-      spo2: item.spo2,
       deviceId: item.deviceId,
       createdAt: item.createdAt,
       eventId: `ext-${item.id}`,
@@ -321,9 +298,7 @@ export function syncExternalMeasurementsToPatientHistory(
 
 export function measurementMetricLabel(metric: PatientMeasurementMetric, locale: "ru" | "kk" | "en") {
   if (metric === "temperature") return locale === "en" ? "Temperature" : "Температура";
-  if (metric === "pulse") return locale === "en" ? "Pulse" : "Пульс";
-  if (metric === "pressure") return locale === "en" ? "Pressure" : locale === "kk" ? "Қысым" : "Давление";
-  return "SpO₂";
+  return locale === "en" ? "Pulse" : "Пульс";
 }
 
 export function measurementSourceLabel(source: MeasurementSource, locale: "ru" | "kk" | "en") {
@@ -336,13 +311,7 @@ export function formatMeasurementValue(entry: PatientMeasurementEntry, locale: "
   if (entry.metric === "temperature") {
     return `${entry.value.toFixed(1)} °C`;
   }
-  if (entry.metric === "pulse") {
-    return locale === "en" ? `${Math.round(entry.value)} bpm` : `${Math.round(entry.value)} уд/мин`;
-  }
-  if (entry.metric === "pressure") {
-    return `${Math.round(entry.value)}/${Math.round(entry.secondaryValue ?? 0)}`;
-  }
-  return `${Math.round(entry.value)}%`;
+  return locale === "en" ? `${Math.round(entry.value)} bpm` : `${Math.round(entry.value)} уд/мин`;
 }
 
 export function formatMeasurementDateTime(iso: string, locale: "ru" | "kk" | "en") {

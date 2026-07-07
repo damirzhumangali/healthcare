@@ -1,4 +1,12 @@
 User-agent: *
+Disallow: /admin/
+Disallow: /doctor/
+Disallow: /auth/
+Disallow: /scan/
+Disallow: /pair/
+Disallow: /app/
+Disallow: /login
+Disallow: /register
 Allow: /
 
 Sitemap: https://healthcare.kz/sitemap.xml

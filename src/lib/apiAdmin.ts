@@ -1,8 +1,9 @@
 import { API_URL } from "./apiBase";
 import { getToken } from "./auth";
+import { resolvePatientDisplayName } from "./patientName";
 import {
   DOCTORS,
-  fetchDoctors,
+  fetchAppointments,
   setAppointmentMeetingInfo,
   type Appointment,
   type DoctorOption,
@@ -17,6 +18,17 @@ export type AdminSummary = {
   doctors: number;
   patients: number;
   telegramNew?: number;
+};
+
+export type AdminRegistrationStats = {
+  total: number;
+  today: number;
+  last_7_days: number;
+  last_30_days: number;
+  by_day: Array<{
+    date: string;
+    count: number;
+  }>;
 };
 
 export type AdminPatient = {
@@ -53,6 +65,22 @@ export type AdminTelegramConsultation = {
 
 const LOCAL_DOCTORS_KEY = "healthassist_doctors_v1";
 const LOCAL_APPOINTMENTS_KEY = "healthassist_appointments_v1";
+const REGISTRATION_STATS_UNAVAILABLE_KEY = "healthassist_admin_registration_stats_unavailable_v1";
+
+export class AdminApiError extends Error {
+  code: "unauthorized" | "forbidden" | "request_failed";
+
+  constructor(code: "unauthorized" | "forbidden" | "request_failed") {
+    super(code);
+    this.code = code;
+  }
+}
+
+function shouldAllowLocalAdminFallback() {
+  if (!import.meta.env.PROD) return true;
+  if (typeof window === "undefined") return false;
+  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+}
 
 function authHeaders() {
   const token = getToken();
@@ -65,6 +93,33 @@ function authHeaders() {
   }
 
   return headers;
+}
+
+function isRegistrationStatsEndpointUnavailable() {
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(REGISTRATION_STATS_UNAVAILABLE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markRegistrationStatsEndpointUnavailable() {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(REGISTRATION_STATS_UNAVAILABLE_KEY, "1");
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function clearRegistrationStatsEndpointUnavailable() {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(REGISTRATION_STATS_UNAVAILABLE_KEY);
+  } catch {
+    // ignore storage failures
+  }
 }
 
 function readLocalDoctors(): DoctorOption[] {
@@ -97,6 +152,123 @@ function readCurrentUser(): { id?: string; email?: string; name?: string } | nul
   } catch {
     return null;
   }
+}
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildRegistrationDays(count: number) {
+  const days: string[] = [];
+  const now = new Date();
+  for (let index = count - 1; index >= 0; index -= 1) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - index);
+    days.push(localDateKey(date));
+  }
+  return days;
+}
+
+export function buildRegistrationStatsFromPatients(items: AdminPatient[]): AdminRegistrationStats {
+  const sourceItems = Array.isArray(items) ? items : [];
+  const byDayTemplate = buildRegistrationDays(30);
+  const grouped = new Map(byDayTemplate.map((date) => [date, 0]));
+  const todayKey = byDayTemplate[byDayTemplate.length - 1];
+  const last7Keys = new Set(byDayTemplate.slice(-7));
+  const last30Keys = new Set(byDayTemplate);
+
+  let total = sourceItems.length;
+  let today = 0;
+  let last7Days = 0;
+  let last30Days = 0;
+
+  for (const item of sourceItems) {
+    const sourceDate = item.created_at || item.last_appointment_at || null;
+    if (!sourceDate) continue;
+
+    const createdAt = new Date(sourceDate);
+    if (Number.isNaN(createdAt.getTime())) continue;
+
+    const dateKey = localDateKey(createdAt);
+    if (dateKey === todayKey) today += 1;
+    if (last7Keys.has(dateKey)) last7Days += 1;
+    if (last30Keys.has(dateKey)) {
+      last30Days += 1;
+      grouped.set(dateKey, (grouped.get(dateKey) || 0) + 1);
+    }
+  }
+
+  return {
+    total,
+    today,
+    last_7_days: last7Days,
+    last_30_days: last30Days,
+    by_day: byDayTemplate.map((date) => ({
+      date,
+      count: grouped.get(date) || 0,
+    })),
+  };
+}
+
+function buildRegistrationStatsFromAppointments(items: Appointment[]): AdminRegistrationStats {
+  const sourceItems = Array.isArray(items) ? items : [];
+  const groupedByPatient = new Map<
+    string,
+    {
+      id: string;
+      created_at?: string;
+      last_appointment_at?: string | null;
+    }
+  >();
+
+  for (const item of sourceItems) {
+    const patientId =
+      item.patient_id ||
+      item.patientId ||
+      item.patient_email ||
+      item.patientEmail ||
+      item.id;
+
+    if (!patientId) continue;
+
+    const existing = groupedByPatient.get(patientId);
+    const createdAt = item.created_at || item.createdAt;
+
+    if (!existing) {
+      groupedByPatient.set(patientId, {
+        id: patientId,
+        created_at: createdAt,
+        last_appointment_at: createdAt || null,
+      });
+      continue;
+    }
+
+    const existingCreated = existing.created_at ? Date.parse(existing.created_at) : Number.POSITIVE_INFINITY;
+    const nextCreated = createdAt ? Date.parse(createdAt) : Number.POSITIVE_INFINITY;
+    if (nextCreated < existingCreated) {
+      existing.created_at = createdAt;
+    }
+
+    const existingLast = existing.last_appointment_at ? Date.parse(existing.last_appointment_at) : Number.NEGATIVE_INFINITY;
+    const nextLast = createdAt ? Date.parse(createdAt) : Number.NEGATIVE_INFINITY;
+    if (nextLast > existingLast) {
+      existing.last_appointment_at = createdAt || existing.last_appointment_at || null;
+    }
+  }
+
+  return buildRegistrationStatsFromPatients(
+    Array.from(groupedByPatient.values()).map((item) => ({
+      id: item.id,
+      name: "",
+      appointment_count: 0,
+      created_at: item.created_at,
+      last_appointment_at: item.last_appointment_at ?? null,
+      role: "patient",
+    })),
+  );
 }
 
 function localSummary(): AdminSummary {
@@ -143,7 +315,12 @@ function localPatients(): AdminPatient[] {
       }
     }
 
-    const name = resolvedName || `Пациент ${String(id).slice(-4)}`;
+    const name = resolvePatientDisplayName({
+      names: [resolvedName],
+      source: id,
+      fallback: "Пациент",
+      requireFullName: true,
+    });
 
     grouped.set(id, {
       id,
@@ -164,11 +341,19 @@ export async function fetchAdminSummary(): Promise<AdminSummary> {
       headers: authHeaders(),
       credentials: "include",
     });
-    if (!res.ok) throw new Error("fetch admin summary failed");
+    if (!res.ok) {
+      if (res.status === 401) throw new AdminApiError("unauthorized");
+      if (res.status === 403) throw new AdminApiError("forbidden");
+      throw new AdminApiError("request_failed");
+    }
     const data = await res.json();
     return data.summary ?? localSummary();
-  } catch {
-    return localSummary();
+  } catch (error) {
+    if (shouldAllowLocalAdminFallback()) {
+      return localSummary();
+    }
+    if (error instanceof AdminApiError) throw error;
+    throw new AdminApiError("request_failed");
   }
 }
 
@@ -177,20 +362,115 @@ export async function fetchAdminPatients(): Promise<{ items: AdminPatient[] }> {
     const res = await fetch(`${API_URL}/api/admin/patients`, {
       headers: authHeaders(),
       credentials: "include",
+      cache: "no-store",
     });
-    if (!res.ok) throw new Error("fetch admin patients failed");
+    if (res.status === 304) {
+      return { items: localPatients() };
+    }
+    if (!res.ok) {
+      if (res.status === 401) throw new AdminApiError("unauthorized");
+      if (res.status === 403) throw new AdminApiError("forbidden");
+      throw new AdminApiError("request_failed");
+    }
     const data = await res.json();
     return { items: data.items ?? data.patients ?? [] };
-  } catch {
-    return { items: localPatients() };
+  } catch (error) {
+    if (shouldAllowLocalAdminFallback()) {
+      return { items: localPatients() };
+    }
+    if (error instanceof AdminApiError) throw error;
+    throw new AdminApiError("request_failed");
+  }
+}
+
+export async function fetchAdminRegistrationStats(): Promise<AdminRegistrationStats> {
+  if (isRegistrationStatsEndpointUnavailable()) {
+    try {
+      const { items } = await fetchAdminPatients();
+      if (items.length > 0) return buildRegistrationStatsFromPatients(items);
+      const { items: appointmentItems } = await fetchAppointments();
+      return buildRegistrationStatsFromAppointments(appointmentItems);
+    } catch {
+      try {
+        const { items: appointmentItems } = await fetchAppointments();
+        return buildRegistrationStatsFromAppointments(appointmentItems);
+      } catch {
+        return buildRegistrationStatsFromPatients(localPatients());
+      }
+    }
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/admin/stats/registrations`, {
+      headers: authHeaders(),
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (res.status === 304) {
+      const { items } = await fetchAdminPatients();
+      if (items.length > 0) return buildRegistrationStatsFromPatients(items);
+      const { items: appointmentItems } = await fetchAppointments();
+      return buildRegistrationStatsFromAppointments(appointmentItems);
+    }
+
+    if (!res.ok) {
+      if (res.status === 401) throw new AdminApiError("unauthorized");
+      if (res.status === 403) throw new AdminApiError("forbidden");
+      if (res.status === 404) {
+        markRegistrationStatsEndpointUnavailable();
+        const { items } = await fetchAdminPatients();
+        if (items.length > 0) return buildRegistrationStatsFromPatients(items);
+        const { items: appointmentItems } = await fetchAppointments();
+        return buildRegistrationStatsFromAppointments(appointmentItems);
+      }
+      throw new AdminApiError("request_failed");
+    }
+
+    clearRegistrationStatsEndpointUnavailable();
+    return (await res.json()) as AdminRegistrationStats;
+  } catch (error) {
+    if (error instanceof AdminApiError && (error.code === "unauthorized" || error.code === "forbidden")) {
+      throw error;
+    }
+
+    try {
+      const { items } = await fetchAdminPatients();
+      if (items.length > 0) return buildRegistrationStatsFromPatients(items);
+      const { items: appointmentItems } = await fetchAppointments();
+      return buildRegistrationStatsFromAppointments(appointmentItems);
+    } catch {
+      try {
+        const { items: appointmentItems } = await fetchAppointments();
+        return buildRegistrationStatsFromAppointments(appointmentItems);
+      } catch {
+        return buildRegistrationStatsFromPatients(localPatients());
+      }
+    }
   }
 }
 
 export async function fetchAdminDoctors(): Promise<{ items: DoctorOption[] }> {
+  const params = new URLSearchParams({ includeInactive: "1" });
   try {
-    return await fetchDoctors(true);
-  } catch {
-    return { items: readLocalDoctors() };
+    const res = await fetch(`${API_URL}/api/doctors?${params.toString()}`, {
+      headers: authHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      if (res.status === 401) throw new AdminApiError("unauthorized");
+      if (res.status === 403) throw new AdminApiError("forbidden");
+      throw new AdminApiError("request_failed");
+    }
+    const data = await res.json();
+    const items = data.items ?? data.doctors ?? [];
+    return { items: items.length > 0 ? items : DOCTORS.map((doctor) => ({ ...doctor, active: true })) };
+  } catch (error) {
+    if (shouldAllowLocalAdminFallback()) {
+      return { items: readLocalDoctors() };
+    }
+    if (error instanceof AdminApiError) throw error;
+    throw new AdminApiError("request_failed");
   }
 }
 

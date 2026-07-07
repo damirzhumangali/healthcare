@@ -24,6 +24,7 @@ import MeasurementDetails from "./pages/MeasurementDetails";
 import AppointmentForm from "./pages/AppointmentForm";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
 import AimarControl from "./pages/AimarControl";
 import WardConsultationsPage from "./pages/WardConsultationsPage";
 import DoctorSchedulePage from "./pages/DoctorSchedulePage";
@@ -33,12 +34,16 @@ import LegalDocumentPage from "./pages/LegalDocumentPage";
 import VkAuthCallback from "./pages/VkAuthCallback";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./layouts/AppLayout";
+import SessionIdleManager from "./components/SessionIdleManager";
 import RequireAuth from "./lib/RequireAuth";
 import { hasSession, logout, requiresServerSessionValidation, syncSessionFromServer } from "./lib/auth";
 import { isAdminAccount } from "./lib/adminAccess";
-import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "./lib/locale";
+import LanguageSwitcher from "./components/LanguageSwitcher";
+import { type AppLocale } from "./lib/locale";
+import { useSyncedLocale } from "./lib/useSyncedLocale";
 import { getPublicSeo } from "./lib/publicSeo";
 import { usePageSeo } from "./lib/seo";
+import { buildPublicAppUrl } from "./lib/publicAppUrl";
 
 type Locale = AppLocale;
 type Theme = "dark" | "light";
@@ -300,7 +305,7 @@ function readStoredUser(): StoredUser | null {
 function Landing() {
   const nav = useNavigate();
   const [theme, setTheme] = useState<Theme>("dark");
-  const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
+  const [locale, setLocale] = useSyncedLocale();
   const [activeMobileSection, setActiveMobileSection] = useState(() =>
     typeof window === "undefined" ? "features" : window.location.hash.replace("#", "") || "features"
   );
@@ -317,11 +322,6 @@ function Landing() {
     { id: "map", label: t.navMap, href: "#map", icon: MapPinned },
     { id: "body", label: t.navBody, to: "/body", icon: PersonStanding },
   ] as const;
-
-  function handleLocaleChange(nextLocale: Locale) {
-    setLocale(nextLocale);
-    writeStoredLocale(nextLocale);
-  }
 
   function openUserArea() {
     if (!hasSession()) {
@@ -377,7 +377,69 @@ function Landing() {
     theme === "dark" ? "bg-slate-900/70 border-white/10" : "bg-white border-slate-200";
   const mutedClass = theme === "dark" ? "text-slate-300" : "text-slate-600";
   const footerLabelClass = theme === "dark" ? "text-slate-100" : "text-slate-900";
+  const themeLogo = theme === "light" ? "/images/ha-logo-light.webp" : "/images/ha-logo-dark.webp";
+  const faqs = useMemo(
+    () => [
+      { q: t.q1, a: t.a1 },
+      { q: t.q2, a: t.a2 },
+      { q: t.q3, a: t.a3 },
+    ],
+    [t]
+  );
+
   const seo = getPublicSeo("/", locale);
+
+  const seoJsonLd = useMemo(() => {
+    const canonicalUrl = buildPublicAppUrl("/");
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "MedicalWebPage",
+          "@id": `${canonicalUrl}#webpage`,
+          "url": canonicalUrl,
+          "name": seo.title,
+          "description": seo.description,
+          "inLanguage": locale,
+          "about": {
+            "@type": "MedicalSpecialty",
+            "name": "General Diagnostics"
+          },
+          "audience": {
+            "@type": "MedicalAudience",
+            "audienceType": "Patients and Healthcare Providers"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://healthcare.kz/#organization",
+          "name": "HealthAssist",
+          "url": "https://healthcare.kz/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://healthcare.kz/favicon-healthassist-20260521.webp"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": t.footerEmailValue,
+            "contactType": "customer support"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": `${canonicalUrl}#faq`,
+          "mainEntity": faqs.map((faq) => ({
+            "@type": "Question",
+            "name": faq.q,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.a,
+            },
+          })),
+        }
+      ]
+    };
+  }, [faqs, seo.title, seo.description, locale, t.footerEmailValue]);
 
   usePageSeo({
     title: seo.title,
@@ -403,15 +465,6 @@ function Landing() {
         title: t.f3,
         desc: t.f3d,
       },
-    ],
-    [t]
-  );
-
-  const faqs = useMemo(
-    () => [
-      { q: t.q1, a: t.a1 },
-      { q: t.q2, a: t.a2 },
-      { q: t.q3, a: t.a3 },
     ],
     [t]
   );
@@ -442,6 +495,11 @@ function Landing() {
 
   return (
     <div className={`min-h-screen overflow-x-hidden transition-colors duration-300 ${rootClass}`}>
+      <script
+        type="application/ld+json"
+        id="page-jsonld"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(seoJsonLd) }}
+      />
       <style>{`html { scroll-behavior: smooth; }`}</style>
 
       <header
@@ -459,7 +517,7 @@ function Landing() {
               onClick={() => setActiveMobileSection("features")}
             >
               <img
-                src="/icon-192.png"
+                src={themeLogo}
                 alt="HealthAssist"
                 className="h-7 w-7 rounded-xl object-cover md:h-9 md:w-9"
               />
@@ -478,21 +536,13 @@ function Landing() {
             </nav>
 
             <div className="hidden xl:flex items-center gap-2">
-              <div className="flex rounded-full border border-white/20 overflow-hidden">
-                {APP_LOCALES.map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => handleLocaleChange(l)}
-                    className={`px-2.5 py-1 text-xs font-medium ${
-                      locale === l
-                        ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                        : ""
-                    }`}
-                  >
-                    {l === "kk" ? "KZ" : l.toUpperCase()}
-                  </button>
-                ))}
-              </div>
+              <LanguageSwitcher
+                locale={locale}
+                onChange={setLocale}
+                variant="segmented"
+                ariaLabel="Язык интерфейса"
+                title="Язык интерфейса"
+              />
               <button
                 onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
                 className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
@@ -508,7 +558,7 @@ function Landing() {
                   </span>
                   <button
                     onClick={openUserArea}
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 disabled:opacity-60"
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold bg-teal-400 text-slate-950 disabled:opacity-60"
                   >
                     {isAdminUser ? t.navAdmin : t.navCabinet}
                   </button>
@@ -529,7 +579,7 @@ function Landing() {
                 <>
                   <Link
                     to="/login"
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold bg-teal-400 text-slate-950"
                   >
                     {t.navLogin}
                   </Link>
@@ -538,31 +588,19 @@ function Landing() {
             </div>
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden xl:hidden">
-              <div
-                className={`flex h-8 w-[96px] shrink-0 rounded-full border overflow-hidden md:h-9 md:w-[118px] ${
-                  theme === "dark" ? "border-white/20" : "border-slate-300"
-                }`}
-              >
-                {APP_LOCALES.map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => handleLocaleChange(l)}
-                    className={`flex-1 min-w-0 px-0.5 py-1 text-[10px] font-medium md:text-xs ${
-                      locale === l
-                        ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                        : ""
-                    }`}
-                  >
-                    {l === "kk" ? "KZ" : l.toUpperCase()}
-                  </button>
-                ))}
-              </div>
+              <LanguageSwitcher
+                locale={locale}
+                onChange={setLocale}
+                variant="segmented"
+                ariaLabel="Язык интерфейса"
+                title="Язык интерфейса"
+              />
 
               {isAuthed ? (
                 <>
                   <button
                     onClick={openUserArea}
-                    className="inline-flex h-8 min-w-[70px] items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2.5 text-[11px] font-semibold text-slate-950 md:h-9 md:min-w-[86px] md:px-3 md:text-xs"
+                    className="inline-flex h-8 min-w-[70px] items-center justify-center rounded-full bg-teal-400 px-2.5 text-[11px] font-semibold text-slate-950 md:h-9 md:min-w-[86px] md:px-3 md:text-xs"
                   >
                     {isAdminUser ? t.navAdminMobile : t.navCabinetMobile}
                   </button>
@@ -585,7 +623,7 @@ function Landing() {
                 <>
                   <Link
                     to="/login"
-                    className="inline-flex h-8 min-w-[70px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 px-2.5 text-[11px] font-semibold text-slate-950 md:h-9 md:min-w-[84px] md:px-3 md:text-xs"
+                    className="inline-flex h-8 min-w-[70px] shrink-0 items-center justify-center rounded-full bg-teal-400 px-2.5 text-[11px] font-semibold text-slate-950 md:h-9 md:min-w-[84px] md:px-3 md:text-xs"
                   >
                     {t.navLoginMobile}
                   </Link>
@@ -641,8 +679,9 @@ function Landing() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="flex justify-center">
                 <img
-                  src="/images/robot-aimar.png"
+                  src="/images/robot-aimar.webp"
                   alt="AIMAR Robot"
+                  loading="lazy"
                   className="max-h-[480px] w-auto object-contain"
                   style={{ filter: theme === "dark" ? "drop-shadow(0 24px 48px rgba(34,211,238,0.18))" : "drop-shadow(0 24px 48px rgba(0,0,0,0.12))" }}
                 />
@@ -753,7 +792,7 @@ function Landing() {
             const isActive = activeMobileSection === item.id;
             const itemClass = `flex min-w-0 flex-col items-center justify-center gap-1 rounded-[18px] px-1 py-2 text-center text-[11px] font-semibold leading-tight transition ${
               isActive
-                ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 shadow-lg shadow-cyan-500/20"
+                ? "bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20"
                 : theme === "dark"
                   ? "text-slate-300"
                   : "text-slate-600"
@@ -882,91 +921,102 @@ function Landing() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Navigate to="/login" replace />} />
-      <Route path="/body" element={<BodyMap />} />
-      <Route path="/privacy" element={<LegalDocumentPage documentId="privacy" />} />
-      <Route path="/terms" element={<LegalDocumentPage documentId="terms" />} />
-      <Route
-        path="/medical-disclaimer"
-        element={<LegalDocumentPage documentId="medical-disclaimer" />}
-      />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/auth/vk/callback" element={<VkAuthCallback />} />
-      <Route
-        path="/appointments/new"
-        element={
-          <RequireAuth>
-            <AppointmentForm />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/doctor"
-        element={
-          <RequireAuth>
-            <DoctorDashboard />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <RequireAuth>
-            <AdminDashboard />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin/ward-consults"
-        element={
-          <RequireAuth>
-            <WardConsultationsPage />
-          </RequireAuth>
-        }
-      />
-      <Route path="/robot-terminal" element={<RobotTerminal />} />
-      <Route
-        path="/admin/doctor-schedule"
-        element={
-          <RequireAuth>
-            <DoctorSchedulePage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin/request/:id"
-        element={
-          <RequireAuth>
-            <AdminRequestPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/admin/aimar"
-        element={
-          <RequireAuth>
-            <AimarControl />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/app"
-        element={
-          <RequireAuth>
-            <AppLayout />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="measurements/:id" element={<MeasurementDetails />} />
-      </Route>
-      <Route path="/scan/:deviceId" element={<ScanDevice />} />
-      <Route path="/pair" element={<DevicePairing />} />
-      <Route path="/pair/:deviceId/:pairingToken" element={<DevicePairing />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <SessionIdleManager />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
+        <Route path="/body" element={<BodyMap />} />
+        <Route path="/privacy" element={<LegalDocumentPage documentId="privacy" />} />
+        <Route path="/terms" element={<LegalDocumentPage documentId="terms" />} />
+        <Route
+          path="/medical-disclaimer"
+          element={<LegalDocumentPage documentId="medical-disclaimer" />}
+        />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/auth/vk/callback" element={<VkAuthCallback />} />
+        <Route
+          path="/appointments/new"
+          element={
+            <RequireAuth>
+              <AppointmentForm />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/doctor"
+          element={
+            <RequireAuth>
+              <DoctorDashboard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth>
+              <AdminDashboard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <RequireAuth>
+              <AdminAnalyticsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/ward-consults"
+          element={
+            <RequireAuth>
+              <WardConsultationsPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/robot-terminal" element={<RobotTerminal />} />
+        <Route
+          path="/admin/doctor-schedule"
+          element={
+            <RequireAuth>
+              <DoctorSchedulePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/request/:id"
+          element={
+            <RequireAuth>
+              <AdminRequestPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/aimar"
+          element={
+            <RequireAuth>
+              <AimarControl />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/app"
+          element={
+            <RequireAuth>
+              <AppLayout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="measurements/:id" element={<MeasurementDetails />} />
+        </Route>
+        <Route path="/scan/:deviceId" element={<ScanDevice />} />
+        <Route path="/pair" element={<DevicePairing />} />
+        <Route path="/pair/:deviceId/:pairingToken" element={<DevicePairing />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }

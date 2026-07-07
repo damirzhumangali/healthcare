@@ -1,8 +1,9 @@
 import { API_URL } from "./apiBase";
-import { getToken } from "./auth";
+import { getCurrentUser, getToken } from "./auth";
 
 export type MeasurementItem = {
   id: string;
+  userId?: string | null;
   createdAt: string;
   deviceId: string;
   systolic: number;
@@ -12,7 +13,12 @@ export type MeasurementItem = {
   spo2: number;
 };
 
-const MEASUREMENTS_CACHE_KEY = "healthassist_measurements_cache_v1";
+const MEASUREMENTS_CACHE_KEY_PREFIX = "healthassist_measurements_cache_v2:";
+
+function resolveMeasurementsCacheKey(userId?: string | null) {
+  const normalizedUserId = String(userId ?? getCurrentUser()?.id ?? "").trim();
+  return normalizedUserId ? `${MEASUREMENTS_CACHE_KEY_PREFIX}${normalizedUserId}` : null;
+}
 
 function normalizeMeasurement(input: any): MeasurementItem | null {
   if (!input || typeof input !== "object") return null;
@@ -21,6 +27,7 @@ function normalizeMeasurement(input: any): MeasurementItem | null {
 
   return {
     id,
+    userId: String(input.userId ?? input.user_id ?? "").trim() || null,
     createdAt: String(input.createdAt ?? input.created_at ?? new Date().toISOString()),
     deviceId: String(input.deviceId ?? input.device_id ?? "device-001"),
     systolic: Number(input.systolic ?? 0),
@@ -31,17 +38,21 @@ function normalizeMeasurement(input: any): MeasurementItem | null {
   };
 }
 
-function writeCachedMeasurements(items: MeasurementItem[]) {
+function writeCachedMeasurements(items: MeasurementItem[], userId?: string | null) {
+  const key = resolveMeasurementsCacheKey(userId);
+  if (!key) return;
   try {
-    localStorage.setItem(MEASUREMENTS_CACHE_KEY, JSON.stringify(items));
+    localStorage.setItem(key, JSON.stringify(items));
   } catch {
     // Ignore storage write failures so API flow keeps working.
   }
 }
 
-export function readCachedMeasurements(): MeasurementItem[] {
+export function readCachedMeasurements(userId?: string | null): MeasurementItem[] {
+  const key = resolveMeasurementsCacheKey(userId);
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(MEASUREMENTS_CACHE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown[];
     return parsed
@@ -53,8 +64,8 @@ export function readCachedMeasurements(): MeasurementItem[] {
   }
 }
 
-export function getCachedMeasurementById(id: string) {
-  return readCachedMeasurements().find((item) => item.id === id) ?? null;
+export function getCachedMeasurementById(id: string, userId?: string | null) {
+  return readCachedMeasurements(userId).find((item) => item.id === id) ?? null;
 }
 
 function normalizeMeasurementsEnvelope(data: any): MeasurementItem[] {
@@ -72,6 +83,7 @@ function normalizeMeasurementsEnvelope(data: any): MeasurementItem[] {
 
 export async function createMeasurement(deviceId: string) {
   const token = getToken();
+  const currentUserId = getCurrentUser()?.id ?? null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -91,28 +103,31 @@ export async function createMeasurement(deviceId: string) {
   const created = normalizeMeasurement(data?.item ?? data?.measurement ?? data);
 
   if (created) {
-    const cache = readCachedMeasurements().filter((item) => item.id !== created.id);
-    writeCachedMeasurements([created, ...cache]);
+    const ownerId = String(created.userId ?? currentUserId ?? "").trim();
+    const cache = readCachedMeasurements(ownerId).filter((item) => item.id !== created.id);
+    writeCachedMeasurements([created, ...cache], ownerId);
   }
 
   return data;
 }
 
-export async function fetchMyMeasurements() {
+export async function fetchMyMeasurements(limit = 100) {
   const token = getToken();
+  const currentUserId = getCurrentUser()?.id ?? null;
   const headers: Record<string, string> = {};
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}/api/measurements/my`, {
+  const qs = limit > 0 ? `?limit=${encodeURIComponent(String(limit))}` : "";
+  const res = await fetch(`${API_URL}/api/measurements/my${qs}`, {
     headers,
     credentials: "include",
   });
   if (!res.ok) throw new Error("fetch measurements failed");
   const data = await res.json();
   const items = normalizeMeasurementsEnvelope(data);
-  writeCachedMeasurements(items);
+  writeCachedMeasurements(items, currentUserId);
   return { ...data, items };
 }

@@ -8,6 +8,7 @@ import {
   type MeasurementItem,
 } from "../lib/apiMeasurements";
 import { useAppPreferences } from "../lib/appPreferences";
+import { getCurrentUser } from "../lib/auth";
 import { usePageSeo } from "../lib/seo";
 
 const copy = {
@@ -76,10 +77,11 @@ export default function MeasurementDetails() {
   const { id } = useParams();
   const { locale } = useAppPreferences();
   const t = copy[locale];
+  const currentUserId = getCurrentUser()?.id ?? null;
   const [measurement, setMeasurement] = useState<MeasurementItem | null>(() =>
-    id ? getCachedMeasurementById(id) : null
+    id ? getCachedMeasurementById(id, currentUserId) : null
   );
-  const [loading, setLoading] = useState(() => Boolean(id) && !getCachedMeasurementById(id));
+  const [loading, setLoading] = useState(() => Boolean(id) && !getCachedMeasurementById(id, currentUserId));
   const [error, setError] = useState<string | null>(null);
 
   const seoDescription = useMemo(() => {
@@ -113,7 +115,7 @@ export default function MeasurementDetails() {
       return;
     }
 
-    const cached = getCachedMeasurementById(id);
+    const cached = getCachedMeasurementById(id, currentUserId);
     if (cached) {
       setMeasurement(cached);
       setLoading(false);
@@ -142,7 +144,7 @@ export default function MeasurementDetails() {
     return () => {
       cancelled = true;
     };
-  }, [id, t.loadError]);
+  }, [currentUserId, id, t.loadError]);
 
   if (loading) {
     return (

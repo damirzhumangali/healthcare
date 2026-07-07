@@ -1,20 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { House, LogOut, Moon, Sun, User } from "lucide-react";
+import AvatarCircle from "../components/AvatarCircle";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import ProfileAvatarDialog from "../components/ProfileAvatarDialog";
 import Button from "../components/Button";
 import { getCurrentUser, logout } from "../lib/authStore";
+import { SESSION_USER_UPDATED_EVENT, type SessionUser } from "../lib/auth";
 import { isAdminAccount } from "../lib/adminAccess";
+import { resolveAvatarUrl } from "../lib/avatar";
 import {
   AppPreferencesProvider,
   type AppTheme,
   type Locale,
 } from "../lib/appPreferences";
+import { type AppLocale } from "../lib/locale";
+import { hasPatientFullName, normalizePatientFullName } from "../lib/patientName";
 import { usePageSeo } from "../lib/seo";
+import { useSyncedLocale } from "../lib/useSyncedLocale";
 
 const copy = {
   ru: {
     account: "Аккаунт:",
     patientArea: "Кабинет пациента",
+    home: "На главную",
     logout: "Выйти",
     logoutShort: "Выйти",
     lightTheme: "Включить светлый режим",
@@ -24,6 +33,7 @@ const copy = {
   kk: {
     account: "Аккаунт:",
     patientArea: "Пациент кабинеті",
+    home: "Басты бетке",
     logout: "Шығу",
     logoutShort: "Шығу",
     lightTheme: "Жарық режимді қосу",
@@ -33,6 +43,7 @@ const copy = {
   en: {
     account: "Account:",
     patientArea: "Patient Dashboard",
+    home: "Home",
     logout: "Sign out",
     logoutShort: "Sign out",
     lightTheme: "Switch to light mode",
@@ -61,34 +72,70 @@ function TelegramIcon({ className = "" }: { className?: string }) {
 export default function AppLayout() {
   const nav = useNavigate();
   const location = useLocation();
-  const user = getCurrentUser();
-  const [locale, setLocale] = useState<Locale>(() => {
-    const value = window.localStorage.getItem("ha_locale");
-    return value === "kk" || value === "en" || value === "ru" ? value : "ru";
-  });
+  const isPatientDashboard = location.pathname === "/app";
+  const [user, setUser] = useState<SessionUser | null>(() => getCurrentUser());
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileProfileMenuOpen, setMobileProfileMenuOpen] = useState(false);
+  const [locale, setLocale] = useSyncedLocale();
   const [theme, setTheme] = useState<AppTheme>(() => {
     const value = window.localStorage.getItem("ha_theme");
     return value === "light" ? "light" : "dark";
   });
 
   useEffect(() => {
-    window.localStorage.setItem("ha_locale", locale);
-  }, [locale]);
-
-  useEffect(() => {
     window.localStorage.setItem("ha_theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const syncUser = () => setUser(getCurrentUser());
+    window.addEventListener(SESSION_USER_UPDATED_EVENT, syncUser);
+    return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, syncUser);
+  }, []);
+
+  const mobileProfileRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (mobileProfileRef.current && !mobileProfileRef.current.contains(target)) {
+        setMobileProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMobileProfileMenuOpen(false);
+  }, [location.pathname]);
 
   const preferences = useMemo(
     () => ({
       locale,
-      setLocale,
+      setLocale: setLocale as (locale: Locale) => void,
       theme,
       toggleTheme: () => setTheme((current) => (current === "dark" ? "light" : "dark")),
     }),
     [locale, setLocale, theme, setTheme]
   );
-  const t = copy[locale];
+  const t = copy[locale as Locale];
+  const themeLogo = theme === "light" ? "/images/ha-logo-light.webp" : "/images/ha-logo-dark.webp";
+  const userAvatar = resolveAvatarUrl(
+    user ? { ...user, role: user.role || "patient" } : null,
+    { patientFallback: true },
+  );
+  const resolvedUserName =
+    normalizePatientFullName(user?.name, { requireFullName: user?.role === "patient" }) ||
+    user?.name ||
+    user?.email ||
+    "Пациент";
+  const requiresPatientName = user?.role === "patient" && !hasPatientFullName(user?.name);
   const seoTitle =
     location.pathname.includes("/measurements/")
       ? locale === "kk"
@@ -116,6 +163,12 @@ export default function AppLayout() {
     robots: "noindex, nofollow",
   });
 
+  useEffect(() => {
+    if (requiresPatientName) {
+      setProfileOpen(true);
+    }
+  }, [requiresPatientName]);
+
   if (isAdminAccount(user)) {
     return <Navigate to="/admin" replace />;
   }
@@ -125,23 +178,33 @@ export default function AppLayout() {
       <div className={`app-shell app-shell--${theme}`}>
       <header className="topbar">
         <div className="brand">
-          <img src="/icon-192.png" alt="HealthAssist" className="brand__logo" />
-          <div className="brand__meta hidden sm:block xl:block">
+          <img src={themeLogo} alt="HealthAssist" className="brand__logo" />
+          <div className="brand__meta">
             <div className="brand__title">HealthAssist</div>
-            <div className="brand__sub">
-              {user ? (
-                <>
-                  <span>{t.account}</span>
-                  <strong className="brand__account">{user.name || user.email}</strong>
-                </>
-              ) : (
-                t.patientArea
-              )}
-            </div>
           </div>
         </div>
 
-        <div className="actions app-topbar__toolbar hidden xl:flex">
+        <div className="app-topbar__toolbar">
+          <button
+            type="button"
+            className="app-topbar__account-chip"
+            onClick={() => setProfileOpen(true)}
+            aria-label={resolvedUserName}
+            title={resolvedUserName}
+          >
+            <AvatarCircle
+              name={resolvedUserName}
+              src={userAvatar}
+              size={34}
+              className="brand__avatar"
+              alt={resolvedUserName}
+            />
+            <span className="app-topbar__account-chip-copy">
+              <strong>{resolvedUserName}</strong>
+              <span>{user?.role === "patient" ? "Пациент" : t.patientArea}</span>
+            </span>
+          </button>
+
           <button
             type="button"
             className="theme-toggle"
@@ -151,21 +214,12 @@ export default function AppLayout() {
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          <div className="language-switcher language-switcher--topbar">
-            {(["ru", "kk", "en"] as Locale[]).map((item) => (
-              <button
-                key={item}
-                onClick={() => setLocale(item)}
-                className={
-                  locale === item
-                    ? "language-switcher__item language-switcher__item--active"
-                    : "language-switcher__item"
-                }
-              >
-                {item === "kk" ? "KZ" : item.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          <LanguageSwitcher
+            locale={locale as AppLocale}
+            onChange={setLocale}
+            variant="segmented"
+            className="language-switcher--topbar"
+          />
 
           <Button
             variant="ghost"
@@ -179,26 +233,68 @@ export default function AppLayout() {
           </Button>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden xl:hidden">
-          <div
-            className={`flex h-8 w-[96px] shrink-0 rounded-full border overflow-hidden md:h-9 md:w-[118px] ${
-              theme === "dark" ? "border-white/20" : "border-slate-300"
-            }`}
-          >
-            {(["ru", "kk", "en"] as Locale[]).map((item) => (
-              <button
-                key={item}
-                onClick={() => setLocale(item)}
-                className={`flex-1 min-w-0 px-0.5 py-1 text-[10px] font-medium md:text-xs ${
-                  locale === item
-                    ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                    : ""
-                }`}
-              >
-                {item === "kk" ? "KZ" : item.toUpperCase()}
-              </button>
-            ))}
+        <div className="app-topbar__mobile-controls">
+          <div className="app-topbar__mobile-group" ref={mobileProfileRef}>
+            <button
+              type="button"
+              className="app-topbar__mobile-profile"
+              onClick={() => {
+                setMobileProfileMenuOpen((current) => !current);
+              }}
+              aria-label={resolvedUserName}
+              title={resolvedUserName}
+            >
+              <AvatarCircle
+                name={resolvedUserName}
+                src={userAvatar}
+                size={38}
+                className="brand__avatar"
+                alt={resolvedUserName}
+              />
+              <span className="app-topbar__mobile-profile-copy">
+                <strong>{resolvedUserName}</strong>
+                <span>{user?.role === "patient" ? "Пациент" : t.patientArea}</span>
+              </span>
+            </button>
+            {mobileProfileMenuOpen ? (
+              <div className="app-topbar__popover app-topbar__popover--profile">
+                <div className="app-topbar__popover-copy">
+                  <strong>{resolvedUserName}</strong>
+                  <span>{user?.role === "patient" ? "Пациент" : t.patientArea}</span>
+                </div>
+                <button
+                  type="button"
+                  className="app-topbar__popover-item"
+                  onClick={() => {
+                    setProfileOpen(true);
+                    setMobileProfileMenuOpen(false);
+                  }}
+                >
+                  <User size={15} />
+                  Фото профиля
+                </button>
+              </div>
+            ) : null}
           </div>
+
+          <LanguageSwitcher
+            locale={locale as AppLocale}
+            onChange={setLocale}
+            variant="segmented"
+            ariaLabel="Язык интерфейса"
+            title="Язык интерфейса"
+          />
+
+          <button
+            type="button"
+            className="app-topbar__home-btn"
+            onClick={() => nav("/")}
+            aria-label={t.home}
+            title={t.home}
+          >
+            <House size={14} />
+            <span className="app-topbar__home-label">{t.home}</span>
+          </button>
 
           <button
             type="button"
@@ -206,32 +302,44 @@ export default function AppLayout() {
               logout();
               nav("/login");
             }}
-            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
-              theme === "dark" ? "border-white/20" : "border-slate-300"
-            } md:h-9 md:w-auto md:min-w-[84px] md:px-3 md:text-xs`}
+            className="app-topbar__icon-btn"
             aria-label={t.logoutShort}
             title={t.logoutShort}
           >
-            <LogOut className="h-3.5 w-3.5 md:mr-1.5 md:h-4 md:w-4" />
-            <span className="hidden md:inline">{t.logoutShort}</span>
+            <LogOut size={18} />
           </button>
 
           <button
             type="button"
             onClick={preferences.toggleTheme}
-            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border md:h-9 md:w-9 ${
-              theme === "dark" ? "border-white/20" : "border-slate-300"
-            }`}
+            className="app-topbar__icon-btn"
             aria-label={theme === "dark" ? t.lightTheme : t.darkTheme}
+            title={theme === "dark" ? t.lightTheme : t.darkTheme}
           >
-            {theme === "dark" ? <Sun className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <Moon className="h-3.5 w-3.5 md:h-4 md:w-4" />}
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
       </header>
 
-      <main className="container">
+      <main className={`container app-shell__main${isPatientDashboard ? " app-shell__main--dashboard" : ""}`}>
         <Outlet />
       </main>
+
+      <ProfileAvatarDialog
+        open={profileOpen}
+        user={user}
+        showNameField={user?.role === "patient"}
+        requireName={requiresPatientName}
+        onClose={() => {
+          if (!requiresPatientName) {
+            setProfileOpen(false);
+          }
+        }}
+        onSaved={(savedUser) => {
+          setUser(savedUser);
+          setProfileOpen(false);
+        }}
+      />
       </div>
     </AppPreferencesProvider>
   );

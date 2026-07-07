@@ -77,7 +77,7 @@ type ScrollAnimationSectionProps = {
 };
 
 export const ScrollAnimationSection: React.FC<ScrollAnimationSectionProps> = ({
-  frameCount = 150,
+  frameCount = 240,
   sectionHeightVh = 400,
   basePath = "/frames",
   frameUrls,

@@ -4,12 +4,15 @@ import { ArrowLeft, House, Sparkles } from "lucide-react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/Card";
 import Input from "../components/Input";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { AppointmentRequestError, createAppointment, pingBackend } from "../lib/apiAppointments";
 import { isAdminAccount } from "../lib/adminAccess";
 import { getCurrentUser } from "../lib/authStore";
+import { validateComplaint } from "../lib/complaintValidation";
 import { normalizeConsultationMode, type ConsultationMode } from "../lib/consultationMode";
-import { APP_LOCALES, readStoredLocale, writeStoredLocale, type AppLocale } from "../lib/locale";
+import { type AppLocale } from "../lib/locale";
 import { usePageSeo } from "../lib/seo";
+import { useSyncedLocale } from "../lib/useSyncedLocale";
 
 type Locale = AppLocale;
 
@@ -64,6 +67,8 @@ const appointmentText = {
     home: "На главную",
     specialty: "Нужный специалист",
     date: "Желаемая дата",
+    dateOptional: "по желанию",
+    dateHint: "Можно оставить пустым — администратор всё равно назначит точное время.",
     symptoms: "Симптомы / Причина обращения",
     symptomsPlaceholder: "Например: головная боль, высокая температура, боль в груди...",
     symptomsHint: "Минимум 10 символов. Опишите жалобы как можно точнее.",
@@ -74,10 +79,10 @@ const appointmentText = {
     visitOnlineHome: "Онлайн из дома",
     consultationHintClinic: "Пациент приедет в клинику, а время назначит администратор.",
     consultationHintOnlineHome: "После подтверждения администратор сразу создаст ссылку и отправит её пациенту и врачу.",
-    fillAllError: "Заполните дату и опишите симптомы.",
-    tooShortError: "Опишите симптомы подробнее — минимум 10 символов.",
-    spamError: "Пожалуйста, опишите ваши реальные симптомы медицинскими словами.",
-    offensiveError: "Пожалуйста, используйте корректные медицинские термины.",
+    fillAllError: "Опишите симптомы, чтобы отправить заявку.",
+    tooShortError: "Опишите жалобу понятным текстом — минимум 10 символов, реальными словами.",
+    spamError: "Опишите симптом нормально, без повторяющихся символов.",
+    offensiveError: "Пожалуйста, без нецензурных выражений.",
     created: "Заявка отправлена. Администратор назначит врача и время.",
     createError: "Не удалось создать заявку. Попробуйте ещё раз чуть позже.",
     createAuthError: "Сессия истекла. Войдите снова, чтобы заявка дошла врачу и в админку.",
@@ -92,6 +97,8 @@ const appointmentText = {
     home: "Басты бетке",
     specialty: "Қажетті маман",
     date: "Қалаулы күн",
+    dateOptional: "міндетті емес",
+    dateHint: "Бос қалдыруға болады — нақты уақытты бәрібір әкімші тағайындайды.",
     symptoms: "Симптомдар / Өтініш себебі",
     symptomsPlaceholder: "Мысалы: бас ауруы, жоғары температура, кеуде ауруы...",
     symptomsHint: "Кем дегенде 10 таңба. Шағымдарыңызды мүмкіндігінше нақты сипаттаңыз.",
@@ -102,10 +109,10 @@ const appointmentText = {
     visitOnlineHome: "Үйден онлайн",
     consultationHintClinic: "Пациент клиникаға келеді, ал уақытты әкімші тағайындайды.",
     consultationHintOnlineHome: "Расталғаннан кейін әкімші сілтемені бірден жасап, пациент пен дәрігерге жібереді.",
-    fillAllError: "Күнді толтырыңыз және симптомдарды сипаттаңыз.",
-    tooShortError: "Симптомдарды толығырақ сипаттаңыз — кем дегенде 10 таңба.",
-    spamError: "Нақты симптомдарыңызды медициналық сөздермен сипаттаңыз.",
-    offensiveError: "Дұрыс медициналық терминдерді қолданыңыз.",
+    fillAllError: "Өтінімді жіберу үшін симптомдарды сипаттаңыз.",
+    tooShortError: "Шағымды түсінікті мәтінмен жазыңыз — кемінде 10 таңба және нақты сөздер болсын.",
+    spamError: "Симптомды қайталанатын таңбаларсыз қалыпты түрде жазыңыз.",
+    offensiveError: "Өтінеміз, бейәдеп сөздерсіз жазыңыз.",
     created: "Өтінім жіберілді. Әкімші дәрігер мен уақытты тағайындайды.",
     createError: "Өтінімді жасау мүмкін болмады. Сәл кейінірек қайта көріңіз.",
     createAuthError: "Сессия аяқталды. Өтінім дәрігер мен әкімшіге жетуі үшін қайта кіріңіз.",
@@ -120,6 +127,8 @@ const appointmentText = {
     home: "Home",
     specialty: "Specialist needed",
     date: "Preferred date",
+    dateOptional: "optional",
+    dateHint: "You can leave this empty — the admin will still assign the exact time.",
     symptoms: "Symptoms / Reason for visit",
     symptomsPlaceholder: "For example: headache, high fever, chest pain...",
     symptomsHint: "At least 10 characters. Describe your complaint as precisely as possible.",
@@ -130,10 +139,10 @@ const appointmentText = {
     visitOnlineHome: "Online from home",
     consultationHintClinic: "The patient will come to the clinic and the admin will assign the time.",
     consultationHintOnlineHome: "After approval, the admin will immediately create the meeting link and send it to both patient and doctor.",
-    fillAllError: "Please fill in the date and describe your symptoms.",
-    tooShortError: "Please describe your symptoms in more detail — at least 10 characters.",
-    spamError: "Please describe your real symptoms using medical terms.",
-    offensiveError: "Please use appropriate medical terminology.",
+    fillAllError: "Please describe your symptoms before sending the request.",
+    tooShortError: "Please describe the complaint clearly — at least 10 characters, using real words.",
+    spamError: "Please describe the symptom normally, without repeated characters.",
+    offensiveError: "Please describe the complaint without offensive language.",
     created: "Request sent. An admin will assign a doctor and time.",
     createError: "Could not create the request. Please try again a little later.",
     createAuthError: "Your session expired. Sign in again so the request reaches the doctor and admin.",
@@ -142,23 +151,6 @@ const appointmentText = {
     cancel: "Cancel",
   },
 } as const;
-
-const BAD_WORDS = ["хуй", "пизд", "еба", "бляд", "ёба", "блят", "сука", "пиздец", "нахуй", "ёбан", "залуп", "мудак", "мудил", "ублюд"];
-
-function validateSymptoms(text: string): "ok" | "short" | "spam" | "offensive" {
-  const trimmed = text.trim();
-  if (trimmed.length < 10) return "short";
-
-  const lower = trimmed.toLowerCase();
-  if (BAD_WORDS.some((w) => lower.includes(w))) return "offensive";
-
-  // Detect spam: repeated chars (ааааа), or less than 50% actual letters
-  if (/(.)\1{4,}/.test(trimmed)) return "spam";
-  const letters = (trimmed.match(/[а-яёa-zәіңғүұқөһ]/gi) ?? []).length;
-  if (letters / trimmed.length < 0.45) return "spam";
-
-  return "ok";
-}
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -169,9 +161,9 @@ export default function AppointmentForm() {
   const [searchParams] = useSearchParams();
   const currentUser = getCurrentUser();
   const requestedMode = normalizeConsultationMode(searchParams.get("mode"));
-  const [locale, setLocale] = useState<Locale>(() => readStoredLocale());
+  const [locale, setLocale] = useSyncedLocale();
   const [specialty, setSpecialty] = useState(SPECIALTIES[0] ?? "");
-  const [date, setDate] = useState(today());
+  const [date, setDate] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [suggested, setSuggested] = useState<string | null>(null);
   const [consultationMode, setConsultationMode] = useState<ConsultationMode>(
@@ -196,15 +188,13 @@ export default function AppointmentForm() {
     return <Navigate to="/admin" replace />;
   }
 
-  function changeLocale(nextLocale: Locale) {
-    setLocale(nextLocale);
-    writeStoredLocale(nextLocale);
-  }
-
   function handleSymptomsChange(text: string) {
     setSymptoms(text);
     const match = detectSpecialty(text);
     setSuggested(match && match !== specialty ? match : null);
+    if (err) {
+      setErr(null);
+    }
   }
 
   function applySuggestion() {
@@ -219,20 +209,20 @@ export default function AppointmentForm() {
     setErr(null);
     setOk(null);
 
-    if (!date || !symptoms.trim()) {
+    if (!symptoms.trim()) {
       setErr(t.fillAllError);
       return;
     }
 
-    const check = validateSymptoms(symptoms);
-    if (check === "short") { setErr(t.tooShortError); return; }
-    if (check === "spam") { setErr(t.spamError); return; }
+    const check = validateComplaint(symptoms);
+    if (check === "meaningless") { setErr(t.tooShortError); return; }
+    if (check === "repeating") { setErr(t.spamError); return; }
     if (check === "offensive") { setErr(t.offensiveError); return; }
 
     setLoading(true);
     try {
       await createAppointment({
-        date,
+        date: date || today(),
         time: "",
         reason: symptoms.trim(),
         specialtyRequest: specialty,
@@ -265,18 +255,14 @@ export default function AppointmentForm() {
             >
               <ArrowLeft size={18} />
             </Link>
-            <div className="appointment-form__locale" aria-label="Language switcher">
-              {APP_LOCALES.map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  className={`appointment-form__locale-item ${locale === lang ? "appointment-form__locale-item--active" : ""}`}
-                  onClick={() => changeLocale(lang)}
-                >
-                  {lang === "kk" ? "KZ" : lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            <LanguageSwitcher
+              locale={locale}
+              onChange={setLocale}
+              variant="segmented"
+              className="appointment-form__locale"
+              ariaLabel="Язык интерфейса"
+              title="Язык интерфейса"
+            />
             <Link
               to="/"
               className="btn btn--ghost appointment-form__nav-btn appointment-form__home-btn"
@@ -354,7 +340,8 @@ export default function AppointmentForm() {
 
             {/* Preferred date only — time set by admin */}
             <Input
-              label={t.date}
+              label={`${t.date} (${t.dateOptional})`}
+              hint={t.dateHint}
               type="date"
               min={today()}
               value={date}

@@ -12,8 +12,8 @@ type CinematicHeroProps = {
 };
 
 const HERO_IMAGES = {
-  dark: "/images/doctor-hero.jpg",
-  light: "/images/doctor-hero-light.jpg"
+  dark: "/images/doctor-hero.webp",
+  light: "/images/doctor-hero-light.webp"
 };
 
 export default function CinematicHero({

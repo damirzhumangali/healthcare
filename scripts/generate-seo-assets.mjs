@@ -18,31 +18,50 @@ function normalizeBaseUrl(value) {
   return value.trim().replace(/\/+$/, "");
 }
 
-function buildUrl(routePath) {
-  if (routePath === "/") {
-    return `${publicUrl}/`;
+function buildUrl(routePath, lang) {
+  const baseUrl = routePath === "/" ? `${publicUrl}/` : `${publicUrl}${routePath}`;
+  if (!lang || lang === "ru") {
+    return baseUrl;
   }
-
-  return `${publicUrl}${routePath}`;
+  return `${baseUrl}?lang=${lang}`;
 }
 
 const robotsTxt = `User-agent: *
+Disallow: /admin/
+Disallow: /doctor/
+Disallow: /auth/
+Disallow: /scan/
+Disallow: /pair/
+Disallow: /app/
+Disallow: /login
+Disallow: /register
 Allow: /
 
 Sitemap: ${publicUrl}/sitemap.xml
 `;
 
+const languages = ["ru", "kk", "en"];
+
 const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${sitemapRoutes
-  .map(
-    (route) => `  <url>
-    <loc>${buildUrl(route.path)}</loc>
+  .flatMap((route) => {
+    return languages.map((lang) => {
+      const locUrl = buildUrl(route.path, lang);
+      const alternates = languages.map((l) => {
+        return `    <xhtml:link rel="alternate" hreflang="${l}" href="${buildUrl(route.path, l)}" />`;
+      });
+      alternates.push(`    <xhtml:link rel="alternate" hreflang="x-default" href="${buildUrl(route.path, "ru")}" />`);
+
+      return `  <url>
+    <loc>${locUrl}</loc>
     <lastmod>${buildDate}</lastmod>
     <changefreq>${route.changefreq}</changefreq>
     <priority>${route.priority}</priority>
-  </url>`
-  )
+${alternates.join("\n")}
+  </url>`;
+    });
+  })
   .join("\n")}
 </urlset>
 `;

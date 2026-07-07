@@ -1,16 +1,20 @@
 import type { FormEvent } from "react";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { LockKeyhole } from "lucide-react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { getGoogleAuthUrl } from "../lib/apiAuth";
 import { login } from "../lib/authStore";
 import { resolvePostLoginRedirect, storePostLoginRedirect } from "../lib/authRedirect";
+import { type AppLocale } from "../lib/locale";
 import { usePageSeo } from "../lib/seo";
+import { useSyncedLocale } from "../lib/useSyncedLocale";
 import { isVkAuthEnabled, startVkLogin } from "../lib/vkAuth";
 
-type Locale = "ru" | "kk" | "en";
+type Locale = AppLocale;
 
 const copy = {
   ru: {
@@ -106,11 +110,7 @@ export default function Login() {
   const postLoginRedirect = resolvePostLoginRedirect(
     new URLSearchParams(location.search).get("next")
   );
-  const [locale, setLocale] = useState<Locale>(() => {
-    const v = window.localStorage.getItem("ha_locale");
-    if (v === "en" || v === "kk" || v === "ru") return v;
-    return "ru";
-  });
+  const [locale, setLocale] = useSyncedLocale();
 
   const t = copy[locale];
   const seoCopy = {
@@ -148,10 +148,6 @@ export default function Login() {
     robots: "noindex, nofollow",
   });
 
-  useEffect(() => {
-    window.localStorage.setItem("ha_locale", locale);
-  }, [locale]);
-
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -172,25 +168,35 @@ export default function Login() {
     <div className="center min-h-screen relative">
       {/* Language Switcher */}
       <div className="absolute top-4 right-4">
-        <div className="flex rounded-full border border-white/20 overflow-hidden bg-slate-900/50 backdrop-blur-sm">
-          {(["ru", "kk", "en"] as Locale[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLocale(l)}
-              className={`px-3 py-1.5 text-xs font-medium transition ${
-                locale === l
-                  ? "bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <LanguageSwitcher
+          locale={locale}
+          onChange={setLocale}
+          variant="segmented"
+          ariaLabel="Язык интерфейса"
+          title="Язык интерфейса"
+        />
       </div>
 
       <Card>
         <div className="stack">
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              margin: "0 auto 4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background:
+                "linear-gradient(135deg, rgba(34,211,238,0.22), rgba(50,193,141,0.24))",
+              border: "1px solid rgba(120,240,220,0.22)",
+              boxShadow: "0 12px 28px rgba(17,94,89,0.18), inset 0 1px 0 rgba(255,255,255,0.16)",
+              backdropFilter: "blur(14px)",
+            }}
+          >
+            <LockKeyhole size={24} color="#eafffb" strokeWidth={2.2} />
+          </div>
           <h1 className="h1">{t.title}</h1>
           <p className="muted">
             {subtitle}

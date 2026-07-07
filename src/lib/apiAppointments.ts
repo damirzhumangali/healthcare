@@ -1,9 +1,12 @@
 import { API_URL } from "./apiBase";
 import { getToken } from "./auth";
+import { normalizePatientFullName } from "./patientName";
 import {
   isHomeOnlineConsultation,
   readRoomLabel,
   resolveConsultationMode,
+  resolveAppointmentRequestType,
+  type AppointmentRequestType,
   type ConsultationMode,
 } from "./consultationMode";
 
@@ -30,6 +33,8 @@ export type Appointment = {
   wantsOnline?: boolean;
   consultation_mode?: ConsultationMode;
   consultationMode?: ConsultationMode;
+  request_type?: AppointmentRequestType;
+  requestType?: AppointmentRequestType;
   room_label?: string;
   roomLabel?: string;
   ward_label?: string;
@@ -264,19 +269,22 @@ function createLocalAppointment(input: {
   bedLabel?: string;
 }) {
   const user = readCurrentUser();
+  const patientProfileName = normalizePatientFullName(user?.name, { requireFullName: true }) || "";
   const doctor = input.doctorId ? DOCTORS.find((item) => item.id === input.doctorId) : undefined;
   const id = crypto.randomUUID();
   const consultationMode =
     input.consultationMode || (input.wantsOnline ? "online_home" : "in_person");
   const wantsOnline = consultationMode !== "in_person";
+  const requestType: AppointmentRequestType =
+    consultationMode === "online_ward" ? "ward_online" : "regular";
   const meetingUrl =
     consultationMode === "online_home" && input.doctorId ? buildLocalMeetingUrl(id) : undefined;
   const appointment: Appointment = {
     id,
     patient_id: user?.id || user?.email || "local-patient",
     patient_email: user?.email,
-    patientName: user?.name || user?.email || "Пациент",
-    patient_name: user?.name || user?.email || "",
+    patientName: patientProfileName || "Пациент",
+    patient_name: patientProfileName,
     doctor_id: input.doctorId,
     doctorName: doctor ? `${doctor.name} — ${doctor.specialty}` : undefined,
     date: input.date,
@@ -287,6 +295,8 @@ function createLocalAppointment(input: {
     wantsOnline,
     consultation_mode: consultationMode,
     consultationMode,
+    request_type: requestType,
+    requestType,
     room_label: input.roomLabel,
     roomLabel: input.roomLabel,
     ward_label: input.wardLabel,
@@ -321,6 +331,31 @@ function updateLocalAppointmentStatus(id: string, status: AppointmentStatus) {
 
 function normalizeAppointmentList(data: { items?: Appointment[]; appointments?: Appointment[] }) {
   return { items: data.items ?? data.appointments ?? [] };
+}
+
+function mergeAppointmentWithFallback(primary: Appointment, fallback?: Appointment | null): Appointment {
+  if (!fallback) return primary;
+
+  return {
+    ...fallback,
+    ...primary,
+    patientName: primary.patientName || primary.patient_name || fallback.patientName || fallback.patient_name,
+    patient_name: primary.patient_name || primary.patientName || fallback.patient_name || fallback.patientName,
+    patient_email: primary.patient_email || primary.patientEmail || fallback.patient_email || fallback.patientEmail,
+    patientEmail: primary.patientEmail || primary.patient_email || fallback.patientEmail || fallback.patient_email,
+    doctorName: primary.doctorName || fallback.doctorName,
+    reason: primary.reason || fallback.reason,
+    specialty_request: primary.specialty_request || primary.specialtyRequest || fallback.specialty_request || fallback.specialtyRequest,
+    specialtyRequest: primary.specialtyRequest || primary.specialty_request || fallback.specialtyRequest || fallback.specialty_request,
+    meeting_url: primary.meeting_url || fallback.meeting_url,
+    meeting_at: primary.meeting_at || primary.meetingAt || fallback.meeting_at || fallback.meetingAt,
+    room_label: primary.room_label || primary.roomLabel || fallback.room_label || fallback.roomLabel,
+    roomLabel: primary.roomLabel || primary.room_label || fallback.roomLabel || fallback.room_label,
+    ward_label: primary.ward_label || primary.wardLabel || fallback.ward_label || fallback.wardLabel,
+    wardLabel: primary.wardLabel || primary.ward_label || fallback.wardLabel || fallback.ward_label,
+    bed_label: primary.bed_label || primary.bedLabel || fallback.bed_label || fallback.bedLabel,
+    bedLabel: primary.bedLabel || primary.bed_label || fallback.bedLabel || fallback.bed_label,
+  };
 }
 
 function authHeaders() {
@@ -373,10 +408,12 @@ export async function createAppointment(input: {
   bedLabel?: string;
 }) {
   const currentUser = readCurrentUser();
-  const patientName = currentUser?.name || currentUser?.email || "";
+  const patientName = normalizePatientFullName(currentUser?.name, { requireFullName: true }) || "";
   const consultationMode =
     input.consultationMode || (input.wantsOnline ? "online_home" : "in_person");
   const wantsOnline = consultationMode !== "in_person";
+  const requestType: AppointmentRequestType =
+    consultationMode === "online_ward" ? "ward_online" : "regular";
 
   try {
     const payload: Record<string, unknown> = {
@@ -385,6 +422,7 @@ export async function createAppointment(input: {
       specialty_request: input.specialtyRequest ?? "",
       wants_online: wantsOnline,
       consultation_mode: consultationMode,
+      request_type: requestType,
       room_label: input.roomLabel ?? "",
       ward_label: input.wardLabel ?? "",
       bed_label: input.bedLabel ?? "",
@@ -425,6 +463,14 @@ export async function createAppointment(input: {
           created.consultationMode ||
           created.consultation_mode ||
           consultationMode,
+        request_type:
+          created.request_type ||
+          created.requestType ||
+          requestType,
+        requestType:
+          created.requestType ||
+          created.request_type ||
+          requestType,
         room_label: created.room_label || created.roomLabel || input.roomLabel,
         roomLabel: created.roomLabel || created.room_label || input.roomLabel,
         ward_label: created.ward_label || created.wardLabel || input.wardLabel,
@@ -437,10 +483,13 @@ export async function createAppointment(input: {
 
     return data;
   } catch (error) {
-    if (error instanceof AppointmentRequestError && error.code === "auth_required") {
+    if (shouldAllowLocalAppointmentFallback()) {
+      return createLocalAppointment(input);
+    }
+    if (error instanceof AppointmentRequestError) {
       throw error;
     }
-    return createLocalAppointment(input);
+    throw new AppointmentRequestError("server_create_failed");
   }
 }
 
@@ -553,6 +602,8 @@ function normalizeFetchedAppointments(items: Appointment[]) {
           (isHomeOnlineConsultation(item) && isDoctorAssigned(item) ? buildLocalMeetingUrl(item.id) : undefined),
         consultation_mode: item.consultation_mode || item.consultationMode || resolveConsultationMode(item),
         consultationMode: item.consultationMode || item.consultation_mode || resolveConsultationMode(item),
+        request_type: item.request_type || item.requestType || resolveAppointmentRequestType(item),
+        requestType: item.requestType || item.request_type || resolveAppointmentRequestType(item),
       }),
     )
     .sort(appointmentSort);
@@ -579,11 +630,13 @@ export async function fetchAppointments(date?: string): Promise<{ items: Appoint
     if (!res.ok) throw new Error("fetch appointments failed");
     const data = normalizeAppointmentList(await res.json());
     const normalized = normalizeFetchedAppointments(data.items ?? []);
+    const cachedById = new Map(allLocal.map((item) => [item.id, item]));
+    const hydrated = normalized.map((item) => mergeAppointmentWithFallback(item, cachedById.get(item.id)));
 
     // Preserve local-only appointments (created while backend was unreachable)
-    const serverIds = new Set(normalized.map((a) => a.id));
+    const serverIds = new Set(hydrated.map((a) => a.id));
     const localOnly = allLocal.filter((a) => !serverIds.has(a.id));
-    const merged = localOnly.length > 0 ? [...normalized, ...localOnly] : normalized;
+    const merged = localOnly.length > 0 ? [...hydrated, ...localOnly] : hydrated;
 
     writeAppointments(merged);
     const result = date ? merged.filter((a) => a.date === date) : merged;
@@ -626,7 +679,11 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     });
     if (!res.ok) throw new Error();
     const data = normalizeAppointmentList(await res.json());
-    const updated = normalizeFetchedAppointments(data.items);
+    const cached = readAppointments();
+    const cachedById = new Map(cached.map((item) => [item.id, item]));
+    const updated = normalizeFetchedAppointments(data.items).map((item) =>
+      mergeAppointmentWithFallback(item, cachedById.get(item.id)),
+    );
     writeAppointments(updated);
 
     return { items: applyAssignOverrides(updated) };
@@ -656,5 +713,35 @@ export async function fetchMyAppointments(): Promise<{ items: Appointment[] }> {
     }
 
     return { items: [] };
+  }
+}
+
+export async function fetchDoctorSchedule(date?: string): Promise<{ items: Appointment[] }> {
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  const query = params.toString();
+  const url = query ? `${API_URL}/api/appointments/my-schedule?${query}` : `${API_URL}/api/appointments/my-schedule`;
+  const cached = normalizeFetchedAppointments(readAppointments());
+  const cachedById = new Map(cached.map((item) => [item.id, item]));
+
+  try {
+    const res = await fetch(url, {
+      headers: authHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("fetch doctor schedule failed");
+    const data = normalizeAppointmentList(await res.json());
+    const normalized = normalizeFetchedAppointments(data.items ?? []).map((item) =>
+      mergeAppointmentWithFallback(item, cachedById.get(item.id)),
+    );
+
+    const serverIds = new Set(normalized.map((item) => item.id));
+    const localOnly = cached.filter((item) => !serverIds.has(item.id));
+    const merged = localOnly.length > 0 ? [...normalized, ...localOnly] : normalized;
+    writeAppointments(merged);
+
+    return { items: applyAssignOverrides(date ? merged.filter((item) => item.date === date) : merged) };
+  } catch {
+    return fetchAppointments(date);
   }
 }

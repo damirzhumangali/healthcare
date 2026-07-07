@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Check, Clock, Video } from "lucide-react";
+import { ArrowLeft, CalendarClock, Check, Video } from "lucide-react";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
   DOCTORS,
   assignDoctorToAppointment,
-  updateAppointmentStatus,
   fetchAppointments,
   type Appointment,
 } from "../lib/apiAppointments";
@@ -17,7 +17,16 @@ import {
 } from "../lib/consultationMode";
 import { fetchAdminDoctors, notifyOnlineMeeting } from "../lib/apiAdmin";
 import { syncBedsideConsultations } from "../lib/onlineConsultations";
+import {
+  clearScheduleSelection,
+  readScheduleSelection,
+  saveActiveScheduleTarget,
+  type ScheduleSelection,
+} from "../lib/requestScheduleSelection";
+import { recommendSpecialist } from "../lib/specialistRecommendation";
 import { usePageSeo } from "../lib/seo";
+import { resolvePatientDisplayName } from "../lib/patientName";
+import { useSyncedLocale } from "../lib/useSyncedLocale";
 
 type DoctorRow = { id: string; name: string; specialty: string };
 
@@ -29,31 +38,13 @@ function jitsiRoomUrl(appointmentId: string) {
   return `https://meet.jit.si/healthassist-${appointmentId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 24)}`;
 }
 
-function getBusyDoctorIds(
-  date: string,
-  timeSlot: string,
-  appointments: Appointment[],
-  excludeId: string,
-): Set<string> {
-  return new Set(
-    appointments
-      .filter((a) =>
-        a.date === date &&
-        a.id !== excludeId &&
-        a.status !== "done" &&
-        (timeSlot ? a.time === timeSlot : a.status === "active") &&
-        (a.doctor_id || a.doctorId)
-      )
-      .map((a) => (a.doctor_id || a.doctorId) as string)
-  );
-}
-
 export default function AdminRequestPage() {
+  const [locale, setLocale] = useSyncedLocale();
   usePageSeo({
     title: "Принять заявку — HealthAssist",
     description: "Назначение врача и времени для заявки пациента.",
     path: "/admin/request",
-    locale: "ru",
+    locale,
     robots: "noindex, nofollow",
   });
 
@@ -63,9 +54,6 @@ export default function AdminRequestPage() {
 
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<DoctorRow[]>(DOCTORS);
-  const [selectedDoctorDraftId, setSelectedDoctorDraftId] = useState<string | null>(null);
-  const [assignDateDraft, setAssignDateDraft] = useState("");
-  const [timeDraft, setTimeDraft] = useState("");
   const [roomLabelDraft, setRoomLabelDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -86,27 +74,32 @@ export default function AdminRequestPage() {
     [allAppointments, id, location.state],
   );
 
-  const selectedDoctorId = selectedDoctorDraftId ?? (request?.doctor_id || request?.doctorId) ?? null;
-  const date = assignDateDraft || request?.date || today();
-  const time = timeDraft || (request?.time && request.time !== "00:00" ? request.time : "");
+  const scheduleSelection = useMemo(() => {
+    if (!id) return null;
+    const stateSelection = (location.state as { selectedSchedule?: ScheduleSelection } | null)?.selectedSchedule;
+    const storedSelection = readScheduleSelection(id);
+    if (stateSelection?.requestId === id && (stateSelection.contextType ?? "appointment") === "appointment") {
+      return stateSelection;
+    }
+    if (storedSelection && (storedSelection.contextType ?? "appointment") === "appointment") {
+      return storedSelection;
+    }
+    return null;
+  }, [id, location.state]);
+
+  const selectedDoctorId = scheduleSelection?.doctorId ?? (request?.doctor_id || request?.doctorId) ?? null;
+  const date = scheduleSelection?.date || request?.date || today();
+  const time = scheduleSelection?.time || (request?.time && request.time !== "00:00" ? request.time : "");
   const roomLabel = roomLabelDraft || readRoomLabel(request);
-  const busyIds = getBusyDoctorIds(date, time, allAppointments, id ?? "");
   const isHomeOnline = isHomeOnlineConsultation(request);
   const isWardOnline = isWardOnlineConsultation(request);
   const isOfflineVisit = Boolean(request) && !isHomeOnline && !isWardOnline;
   const jitsiUrl = request ? jitsiRoomUrl(request.id) : "";
   const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId);
-
-  // specialty matching — highlight matching doctors first
-  const specialtyNeeded = request?.specialty_request || request?.specialtyRequest;
-  const sortedDoctors = [...doctors].sort((a, b) => {
-    const aMatch = specialtyNeeded && a.specialty === specialtyNeeded ? -1 : 0;
-    const bMatch = specialtyNeeded && b.specialty === specialtyNeeded ? -1 : 0;
-    const aFree = !busyIds.has(a.id) ? -1 : 1;
-    const bFree = !busyIds.has(b.id) ? -1 : 1;
-    if (aMatch !== bMatch) return aMatch - bMatch;
-    return aFree - bFree;
-  });
+  const recommendedSpecialty = useMemo(
+    () => recommendSpecialist(request?.reason),
+    [request?.reason],
+  );
 
   async function handleAssign() {
     if (!request || !selectedDoctorId || !date || !time || (isOfflineVisit && !roomLabel.trim())) return;
@@ -149,11 +142,66 @@ export default function AdminRequestPage() {
         syncBedsideConsultations([assignedAppointment]);
       }
 
+      clearScheduleSelection(request.id);
       setDone(true);
       window.setTimeout(() => nav("/admin"), 2500);
     } catch {
       setSaving(false);
     }
+  }
+
+  const openDoctorSchedule = useCallback(() => {
+    if (!request) return;
+    const params = new URLSearchParams();
+    params.set("requestId", request.id);
+    params.set("date", date);
+    saveActiveScheduleTarget({
+      requestId: request.id,
+      contextType: "appointment",
+      date,
+    });
+
+    nav(`/admin/doctor-schedule?${params.toString()}`, {
+      state: { appointment: request },
+    });
+  }, [date, nav, request]);
+
+  useEffect(() => {
+    if (!request || selectedDoctorId || done) return;
+    openDoctorSchedule();
+  }, [done, openDoctorSchedule, request, selectedDoctorId]);
+
+  if (request && !selectedDoctorId && !done) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #0b0f14 0%, #111827 100%)",
+          color: "white",
+          display: "grid",
+          placeItems: "center",
+          padding: 24,
+        }}
+      >
+        <div
+          style={{
+            width: "min(560px, 100%)",
+            borderRadius: 18,
+            padding: "28px 30px",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.09)",
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>
+            Открываем график врачей
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.5 }}>
+            Для этой заявки выбор врача и времени теперь идёт прямо в сетке графика, как на странице
+            расписания врачей.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -187,6 +235,15 @@ export default function AdminRequestPage() {
           <div style={{ fontWeight: 800, fontSize: 17 }}>Назначить врача</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>Выберите свободного врача и укажите время</div>
         </div>
+        <div style={{ marginLeft: "auto" }}>
+          <LanguageSwitcher
+            locale={locale}
+            onChange={setLocale}
+            variant="segmented"
+            ariaLabel="Язык интерфейса"
+            title="Язык интерфейса"
+          />
+        </div>
       </div>
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "28px 24px" }}>
@@ -202,12 +259,17 @@ export default function AdminRequestPage() {
               Заявка пациента
             </div>
             <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>
-              {request.patientName || request.patient_name || request.patient_email || "Пациент"}
+              {resolvePatientDisplayName({
+                names: [request.patientName, request.patient_name],
+                source: request.patient_id || request.patientId || request.patient_email || request.patientEmail || request.id,
+                fallback: "Пациент",
+                requireFullName: true,
+              })}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {specialtyNeeded && (
+              {(request.specialty_request || request.specialtyRequest) && (
                 <span style={{ background: "rgba(99,102,241,0.18)", color: "#a5b4fc", borderRadius: 7, padding: "3px 12px", fontSize: 13, fontWeight: 700 }}>
-                  {specialtyNeeded}
+                  {request.specialty_request || request.specialtyRequest}
                 </span>
               )}
               {isHomeOnline && (
@@ -238,98 +300,72 @@ export default function AdminRequestPage() {
                 «{request.reason}»
               </div>
             )}
+            <div style={{
+              marginTop: 12,
+              borderRadius: 10,
+              padding: "12px 14px",
+              background: "rgba(52,211,153,0.08)",
+              border: "1px solid rgba(52,211,153,0.18)",
+            }}>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 4 }}>
+                Рекомендуемый специалист
+              </div>
+              <div style={{ fontWeight: 800, color: "#6ee7b7" }}>
+                {recommendedSpecialty.specialty}
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
+                Подсказка по жалобе: {recommendedSpecialty.reason}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Step 1: Doctor selection */}
+        {/* Step 1: open doctor schedule */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
-            Шаг 1 — Выберите врача
+            Шаг 1 — Выберите врача и время в графике
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-            {sortedDoctors.map((doc) => {
-              const isBusy = busyIds.has(doc.id);
-              const isSelected = selectedDoctorId === doc.id;
-              const isMatch = specialtyNeeded && doc.specialty === specialtyNeeded;
-
-              return (
-                <div
-                  key={doc.id}
-                  style={{
-                    borderRadius: 14, padding: "16px 18px",
-                    border: isSelected
-                      ? "2px solid #34d399"
-                      : isMatch
-                        ? "1px solid rgba(52,211,153,0.35)"
-                        : "1px solid rgba(255,255,255,0.08)",
-                    background: isSelected
-                      ? "rgba(52,211,153,0.1)"
-                      : "rgba(255,255,255,0.04)",
-                    opacity: 1,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    position: "relative",
-                  }}
-                  onClick={() => setSelectedDoctorDraftId(doc.id)}
-                >
-                  {isMatch && !isSelected && (
-                    <div style={{
-                      position: "absolute", top: 10, right: 12,
-                      fontSize: 10, fontWeight: 700, color: "#34d399",
-                      background: "rgba(52,211,153,0.12)",
-                      borderRadius: 5, padding: "2px 7px",
-                    }}>
-                      Подходит
-                    </div>
-                  )}
-                  {isSelected && (
-                    <div style={{ position: "absolute", top: 10, right: 12 }}>
-                      <Check size={16} color="#34d399" />
-                    </div>
-                  )}
-
-                  <div style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: "rgba(99,102,241,0.2)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 16, fontWeight: 800, marginBottom: 10,
-                    color: "#a5b4fc",
-                  }}>
-                    {doc.name.charAt(0)}
-                  </div>
-
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: "white" }}>
-                    {doc.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 12 }}>
-                    {doc.specialty}
-                  </div>
-
-                  <div style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700,
-                    background: isSelected
-                      ? "rgba(52,211,153,0.2)"
-                      : isBusy
-                        ? "rgba(251,191,36,0.1)"
-                        : "rgba(52,211,153,0.12)",
-                    color: isSelected ? "#34d399" : isBusy ? "#f59e0b" : "#34d399",
-                    border: isSelected
-                      ? "1px solid rgba(52,211,153,0.3)"
-                      : isBusy
-                        ? "1px solid rgba(251,191,36,0.25)"
-                        : "1px solid rgba(52,211,153,0.3)",
-                  }}>
-                    {isSelected ? "✓ Выбран" : isBusy ? "⚠ Занят (активный приём)" : "Свободен"}
-                  </div>
+          <div style={{
+            borderRadius: 16,
+            padding: "20px 22px",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.09)",
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>Использовать страницу «График врачей»</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 6, maxWidth: 560 }}>
+                  Откроется сетка с врачами по колонкам и временем по строкам. Нажмите на свободную ячейку, и выбранные врач, дата и время автоматически вернутся в эту заявку.
                 </div>
-              );
-            })}
+                <div style={{ fontSize: 13, color: "#6ee7b7", marginTop: 10 }}>
+                  Подсветим врачей специальности: {recommendedSpecialty.specialty}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={openDoctorSchedule}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "12px 18px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(34,211,238,0.28)",
+                  background: "rgba(34,211,238,0.12)",
+                  color: "#22d3ee",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                <CalendarClock size={16} />
+                Открыть график врачей
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Step 2: Time selection — appears after doctor selected */}
+        {/* Step 2: selected schedule */}
         {selectedDoctorId && (
           <div style={{
             borderRadius: 16, padding: "20px 22px", marginBottom: 24,
@@ -337,7 +373,7 @@ export default function AdminRequestPage() {
             border: "1px solid rgba(52,211,153,0.2)",
           }}>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
-              Шаг 2 — Укажите дату, время и формат приёма
+              Шаг 2 — Проверьте выбранный слот и завершите
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
@@ -347,25 +383,11 @@ export default function AdminRequestPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6 }}>Дата</div>
-                <input
-                  type="date"
-                  className="input"
-                  value={date}
-                  onChange={(e) => setAssignDateDraft(e.target.value)}
-                  style={{ minWidth: 150, fontSize: 15, fontWeight: 700 }}
-                />
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{date}</div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Clock size={12} /> Время приёма
-                </div>
-                <input
-                  type="time"
-                  className="input"
-                  value={time}
-                  onChange={(e) => setTimeDraft(e.target.value)}
-                  style={{ minWidth: 120, fontSize: 15, fontWeight: 700 }}
-                />
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 6 }}>Время приёма</div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{time}</div>
               </div>
               {isOfflineVisit && (
                 <div>
@@ -382,6 +404,23 @@ export default function AdminRequestPage() {
                   />
                 </div>
               )}
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={openDoctorSchedule}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(255,255,255,0.82)",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Изменить выбор в графике
+              </button>
             </div>
 
             {/* Online consultation preview */}
@@ -512,13 +551,10 @@ export default function AdminRequestPage() {
                   transition: "all 0.15s",
                 }}
               >
-                {saving
-                  ? "Отправляем..."
-                  : `Назначить ${selectedDoctor?.name ?? ""} · ${date} ${time || "— укажите время"}`
-                }
+                {saving ? "Отправляем..." : "Завершить"}
               </button>
-              {!time && (
-                <span style={{ fontSize: 13, color: "#f59e0b" }}>⚠ Укажите время приёма</span>
+              {!selectedDoctorId && (
+                <span style={{ fontSize: 13, color: "#f59e0b" }}>⚠ Выберите слот в графике врачей</span>
               )}
               {isOfflineVisit && !roomLabel.trim() && (
                 <span style={{ fontSize: 13, color: "#f59e0b" }}>⚠ Укажите кабинет</span>

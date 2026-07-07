@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Brain, Moon, PersonStanding, Sparkles, Sun } from "lucide-react";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { Link } from "react-router-dom";
 import Body3D from "../components/Body3D";
 import { API_URL } from "../lib/apiBase";
+import { validateComplaint } from "../lib/complaintValidation";
 import { getPublicSeo } from "../lib/publicSeo";
 import { usePageSeo } from "../lib/seo";
 
@@ -95,6 +97,9 @@ const copy = {
     askBtn: "Спросить",
     loading: "Думаю…",
     requestError: "AI временно недоступен. Попробуйте чуть позже.",
+    complaintMeaningfulError: "Опишите жалобу понятным текстом — минимум 10 символов, реальными словами.",
+    complaintRepeatingError: "Опишите симптом нормально, без повторяющихся символов.",
+    complaintOffensiveError: "Пожалуйста, без нецензурных выражений.",
     specialists: {
       urologist: "Уролог",
       mammologistGynecologist: "Маммолог / Гинеколог",
@@ -146,6 +151,9 @@ const copy = {
     askBtn: "Сұрау",
     loading: "Ойлануда…",
     requestError: "AI уақытша қолжетімсіз. Сәл кейінірек қайталап көріңіз.",
+    complaintMeaningfulError: "Шағымды түсінікті мәтінмен жазыңыз — кемінде 10 таңба және нақты сөздер болсын.",
+    complaintRepeatingError: "Симптомды қайталанатын таңбаларсыз қалыпты түрде жазыңыз.",
+    complaintOffensiveError: "Өтінеміз, бейәдеп сөздерсіз жазыңыз.",
     specialists: {
       urologist: "Уролог",
       mammologistGynecologist: "Маммолог / Гинеколог",
@@ -197,6 +205,9 @@ const copy = {
     askBtn: "Ask",
     loading: "Thinking…",
     requestError: "AI is temporarily unavailable. Please try again a bit later.",
+    complaintMeaningfulError: "Please describe the complaint clearly — at least 10 characters, using real words.",
+    complaintRepeatingError: "Please describe the symptom normally, without repeated characters.",
+    complaintOffensiveError: "Please describe the complaint without offensive language.",
     specialists: {
       urologist: "Urologist",
       mammologistGynecologist: "Mammologist / Gynecologist",
@@ -437,6 +448,21 @@ export default function BodyMap() {
 
   const onAsk = async () => {
     if (!selected) return;
+    if (symptoms.trim()) {
+      const validation = validateComplaint(symptoms);
+      if (validation === "meaningless") {
+        setError(t.complaintMeaningfulError);
+        return;
+      }
+      if (validation === "repeating") {
+        setError(t.complaintRepeatingError);
+        return;
+      }
+      if (validation === "offensive") {
+        setError(t.complaintOffensiveError);
+        return;
+      }
+    }
     setLoading(true);
     setAnswer(null);
     setError(null);
@@ -486,22 +512,7 @@ export default function BodyMap() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <div className={`flex items-center rounded-full border p-1 ${panel}`}>
-              {(["ru", "kk", "en"] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLocale(l)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-full transition ${
-                    locale === l
-                      ? "bg-gradient-to-r from-sky-400 to-emerald-400 text-slate-950"
-                      : ""
-                  }`}
-                  title={`${t.lang}: ${l.toUpperCase()}`}
-                >
-                  {l.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            <LanguageSwitcher locale={locale} onChange={setLocale} variant="segmented" ariaLabel="Язык интерфейса" />
             <button
               onClick={() => setTheme((p) => (p === "dark" ? "light" : "dark"))}
               className={`h-10 w-10 rounded-full border inline-flex items-center justify-center shrink-0 ${panel}`}
@@ -693,7 +704,12 @@ export default function BodyMap() {
             </div>
             <textarea
               value={symptoms}
-              onChange={(e) => setSymptoms(e.target.value)}
+              onChange={(e) => {
+                setSymptoms(e.target.value);
+                if (error) {
+                  setError(null);
+                }
+              }}
               rows={4}
               placeholder={t.symptomsPh}
               className={`w-full rounded-2xl border px-3 py-2 text-sm outline-none ${

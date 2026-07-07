@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
-  HeartPulse,
   Video,
+  HeartPulse,
 } from "lucide-react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { fetchMyMeasurements, readCachedMeasurements, type MeasurementItem } from "../lib/apiMeasurements";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
   AppointmentRequestError,
   DOCTORS,
@@ -16,12 +15,32 @@ import {
   type AppointmentStatus,
 } from "../lib/apiAppointments";
 import {
+  fetchMyMeasurements,
+  readCachedMeasurements,
+  type MeasurementItem,
+} from "../lib/apiMeasurements";
+import {
+  formatMeasurementDateTime,
+  formatMeasurementValue,
+  listPatientMeasurements,
+  measurementMetricLabel,
+  measurementSourceLabel,
+  PATIENT_MEASUREMENTS_UPDATED_EVENT,
+  replaceApiMeasurementsForPatientHistory,
+  type PatientMeasurementEntry,
+} from "../lib/patientMeasurements";
+import { setSessionIdleSuppressed } from "../lib/sessionIdle";
+import { SESSION_USER_UPDATED_EVENT } from "../lib/auth";
+import { normalizePatientFullName } from "../lib/patientName";
+import { validateComplaint } from "../lib/complaintValidation";
+import {
   isHomeOnlineConsultation,
   readRoomLabel,
   isWardOnlineConsultation,
   readBedLabel,
   readWardLabel,
 } from "../lib/consultationMode";
+import { syncBedsideConsultations, type BedsideConsultationView } from "../lib/onlineConsultations";
 import { createNewMyTicket, getMyTicket, type OnlineTicketView } from "../lib/onlineTicket";
 import { useAppPreferences } from "../lib/appPreferences";
 
@@ -108,10 +127,21 @@ const copy = {
     wardSuccess: "Палатная онлайн-заявка отправлена. Администратор назначит врача и время.",
     wardError: "Не удалось отправить заявку врачу. Попробуйте ещё раз.",
     wardAuthError: "Сессия истекла. Войдите снова, чтобы заявка дошла врачу и в админку.",
-    wardShortError: "Опишите состояние подробнее — минимум 10 символов.",
+    wardShortError: "Опишите жалобу понятным текстом — минимум 10 символов, реальными словами.",
+    wardSpamError: "Опишите симптом нормально, без повторяющихся символов.",
+    wardOffensiveError: "Пожалуйста, без нецензурных выражений.",
     wardStatusPending: "Заявка в обработке",
     wardStatusAssigned: "Врач назначен",
     wardStatusSubtitle: "Робот и звонок запустятся автоматически к указанному времени.",
+    wardStatusRobotEnRoute: "Робот едет к пациенту",
+    wardStatusRobotEnRouteSubtitle: "Робот уже выехал в палату. Как только он будет у кровати, врач подключит звонок.",
+    wardStatusBedsideReady: "Робот у кровати",
+    wardStatusBedsideReadySubtitle: "Терминал AIMAR уже у пациента. Ожидаем подключения врача к звонку.",
+    wardStatusLive: "Звонок активен",
+    wardStatusLiveSubtitle: "Врач уже подключился через терминал AIMAR. Робот и звонок работают у кровати пациента.",
+    wardRevealAction: "Я в палате — нужна консультация",
+    wardRevealHide: "Скрыть форму палатной консультации",
+    wardRevealHint: "Открывайте эту форму только если вы действительно лежите в палате.",
   },
   kk: {
     title: "Науқас кабинеты",
@@ -179,10 +209,21 @@ const copy = {
     wardSuccess: "Палаталық онлайн өтінім жіберілді. Әкімші дәрігер мен уақытты тағайындайды.",
     wardError: "Өтінімді дәрігерге жіберу мүмкін болмады. Қайта көріңіз.",
     wardAuthError: "Сессия аяқталды. Өтінім дәрігер мен әкімшіге жетуі үшін қайта кіріңіз.",
-    wardShortError: "Жағдайды толығырақ сипаттаңыз — кем дегенде 10 таңба.",
+    wardShortError: "Шағымды түсінікті мәтінмен жазыңыз — кемінде 10 таңба және нақты сөздер болсын.",
+    wardSpamError: "Симптомды қайталанатын таңбаларсыз қалыпты түрде жазыңыз.",
+    wardOffensiveError: "Өтінеміз, бейәдеп сөздерсіз жазыңыз.",
     wardStatusPending: "Өтінім өңделуде",
     wardStatusAssigned: "Дәрігер тағайындалды",
     wardStatusSubtitle: "Робот пен қоңырау көрсетілген уақытта автоматты түрде іске қосылады.",
+    wardStatusRobotEnRoute: "Робот пациентке бара жатыр",
+    wardStatusRobotEnRouteSubtitle: "Робот палатаға жолға шықты. Кереуетке жеткен соң дәрігер қоңырауға қосылады.",
+    wardStatusBedsideReady: "Робот кереует жанында",
+    wardStatusBedsideReadySubtitle: "AIMAR терминалы пациенттің жанында тұр. Дәрігердің қосылуын күтеміз.",
+    wardStatusLive: "Қоңырау белсенді",
+    wardStatusLiveSubtitle: "Дәрігер AIMAR терминалы арқылы қосылды. Робот пен қоңырау пациенттің кереуеті жанында жұмыс істеп тұр.",
+    wardRevealAction: "Мен палатадамын — кеңес керек",
+    wardRevealHide: "Палаталық форманы жасыру",
+    wardRevealHint: "Бұл форманы тек шынымен палатада жатқанда ашыңыз.",
     pressure: "Қысым",
     temp: "Темп",
     pulse: "Пульс",
@@ -259,10 +300,21 @@ const copy = {
     wardSuccess: "Ward online request sent. The admin will assign the doctor and time.",
     wardError: "Could not send the request to the doctor. Please try again.",
     wardAuthError: "Your session expired. Sign in again so the request reaches the doctor and admin.",
-    wardShortError: "Please describe the condition in more detail — at least 10 characters.",
+    wardShortError: "Please describe the complaint clearly — at least 10 characters, using real words.",
+    wardSpamError: "Please describe the symptom normally, without repeated characters.",
+    wardOffensiveError: "Please describe the complaint without offensive language.",
     wardStatusPending: "Request under review",
     wardStatusAssigned: "Doctor assigned",
     wardStatusSubtitle: "The robot and video call will start automatically at the scheduled time.",
+    wardStatusRobotEnRoute: "Robot is on the way",
+    wardStatusRobotEnRouteSubtitle: "The robot is already heading to the ward. Once it reaches the bedside, the doctor will connect the call.",
+    wardStatusBedsideReady: "Robot is at the bedside",
+    wardStatusBedsideReadySubtitle: "The AIMAR terminal is already with the patient. Waiting for the doctor to join the call.",
+    wardStatusLive: "Call is active",
+    wardStatusLiveSubtitle: "The doctor is already connected through the AIMAR terminal. The robot and call are running at the patient's bedside.",
+    wardRevealAction: "I am in the ward — need a consultation",
+    wardRevealHide: "Hide ward consultation form",
+    wardRevealHint: "Open this form only if you are actually admitted to a ward.",
     pressure: "Pressure",
     temp: "Temp",
     pulse: "Pulse",
@@ -274,14 +326,6 @@ const copy = {
     showLess: "Show less",
   },
 } as const;
-
-function fmtDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
 
 function readCurrentUser(): StoredUser | null {
   try {
@@ -303,21 +347,79 @@ function appointmentSortAsc(a: Appointment, b: Appointment) {
   return (a.time || "00:00").localeCompare(b.time || "00:00");
 }
 
+function latestMeasurementEntry(
+  items: PatientMeasurementEntry[],
+  metric: PatientMeasurementEntry["metric"],
+) {
+  return items.find((item) => item.metric === metric) ?? null;
+}
+
 export default function Dashboard() {
   const nav = useNavigate();
-  const { locale } = useAppPreferences();
-  const currentUser = useMemo(() => readCurrentUser(), []);
+  const { locale, theme } = useAppPreferences();
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(() => readCurrentUser());
   const isAdmin = currentUser?.role === "admin";
-  const displayName = currentUser?.name || currentUser?.email || "HealthAssist";
+  const displayName =
+    normalizePatientFullName(currentUser?.name, { requireFullName: currentUser?.role === "patient" }) ||
+    currentUser?.name ||
+    currentUser?.email ||
+    "HealthAssist";
 
   const t = copy[locale];
+  const isLightTheme = theme === "light";
+  const ui = useMemo(
+    () =>
+      isLightTheme
+        ? {
+            text: "#101827",
+            muted: "rgba(15,23,42,0.72)",
+            faint: "rgba(15,23,42,0.52)",
+            quiet: "rgba(15,23,42,0.36)",
+            card: "rgba(255,255,255,0.82)",
+            cardSoft: "rgba(255,255,255,0.92)",
+            cardMuted: "rgba(255,255,255,0.72)",
+            border: "rgba(15,23,42,0.10)",
+            rowAlt: "rgba(148,163,184,0.08)",
+            rowBorder: "rgba(15,23,42,0.06)",
+            secondaryBg: "rgba(255,255,255,0.9)",
+            secondaryText: "#101827",
+            actionShadow: "0 12px 26px rgba(56,189,248,0.08)",
+          }
+        : {
+            text: "#ffffff",
+            muted: "rgba(255,255,255,0.68)",
+            faint: "rgba(255,255,255,0.5)",
+            quiet: "rgba(255,255,255,0.35)",
+            card: "rgba(255,255,255,0.03)",
+            cardSoft: "rgba(255,255,255,0.05)",
+            cardMuted: "rgba(255,255,255,0.04)",
+            border: "rgba(255,255,255,0.08)",
+            rowAlt: "rgba(255,255,255,0.02)",
+            rowBorder: "rgba(255,255,255,0.04)",
+            secondaryBg: "rgba(255,255,255,0.04)",
+            secondaryText: "rgba(255,255,255,0.82)",
+            actionShadow: "0 12px 30px rgba(56,189,248,0.15)",
+          },
+    [isLightTheme],
+  );
 
-  const [items, setItems] = useState<MeasurementItem[]>(() => readCachedMeasurements());
+  useEffect(() => {
+    const syncUser = () => setCurrentUser(readCurrentUser());
+    window.addEventListener(SESSION_USER_UPDATED_EVENT, syncUser);
+    return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, syncUser);
+  }, []);
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [measurementHistory, setMeasurementHistory] = useState<PatientMeasurementEntry[]>(() =>
+    currentUser?.id ? listPatientMeasurements(currentUser.id) : [],
+  );
+  const [measurementVisible, setMeasurementVisible] = useState(5);
+  const [wardConsultations, setWardConsultations] = useState<BedsideConsultationView[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [ticket, setTicket] = useState<OnlineTicketView | null>(null);
-  const [apptVisible, setApptVisible] = useState(5);
+  const [apptVisible, setApptVisible] = useState(3);
+  const [showWardRequestForm, setShowWardRequestForm] = useState(false);
   const [wardForm, setWardForm] = useState(() => ({
     specialty: DOCTORS[0]?.specialty || "Терапевт",
     date: new Date().toISOString().slice(0, 10),
@@ -328,23 +430,37 @@ export default function Dashboard() {
   const [wardSubmitting, setWardSubmitting] = useState(false);
   const [wardErr, setWardErr] = useState<string | null>(null);
   const [wardOk, setWardOk] = useState<string | null>(null);
-  const latestMeasurement = items[0] ?? null;
 
   const refreshTicket = useCallback(() => {
     const currentTicket = getMyTicket();
     setTicket(currentTicket?.status === "passed" ? null : currentTicket);
   }, []);
 
-  const load = useCallback(async () => {
-    setErr(null);
-    try {
-      const data = await fetchMyMeasurements();
-      setItems(data.items ?? []);
-    } catch {
-      setItems(readCachedMeasurements());
-      setErr(t.measurementError);
+  const refreshMeasurementHistory = useCallback((items?: MeasurementItem[]) => {
+    if (!currentUser?.id) {
+      setMeasurementHistory([]);
+      return [];
     }
-  }, [t.measurementError]);
+    if (items?.length) {
+      const next = replaceApiMeasurementsForPatientHistory(currentUser.id, items);
+      setMeasurementHistory(next);
+      return next;
+    }
+    const next = listPatientMeasurements(currentUser.id);
+    setMeasurementHistory(next);
+    return next;
+  }, [currentUser?.id]);
+
+  const loadMeasurements = useCallback(async () => {
+    try {
+      const data = await fetchMyMeasurements(100);
+      const next = data.items ?? [];
+      refreshMeasurementHistory(next);
+    } catch {
+      const cached = readCachedMeasurements(currentUser?.id);
+      refreshMeasurementHistory(cached);
+    }
+  }, [currentUser?.id, refreshMeasurementHistory]);
 
   const loadAppointments = useCallback(async () => {
     setAppointmentsLoading(true);
@@ -355,6 +471,7 @@ export default function Dashboard() {
         return byDate === 0 ? a.time.localeCompare(b.time) : byDate;
       });
       setAppointments(sorted);
+      setWardConsultations(syncBedsideConsultations(sorted));
     } catch {
       setErr(t.appointmentError);
     } finally {
@@ -365,16 +482,26 @@ export default function Dashboard() {
   useEffect(() => { pingBackend(); }, []);
 
   useEffect(() => {
-    load();
     loadAppointments();
+    void loadMeasurements();
     refreshTicket();
 
     const timer = window.setInterval(() => {
       refreshTicket();
+      void loadAppointments();
+      void loadMeasurements();
     }, 15000);
 
     return () => window.clearInterval(timer);
-  }, [load, loadAppointments, refreshTicket]);
+  }, [loadAppointments, loadMeasurements, refreshTicket]);
+
+  useEffect(() => {
+    const handleMeasurementsUpdate = () => {
+      refreshMeasurementHistory();
+    };
+    window.addEventListener(PATIENT_MEASUREMENTS_UPDATED_EVENT, handleMeasurementsUpdate);
+    return () => window.removeEventListener(PATIENT_MEASUREMENTS_UPDATED_EVENT, handleMeasurementsUpdate);
+  }, [refreshMeasurementHistory]);
 
   const confirmedAppts = appointments
     .filter((a) => a.status === "active" && isHomeOnlineConsultation(a) && hasAssignedDoctor(a))
@@ -398,13 +525,47 @@ export default function Dashboard() {
     () => Array.from(new Set(DOCTORS.map((doctor) => doctor.specialty))),
     [],
   );
+  const wardConsultByAppointmentId = useMemo(
+    () => new Map(wardConsultations.map((consult) => [consult.appointmentId, consult])),
+    [wardConsultations],
+  );
+  const latestTemperature = useMemo(
+    () => latestMeasurementEntry(measurementHistory, "temperature"),
+    [measurementHistory],
+  );
+  const latestPulse = useMemo(
+    () => latestMeasurementEntry(measurementHistory, "pulse"),
+    [measurementHistory],
+  );
+  const latestMeasurementAt =
+    latestTemperature?.createdAt ||
+    latestPulse?.createdAt ||
+    null;
+  const historyAppointments = useMemo(
+    () =>
+      [...appointments].sort((a, b) => {
+        const byDate = b.date.localeCompare(a.date);
+        if (byDate !== 0) return byDate;
+        return (b.time || "00:00").localeCompare(a.time || "00:00");
+      }),
+    [appointments],
+  );
 
   async function submitWardConsultation() {
     setWardErr(null);
     setWardOk(null);
 
-    if (wardForm.reason.trim().length < 10) {
+    const reasonCheck = validateComplaint(wardForm.reason);
+    if (reasonCheck === "meaningless") {
       setWardErr(t.wardShortError);
+      return;
+    }
+    if (reasonCheck === "repeating") {
+      setWardErr(t.wardSpamError);
+      return;
+    }
+    if (reasonCheck === "offensive") {
+      setWardErr(t.wardOffensiveError);
       return;
     }
 
@@ -426,6 +587,7 @@ export default function Dashboard() {
         bedLabel: wardForm.bedLabel.trim() || "Койка не указана",
       });
       setWardOk(t.wardSuccess);
+      setShowWardRequestForm(true);
       setWardForm((current) => ({
         ...current,
         wardLabel: "",
@@ -447,55 +609,81 @@ export default function Dashboard() {
   const statusMeta = (status: AppointmentStatus) => {
     if (status === "active") return { label: t.appointmentStatusActive, color: "#60a5fa", bg: "rgba(96,165,250,0.12)" };
     if (status === "done") return { label: t.appointmentStatusDone, color: "#34d399", bg: "rgba(52,211,153,0.12)" };
-    return { label: t.appointmentStatusPending, color: "rgba(255,255,255,0.35)", bg: "rgba(255,255,255,0.06)" };
+    return { label: t.appointmentStatusPending, color: ui.quiet, bg: ui.cardSoft };
+  };
+  const formatAppointmentDateTime = (date: string, time?: string) => {
+    const [year, month, day] = date.split("-");
+    const formattedDate = year && month && day ? `${day}.${month}.${year}` : date;
+    return time && time !== "00:00" ? `${formattedDate} · ${time}` : formattedDate;
+  };
+  const wardFieldStyle: React.CSSProperties = {
+    fontSize: 16,
+    lineHeight: 1.25,
+    padding: "12px 14px",
+    minWidth: 0,
+  };
+  const wardSelectStyle: React.CSSProperties = {
+    ...wardFieldStyle,
+    paddingRight: 38,
+    appearance: "auto",
+    WebkitAppearance: "menulist",
+  };
+  const dashboardPanelStyle: React.CSSProperties = {
+    background: ui.card,
+    border: `1px solid ${ui.border}`,
+    borderRadius: 24,
+    padding: "24px 24px 22px",
+    boxShadow: isLightTheme ? "0 18px 38px rgba(15,23,42,0.06)" : "0 18px 40px rgba(0,0,0,0.18)",
+  };
+  const dashboardSectionEyebrowStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: ui.quiet,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    fontWeight: 700,
+  };
+  const dashboardSectionTitleStyle: React.CSSProperties = {
+    fontSize: 15,
+    fontWeight: 800,
+    color: ui.text,
+    marginTop: 10,
+  };
+  const dashboardSectionHintStyle: React.CSSProperties = {
+    fontSize: 13,
+    lineHeight: 1.55,
+    color: ui.faint,
+    marginTop: 8,
   };
 
   /* escape .container padding (28px top, 24px sides, 60px bottom) */
   return (
-    <div style={{
-      margin: "-28px -24px -60px",
-      minHeight: "calc(100vh - 56px)",
-      background: "transparent",
-      color: "white",
-      fontFamily: "inherit",
-    }}>
+    <div
+      className="patient-dashboard-shell"
+      style={{
+        background: "transparent",
+        color: ui.text,
+        fontFamily: "inherit",
+      }}
+    >
 
-      <div style={{ padding: "40px 48px 80px" }}>
+      <div className="patient-dashboard-inner">
 
         {/* Welcome */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 32 }}>
           <div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 6, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
+            <div style={{ fontSize: 11, color: ui.quiet, marginBottom: 6, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
               {new Date().toLocaleDateString(locale === "kk" ? "kk-KZ" : locale === "en" ? "en-US" : "ru-RU", { weekday: "long", day: "numeric", month: "long" })}
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: "-0.8px" }}>
+            <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: "-0.8px", color: ui.text }}>
               Привет, {displayName.split(" ")[0]} 👋
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {isAdmin && (
-              <button onClick={() => nav("/admin")} style={{
-                padding: "10px 18px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer",
-                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)",
-              }}>{t.adminPanel}</button>
-            )}
-            <button onClick={() => nav("/appointments/new")} style={{
-              padding: "10px 22px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer", border: "none",
-              background: "linear-gradient(135deg, #818cf8, #38bdf8)", color: "#0a0f1a",
-            }}>+ {t.bookDoctor}</button>
-          </div>
-        </div>
-
-        {/* Stats row — appointments + ticket only */}
-        <div style={{ display: "flex", gap: 0, borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 32, padding: "18px 0" }}>
-          <div style={{ flex: 1, textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1 }}>{appointmentsLoading ? "…" : appointments.length}</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>{t.heroAppointments}</div>
-          </div>
-          <div style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1 }}>{ticket ? `A-${ticket.ticketNumber}` : "—"}</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>{t.heroTicket}</div>
-          </div>
+          {isAdmin ? (
+            <button onClick={() => nav("/admin")} style={{
+              padding: "10px 18px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer",
+              background: ui.secondaryBg, border: `1px solid ${ui.border}`, color: ui.secondaryText,
+            }}>{t.adminPanel}</button>
+          ) : null}
         </div>
 
         {/* Confirmed appointment banner */}
@@ -511,7 +699,7 @@ export default function Dashboard() {
                 <HeartPulse size={16} color="#34d399" />
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#6ee7b7" }}>{t.confirmedTitle}</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: ui.faint, marginTop: 2 }}>
                     {confirmed.specialty_request || confirmed.specialtyRequest || "Специалист"} · {confirmed.date}{confirmed.time && confirmed.time !== "00:00" ? ` · ${confirmed.time}` : ""}
                   </div>
                 </div>
@@ -521,7 +709,7 @@ export default function Dashboard() {
                   display: "inline-flex", alignItems: "center", gap: 6,
                   background: "#34d399", color: "#0a0f1a", borderRadius: 6,
                   padding: "7px 16px", fontWeight: 700, fontSize: 12, textDecoration: "none",
-                }}>
+                }} onClick={() => setSessionIdleSuppressed(true)}>
                   <Video size={12} /> {t.joinMeeting}
                 </a>
               )}
@@ -544,7 +732,7 @@ export default function Dashboard() {
                 <HeartPulse size={16} color="#818cf8" />
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#c4b5fd" }}>{t.confirmedTitle}</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: ui.faint, marginTop: 2 }}>
                     {confirmed.specialty_request || confirmed.specialtyRequest || "Специалист"} · {confirmed.date}
                     {confirmed.time && confirmed.time !== "00:00" ? ` · ${confirmed.time}` : ""}
                     {roomLabel ? ` · ${t.confirmedRoom}: ${roomLabel}` : ""}
@@ -563,8 +751,30 @@ export default function Dashboard() {
 
         {wardAppointments.map((appointment) => {
           const assigned = hasAssignedDoctor(appointment);
+          const consult = wardConsultByAppointmentId.get(appointment.id);
+          const stage = appointment.status === "active" ? "live" : consult?.stage || "scheduled";
           const wardLabel = readWardLabel(appointment) || "Палата не указана";
           const bedLabel = readBedLabel(appointment) || "Койка не указана";
+          const stageTitle =
+            stage === "live"
+              ? t.wardStatusLive
+              : stage === "bedside_ready"
+                ? t.wardStatusBedsideReady
+                : stage === "robot_en_route"
+                  ? t.wardStatusRobotEnRoute
+                  : assigned
+                    ? t.wardStatusAssigned
+                    : t.wardStatusPending;
+          const stageSubtitle =
+            stage === "live"
+              ? t.wardStatusLiveSubtitle
+              : stage === "bedside_ready"
+                ? t.wardStatusBedsideReadySubtitle
+                : stage === "robot_en_route"
+                  ? t.wardStatusRobotEnRouteSubtitle
+                  : assigned
+                    ? t.wardStatusSubtitle
+                    : appointment.reason;
           return (
             <div
               key={`ward-${appointment.id}`}
@@ -582,50 +792,197 @@ export default function Dashboard() {
             >
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#7dd3fc" }}>
-                  {assigned ? t.wardStatusAssigned : t.wardStatusPending}
+                  {stageTitle}
                 </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 3 }}>
+                <div style={{ fontSize: 12, color: ui.muted, marginTop: 3 }}>
                   {wardLabel} · {bedLabel}
                   {appointment.time && appointment.time !== "00:00" ? ` · ${appointment.date} · ${appointment.time}` : ` · ${appointment.date}`}
                 </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", marginTop: 3 }}>
-                  {assigned ? t.wardStatusSubtitle : appointment.reason}
+                <div style={{ fontSize: 12, color: ui.faint, marginTop: 3 }}>
+                  {stageSubtitle}
                 </div>
               </div>
             </div>
           );
         })}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            alignItems: "start",
-            gap: 20,
-            marginTop: confirmedAppts.length > 0 || wardAppointments.length > 0 ? 24 : 0,
-            marginBottom: 28,
-          }}
-        >
+        <div className="patient-dashboard-overview-grid">
           <div
+            className="patient-dashboard-card patient-dashboard-card--measurement"
             style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: 12,
-              padding: "20px 22px",
+              ...dashboardPanelStyle,
+              background: isLightTheme
+                ? "linear-gradient(135deg, rgba(238,250,255,0.95), rgba(239,255,246,0.92))"
+                : "linear-gradient(135deg, rgba(34,211,238,0.10), rgba(12,33,56,0.68))",
+              borderColor: isLightTheme ? "rgba(56,189,248,0.16)" : "rgba(34,211,238,0.14)",
             }}
           >
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, marginBottom: 10 }}>
-              Ward
+            <div style={{ ...dashboardSectionEyebrowStyle, color: "#67e8f9" }}>
+              {t.heroLatestMeasurement}
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{t.wardBannerTitle}</div>
-            <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.65, color: "rgba(255,255,255,0.68)" }}>
+            <div style={{ fontSize: 12, color: ui.faint, marginTop: 6 }}>
+              {latestMeasurementAt ? formatMeasurementDateTime(latestMeasurementAt, locale) : t.heroNoMeasurements}
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 12,
+                marginTop: 18,
+              }}
+            >
+              <div
+                style={{
+                  borderRadius: 18,
+                  border: `1px solid ${ui.border}`,
+                  background: ui.cardSoft,
+                  padding: "18px 20px",
+                }}
+              >
+                <div style={{ fontSize: 11, color: ui.faint, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+                  {t.temp}
+                </div>
+                <div style={{ fontSize: 46, lineHeight: 1.02, fontWeight: 900, marginTop: 14, color: ui.text }}>
+                  {latestTemperature ? formatMeasurementValue(latestTemperature, locale) : "—"}
+                </div>
+              </div>
+              <div
+                style={{
+                  borderRadius: 18,
+                  border: `1px solid ${ui.border}`,
+                  background: ui.cardSoft,
+                  padding: "18px 20px",
+                }}
+              >
+                <div style={{ fontSize: 11, color: ui.faint, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+                  {t.pulse}
+                </div>
+                <div style={{ fontSize: 46, lineHeight: 1.02, fontWeight: 900, marginTop: 14, color: ui.text }}>
+                  {latestPulse ? formatMeasurementValue(latestPulse, locale) : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="patient-dashboard-side-stack">
+            <div className="patient-dashboard-card" style={dashboardPanelStyle}>
+              <div style={dashboardSectionEyebrowStyle}>{t.quickActions}</div>
+              <div style={dashboardSectionTitleStyle}>{t.quickActionsHint}</div>
+              <div className="patient-dashboard-action-group">
+                <button
+                  onClick={() => nav("/appointments/new")}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "11px 18px",
+                    minHeight: 46,
+                    borderRadius: 12,
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    border: "none",
+                    background: "linear-gradient(135deg, var(--primary), var(--primary2))",
+                    color: "var(--primaryText)",
+                    boxShadow: ui.actionShadow,
+                  }}
+                >
+                  + {t.bookDoctor}
+                </button>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowWardRequestForm((current) => !current)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "11px 16px",
+                      minHeight: 46,
+                      borderRadius: 12,
+                      border: `1px solid ${ui.border}`,
+                      background: ui.secondaryBg,
+                      color: ui.secondaryText,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showWardRequestForm ? t.wardRevealHide : t.wardRevealAction}
+                  </button>
+                  {!showWardRequestForm ? (
+                    <div style={{ fontSize: 12, color: ui.faint, marginTop: 8, lineHeight: 1.55 }}>
+                      {t.wardRevealHint}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="patient-dashboard-card" style={dashboardPanelStyle}>
+              <div style={dashboardSectionEyebrowStyle}>{t.onlineTicket}</div>
+              <div style={dashboardSectionTitleStyle}>{ticket ? t.heroSnapshot : t.heroQueueMissing}</div>
+              {!ticket ? (
+                <>
+                  <div style={dashboardSectionHintStyle}>{t.noTicket}</div>
+                  <div style={{ marginTop: 18 }}>
+                    <button
+                      onClick={() => { const c = createNewMyTicket(); setTicket(c); }}
+                      style={{
+                        padding: "10px 16px", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
+                        background: ui.secondaryBg, border: `1px solid ${ui.border}`, color: ui.muted,
+                      }}
+                    >{t.takeNewTicket}</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="patient-dashboard-ticket-grid" style={{ marginTop: 18 }}>
+                    {[
+                      { label: t.yourNumber, value: `A-${ticket.ticketNumber}` },
+                      { label: t.nowCalling, value: `A-${ticket.servingNow}` },
+                      { label: t.ahead, value: ticket.peopleAhead },
+                      { label: t.waiting, value: `~${ticket.etaMinutes} ${t.minutes}` },
+                    ].map((m) => (
+                      <div key={m.label} className="patient-dashboard-ticket-metric">
+                        <div style={{ fontSize: 10, color: ui.quiet, fontWeight: 700, marginBottom: 3 }}>{m.label}</div>
+                        <div style={{ fontWeight: 900, fontSize: 22, color: ui.text }}>{m.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <button
+                      onClick={() => { const n = createNewMyTicket(); setTicket(n); }}
+                      style={{
+                        padding: "9px 15px", borderRadius: 10, fontWeight: 700, fontSize: 12, cursor: "pointer",
+                        background: ui.secondaryBg, border: `1px solid ${ui.border}`, color: ui.muted,
+                      }}
+                    >{t.takeNewTicket}</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {showWardRequestForm ? (
+          <div
+            className="patient-dashboard-card"
+            style={{
+              ...dashboardPanelStyle,
+              marginBottom: 32,
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: ui.text }}>{t.wardBannerTitle}</div>
+            <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.65, color: ui.muted }}>
               {t.wardBannerText}
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardSpecialty}</span>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+              <label style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 12, color: ui.faint }}>{t.wardSpecialty}</span>
                 <select
                   className="input"
+                  style={wardSelectStyle}
                   value={wardForm.specialty}
                   onChange={(event) => setWardForm((current) => ({ ...current, specialty: event.target.value }))}
                 >
@@ -636,29 +993,32 @@ export default function Dashboard() {
                   ))}
                 </select>
               </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardDate}</span>
+              <label style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 12, color: ui.faint }}>{t.wardDate}</span>
                 <input
                   className="input"
+                  style={wardFieldStyle}
                   type="date"
                   value={wardForm.date}
                   min={new Date().toISOString().slice(0, 10)}
                   onChange={(event) => setWardForm((current) => ({ ...current, date: event.target.value }))}
                 />
               </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardRoom}</span>
+              <label style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 12, color: ui.faint }}>{t.wardRoom}</span>
                 <input
                   className="input"
+                  style={wardFieldStyle}
                   value={wardForm.wardLabel}
                   onChange={(event) => setWardForm((current) => ({ ...current, wardLabel: event.target.value }))}
                   placeholder="Палата 305"
                 />
               </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardBed}</span>
+              <label style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 12, color: ui.faint }}>{t.wardBed}</span>
                 <input
                   className="input"
+                  style={wardFieldStyle}
                   value={wardForm.bedLabel}
                   onChange={(event) => setWardForm((current) => ({ ...current, bedLabel: event.target.value }))}
                   placeholder="Койка 2"
@@ -666,14 +1026,19 @@ export default function Dashboard() {
               </label>
             </div>
             <label style={{ display: "grid", gap: 6, marginTop: 10 }}>
-              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.52)" }}>{t.wardReason}</span>
+              <span style={{ fontSize: 12, color: ui.faint }}>{t.wardReason}</span>
               <textarea
                 className="input"
+                style={{ ...wardFieldStyle, height: "auto", resize: "vertical" }}
                 rows={4}
                 value={wardForm.reason}
-                onChange={(event) => setWardForm((current) => ({ ...current, reason: event.target.value }))}
+                onChange={(event) => {
+                  setWardForm((current) => ({ ...current, reason: event.target.value }));
+                  if (wardErr) {
+                    setWardErr(null);
+                  }
+                }}
                 placeholder={t.wardReasonPlaceholder}
-                style={{ height: "auto", resize: "vertical" }}
               />
             </label>
             {wardErr ? (
@@ -681,63 +1046,66 @@ export default function Dashboard() {
                 {wardErr}
               </div>
             ) : null}
-            {wardOk ? (
-              <div className="badge badge--ok" style={{ marginTop: 12 }}>
-                <span className="badge__dot" />
-                {wardOk}
-              </div>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => void submitWardConsultation()}
-              disabled={wardSubmitting}
-              style={{
-                marginTop: 14,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "10px 18px",
-                borderRadius: 8,
-                border: "1px solid rgba(52,211,153,0.28)",
-                background: "rgba(52,211,153,0.15)",
-                color: "#6ee7b7",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              {wardSubmitting ? t.wardSubmitting : t.wardSubmit}
-            </button>
+            <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              {wardOk ? (
+                <div className="badge badge--ok" style={{ maxWidth: "100%" }}>
+                  <span className="badge__dot" />
+                  {wardOk}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void submitWardConsultation()}
+                disabled={wardSubmitting}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px 18px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(52,211,153,0.28)",
+                  background: "rgba(52,211,153,0.15)",
+                  color: "#6ee7b7",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {wardSubmitting ? t.wardSubmitting : t.wardSubmit}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        {/* Two-column layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 48, marginTop: confirmedAppts.length > 0 || inPersonConfirmedAppts.length > 0 ? 24 : 0 }}>
+        <div className="patient-dashboard-content-grid">
 
           {/* Appointments — paginated table */}
-          <div>
+          <div className="patient-dashboard-card patient-dashboard-card--history" style={dashboardPanelStyle}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
-                {t.myAppointments} {!appointmentsLoading && appointments.length > 0 && `(${appointments.length})`}
+              <div style={{ fontSize: 11, color: ui.quiet, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
+                {t.myAppointments} {!appointmentsLoading && historyAppointments.length > 0 && `(${historyAppointments.length})`}
               </div>
             </div>
 
             {appointmentsLoading ? (
-              <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 14, margin: 0 }}>{t.loading}</p>
-            ) : appointments.length === 0 ? (
+              <p style={{ color: ui.quiet, fontSize: 14, margin: 0 }}>{t.loading}</p>
+            ) : historyAppointments.length === 0 ? (
               <div style={{ padding: "28px 0" }}>
-                <CalendarClock size={24} style={{ color: "rgba(255,255,255,0.1)", display: "block", marginBottom: 8 }} />
-                <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 14, margin: 0 }}>{t.noAppointments}</p>
+                <CalendarClock size={24} style={{ color: ui.quiet, display: "block", marginBottom: 8 }} />
+                <p style={{ color: ui.quiet, fontSize: 14, margin: 0 }}>{t.noAppointments}</p>
               </div>
             ) : (
               <>
                 {/* Table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 110px", gap: 12, padding: "0 0 8px", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 4 }}>
-                  {["Специальность · Дата", "", "Статус"].map((h, i) => (
-                    <div key={i} style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</div>
-                  ))}
+                <div className="dashboard-history__head" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 260px", gap: 12, padding: "0 0 8px", borderBottom: `1px solid ${ui.border}`, marginBottom: 4 }}>
+                  <div style={{ fontSize: 10, color: ui.quiet, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Специальность · Дата
+                  </div>
+                  <div style={{ fontSize: 10, color: ui.quiet, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", textAlign: "right" }}>
+                    Статус
+                  </div>
                 </div>
 
-                {appointments.slice(0, apptVisible).map((appt, idx) => {
+                {historyAppointments.slice(0, apptVisible).map((appt, idx) => {
                   const roomLabel = readRoomLabel(appt);
                   const sm =
                     appt.status === "pending" && hasAssignedDoctor(appt)
@@ -745,23 +1113,23 @@ export default function Dashboard() {
                       : statusMeta(appt.status);
                   const isEven = idx % 2 === 0;
                   return (
-                    <div key={appt.id} style={{
-                      display: "grid", gridTemplateColumns: "1fr auto 110px", gap: 12,
+                    <div key={appt.id} className="dashboard-history__row" style={{
+                      display: "grid", gridTemplateColumns: "minmax(0, 1fr) 260px", gap: 12,
                       padding: "11px 8px",
-                      background: isEven ? "rgba(255,255,255,0.02)" : "transparent",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
+                      background: isEven ? ui.rowAlt : "transparent",
+                      borderBottom: `1px solid ${ui.rowBorder}`,
                     }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div className="dashboard-history__main" style={{ minWidth: 0 }}>
+                        <div className="dashboard-history__title" style={{ fontWeight: 600, fontSize: 13, color: ui.text }}>
                           {appt.specialty_request || appt.specialtyRequest || "Специалист"}
                         </div>
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
-                          {appt.date}{appt.time && appt.time !== "00:00" ? ` · ${appt.time}` : ""}
+                        <div className="dashboard-history__meta" style={{ fontSize: 11, color: ui.quiet, marginTop: 2 }}>
+                          {formatAppointmentDateTime(appt.date, appt.time)}
                           {roomLabel ? ` · ${t.confirmedRoom}: ${roomLabel}` : ""}
                         </div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center" }}>
-                        {hasAssignedDoctor(appt) && isHomeOnlineConsultation(appt) && appt.meeting_url && (
+                      <div className="dashboard-history__status" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                        {hasAssignedDoctor(appt) && isHomeOnlineConsultation(appt) && appt.meeting_url ? (
                           <a
                             href={appt.meeting_url}
                             target="_blank"
@@ -769,17 +1137,16 @@ export default function Dashboard() {
                             style={{
                               display: "inline-flex", alignItems: "center", gap: 4,
                               background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.35)",
-                              color: "#6ee7b7", borderRadius: 6, padding: "4px 10px",
-                              fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
+                              color: "#6ee7b7", borderRadius: 6, padding: "3px 8px",
+                              fontSize: 10, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
                             }}
+                            onClick={() => setSessionIdleSuppressed(true)}
                           >
-                            <Video size={11} /> {t.joinMeeting}
+                            <Video size={10} /> {t.joinMeeting}
                           </a>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center" }}>
+                        ) : null}
                         <span style={{
-                          fontSize: 11, fontWeight: 600, borderRadius: 4, padding: "2px 8px",
+                          fontSize: 10, fontWeight: 700, borderRadius: 999, padding: "3px 8px",
                           color: sm.color, background: sm.bg, whiteSpace: "nowrap",
                         }}>{sm.label}</span>
                       </div>
@@ -788,22 +1155,22 @@ export default function Dashboard() {
                 })}
 
                 {/* Pagination */}
-                {appointments.length > apptVisible ? (
+                {historyAppointments.length > apptVisible ? (
                   <button
-                    onClick={() => setApptVisible((v) => v + 5)}
+                    onClick={() => setApptVisible((v) => v + 3)}
                     style={{
                       marginTop: 14, width: "100%", padding: "9px 0", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)",
+                      background: ui.secondaryBg, border: `1px solid ${ui.border}`, color: ui.muted,
                     }}
                   >
-                    Показать ещё {Math.min(5, appointments.length - apptVisible)} из {appointments.length - apptVisible}
+                    {t.showAll} ({historyAppointments.length})
                   </button>
-                ) : apptVisible > 5 ? (
+                ) : apptVisible > 3 ? (
                   <button
-                    onClick={() => setApptVisible(5)}
+                    onClick={() => setApptVisible(3)}
                     style={{
                       marginTop: 14, width: "100%", padding: "9px 0", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      background: "none", border: "none", color: "rgba(255,255,255,0.25)",
+                      background: "none", border: "none", color: ui.quiet,
                     }}
                   >{t.showLess}</button>
                 ) : null}
@@ -811,90 +1178,91 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Right column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-
-            {/* Ticket */}
-            <div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, marginBottom: 14 }}>
-                {t.onlineTicket}
+          <div className="patient-dashboard-card patient-dashboard-card--measurements" style={dashboardPanelStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: ui.quiet, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
+                {t.history} {measurementHistory.length > 0 ? `(${measurementHistory.length})` : ""}
               </div>
-              {!ticket ? (
-                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "16px 18px" }}>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", margin: "0 0 12px", lineHeight: 1.6 }}>{t.noTicket}</p>
-                  <button
-                    onClick={() => { const c = createNewMyTicket(); setTicket(c); }}
-                    style={{
-                      padding: "8px 16px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer",
-                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)",
-                    }}
-                  >{t.takeNewTicket}</button>
-                </div>
-              ) : (
-                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "16px 18px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                    {[
-                      { label: t.yourNumber, value: `A-${ticket.ticketNumber}` },
-                      { label: t.nowCalling, value: `A-${ticket.servingNow}` },
-                      { label: t.ahead, value: ticket.peopleAhead },
-                      { label: t.waiting, value: `~${ticket.etaMinutes} ${t.minutes}` },
-                    ].map((m) => (
-                      <div key={m.label}>
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: 600, marginBottom: 2 }}>{m.label}</div>
-                        <div style={{ fontWeight: 800, fontSize: 20, color: "white" }}>{m.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => { const n = createNewMyTicket(); setTicket(n); }}
-                    style={{
-                      padding: "7px 14px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer",
-                      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)",
-                    }}
-                  >{t.takeNewTicket}</button>
-                </div>
-              )}
             </div>
 
-            {/* Measurements */}
-            <div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600, marginBottom: 14 }}>
-                {t.history}
+            {measurementHistory.length === 0 ? (
+              <div style={{ padding: "20px 0", color: ui.quiet, fontSize: 14 }}>
+                {t.noMeasurements}
               </div>
-              {items.length === 0 ? (
-                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "16px 18px" }}>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", margin: "0 0 12px", lineHeight: 1.5 }}>{t.noMeasurements}</p>
-                  <button onClick={() => nav("/app/measurements/new")} style={{
-                    padding: "8px 16px", borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: "pointer",
-                    background: "rgba(129,140,248,0.12)", border: "1px solid rgba(129,140,248,0.2)", color: "#a5b4fc",
-                  }}>+ {t.newMeasurement}</button>
-                </div>
-              ) : (
-                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "16px 18px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                    {[
-                      { icon: "🌡", label: t.temp, value: latestMeasurement?.tempC != null ? `${latestMeasurement.tempC}°C` : "—" },
-                      { icon: "❤️", label: t.pulse, value: latestMeasurement?.hr != null ? `${latestMeasurement.hr} bpm` : "—" },
-                    ].map((v) => (
-                      <div key={v.label}>
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontWeight: 600, marginBottom: 4 }}>{v.icon} {v.label}</div>
-                        <div style={{ fontWeight: 800, fontSize: 22, color: "white" }}>{v.value}</div>
+            ) : (
+              <>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {measurementHistory.slice(0, measurementVisible).map((entry, idx) => (
+                    <div
+                      key={entry.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        gap: 12,
+                        alignItems: "center",
+                        padding: "11px 8px",
+                        background: idx % 2 === 0 ? ui.rowAlt : "transparent",
+                        borderBottom: `1px solid ${ui.rowBorder}`,
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: ui.text }}>
+                          {measurementMetricLabel(entry.metric, locale)} — {formatMeasurementValue(entry, locale)}
+                        </div>
+                        <div style={{ fontSize: 11, color: ui.quiet, marginTop: 3 }}>
+                          {measurementSourceLabel(entry.source, locale)}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                  {latestMeasurement && (
-                    <Link to={`/app/measurements/${latestMeasurement.id}`} style={{
-                      fontSize: 12, color: "rgba(255,255,255,0.2)", textDecoration: "none",
-                    }}>
-                      {fmtDate(latestMeasurement.createdAt)} →
-                    </Link>
-                  )}
+                      <div style={{ fontSize: 11, color: ui.faint, textAlign: "right", whiteSpace: "nowrap" }}>
+                        {formatMeasurementDateTime(entry.createdAt, locale)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+                {measurementHistory.length > measurementVisible ? (
+                  <button
+                    type="button"
+                    onClick={() => setMeasurementVisible((value) => value + 5)}
+                    style={{
+                      marginTop: 14,
+                      width: "100%",
+                      padding: "9px 0",
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      background: ui.secondaryBg,
+                      border: `1px solid ${ui.border}`,
+                      color: ui.muted,
+                    }}
+                  >
+                    {t.showAll} ({measurementHistory.length})
+                  </button>
+                ) : measurementVisible > 5 ? (
+                  <button
+                    type="button"
+                    onClick={() => setMeasurementVisible(5)}
+                    style={{
+                      marginTop: 14,
+                      width: "100%",
+                      padding: "9px 0",
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      background: "none",
+                      border: "none",
+                      color: ui.quiet,
+                    }}
+                  >
+                    {t.showLess}
+                  </button>
+                ) : null}
+              </>
+            )}
           </div>
-        </div>
 
+        </div>
         {err && <div className="alert" style={{ marginTop: 24 }}>{err}</div>}
       </div>
     </div>
