@@ -73,9 +73,9 @@ const text = {
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
     heroKicker: "healthcare.kz — Цифровое здравоохранение Казахстана (healthcare)",
-    heroTitle: "Практические советы по здоровью на каждый день",
+    heroTitle: "HealthAssist — Умная медицинская станция и цифровое здравоохранение (healthcare)",
     heroSub:
-      "Проверяй симптомы, получай базовые рекомендации по самопомощи и понимай, когда нужно обратиться к врачу без промедления.",
+      "Проверяй симптомы с AI, получай советы по здоровью и находи ближайшие аптеки и клиники в Казахстане (healthcare.kz).",
     heroStudioLine1: "AI-powered",
     heroStudioLine2: "healthcare",
     heroStudioLine3: "assistant",
@@ -227,9 +227,9 @@ const text = {
     navAdminMobile: "Admin",
     navCabinetMobile: "Home",
     heroKicker: "healthcare.kz — Digital Healthcare Platform (healthcare)",
-    heroTitle: "Practical health guidance for daily life",
+    heroTitle: "HealthAssist — Smart Medical Station & Digital Healthcare (healthcare.kz)",
     heroSub:
-      "Check symptoms, get basic self-care recommendations, and understand when urgent medical help is needed.",
+      "Check symptoms with AI, get guidance, find clinics and pharmacies (аптека, здравоохранение) in Kazakhstan.",
     heroStudioLine1: "AI-powered",
     heroStudioLine2: "healthcare",
     heroStudioLine3: "assistant",

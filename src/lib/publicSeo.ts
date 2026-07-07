@@ -25,19 +25,19 @@ export const PRERENDER_ROUTES: PublicSeoRoute[] = [
 const publicSeoMap: PublicSeoMap = {
   "/": {
     ru: {
-      title: "HealthAssist — Умная медицинская станция и AI-платформа | Казахстан",
+      title: "HealthAssist — Умная медицинская станция / Smart Medical Station | Казахстан",
       description:
-        "HealthAssist (healthcare.kz / хелзкер) — автоматическая умная медицинская станция и AI-платформа для здравоохранения Казахстана. Проверяйте симптомы с AI, находите ближайшие аптеки и клиники, измеряйте температуру и пульс по QR-коду.",
+        "HealthAssist (healthcare.kz / хелзкер) — автоматическая умная медицинская станция (smart medical station) и AI-платформа для здравоохранения (healthcare) Казахстана. Проверяйте симптомы с AI, находите ближайшие аптеки (pharmacies) и клиники.",
     },
     kk: {
-      title: "HealthAssist — Ақылды медициналық станция және AI-платформасы | Қазақстан",
+      title: "HealthAssist — Ақылды медициналық станция / Smart Medical Station / Умная медицинская станция",
       description:
-        "HealthAssist (healthcare.kz) — автоматты ақылды медициналық өлшеу станциясы және Қазақстанның денсаулық сақтау саласына арналған AI-платформасы. Белгілерді тексеріңіз, жақын маңдағы дәріханалар мен емханаларды табыңыз және QR-код арқылы температура мен пульсті өлшеңіз.",
+        "HealthAssist (healthcare.kz) — автоматты ақылды медициналық өлшеу станциясы (умная медицинская станция) және Қазақстанның денсаулық сақтау (healthcare) саласына арналған AI-платформасы. Белгілерді тексеріңіз, дәріханалар (аптека) мен емханаларды табыңыз.",
     },
     en: {
-      title: "HealthAssist — Smart Medical Station and AI Platform | Kazakhstan",
+      title: "healthcare.kz — Smart Medical Station / Умная медицинская станция | Kazakhstan",
       description:
-        "HealthAssist (healthcare.kz) — automated smart medical station and AI healthcare platform. Check symptoms with AI, find nearby pharmacies and clinics, and measure temperature and pulse via QR code.",
+        "HealthAssist (healthcare.kz) — automated smart medical station (умная медицинская станция) and AI healthcare platform for medicine and pharmacies (здравоохранение, аптека) in Kazakhstan.",
     },
   },
   "/body": {
