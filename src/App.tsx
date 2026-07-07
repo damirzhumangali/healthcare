@@ -72,7 +72,7 @@ const text = {
     navLoginMobile: "Вход",
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
-    heroKicker: "Digital Healthcare Platform",
+    heroKicker: "healthcare.kz — Цифровое здравоохранение Казахстана (healthcare)",
     heroTitle: "Практические советы по здоровью на каждый день",
     heroSub:
       "Проверяй симптомы, получай базовые рекомендации по самопомощи и понимай, когда нужно обратиться к врачу без промедления.",
@@ -80,7 +80,7 @@ const text = {
     heroStudioLine2: "healthcare",
     heroStudioLine3: "assistant",
     heroStudioSub:
-      "Интеллектуальная диагностика и клиническая поддержка на базе современного медицинского AI.",
+      "Интеллектуальная диагностика, проверка симптомов и клиническая поддержка на базе современного медицинского AI для здравоохранения Казахстана (healthcare.kz).",
     heroStudioLabel1: "Medical AI Platform",
     heroStudioLabel2: "Software + Robotics",
     heroStudioLabel3: "Clinical Support",
@@ -149,7 +149,7 @@ const text = {
     navLoginMobile: "Кіру",
     navAdminMobile: "Админ",
     navCabinetMobile: "Каб.",
-    heroKicker: "Digital Healthcare Platform",
+    heroKicker: "healthcare.kz — Қазақстанның цифрлық денсаулық сақтау саласы (healthcare)",
     heroTitle: "Күнделікті денсаулыққа пайдалы нұсқаулық",
     heroSub:
       "Белгілерді тексеріп, алғашқы көмек бойынша ұсыныс алып, дәрігерге қашан шұғыл қаралу керегін біліңіз.",
@@ -157,7 +157,7 @@ const text = {
     heroStudioLine2: "healthcare",
     heroStudioLine3: "assistant",
     heroStudioSub:
-      "Заманауи медициналық AI негізіндегі интеллектуалды диагностика және клиникалық қолдау.",
+      "Заманауи медициналық AI негізіндегі интеллектуалды диагностика, симптомдарды тексеру және Қазақстан денсаулық сақтау саласына (healthcare.kz) арналған клиникалық қолдау.",
     heroStudioLabel1: "Medical AI Platform",
     heroStudioLabel2: "Software + Robotics",
     heroStudioLabel3: "Clinical Support",
@@ -226,7 +226,7 @@ const text = {
     navLoginMobile: "Login",
     navAdminMobile: "Admin",
     navCabinetMobile: "Home",
-    heroKicker: "Digital Healthcare Platform",
+    heroKicker: "healthcare.kz — Digital Healthcare Platform (healthcare)",
     heroTitle: "Practical health guidance for daily life",
     heroSub:
       "Check symptoms, get basic self-care recommendations, and understand when urgent medical help is needed.",
@@ -234,7 +234,7 @@ const text = {
     heroStudioLine2: "healthcare",
     heroStudioLine3: "assistant",
     heroStudioSub:
-      "Intelligent diagnostics and clinical support through modern medical AI.",
+      "Intelligent diagnostics, symptom checker, and clinical support via modern medical AI for healthcare in Kazakhstan (healthcare.kz).",
     heroStudioLabel1: "Medical AI Platform",
     heroStudioLabel2: "Software + Robotics",
     heroStudioLabel3: "Clinical Support",
