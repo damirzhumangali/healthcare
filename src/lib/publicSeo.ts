@@ -27,17 +27,17 @@ const publicSeoMap: PublicSeoMap = {
     ru: {
       title: "HealthAssist — Умная медицинская станция и AI-платформа | Казахстан",
       description:
-        "HealthAssist — автоматическая умная медицинская станция измерений. Проверяйте симптомы с AI, используйте 3D-карту тела и измеряйте температуру и пульс по QR-коду в клиниках Казахстана.",
+        "HealthAssist (healthcare.kz / хелзкер) — автоматическая умная медицинская станция и AI-платформа для здравоохранения Казахстана. Проверяйте симптомы с AI, находите ближайшие аптеки и клиники, измеряйте температуру и пульс по QR-коду.",
     },
     kk: {
       title: "HealthAssist — Ақылды медициналық станция және AI-платформасы | Қазақстан",
       description:
-        "HealthAssist — автоматты ақылды медициналық өлшеу станциясы. Симптомдарды тексеріңіз, 3D дене картасын қолданыңыз және Қазақстан емханаларында QR-код арқылы температура мен пульсті өлшеңіз.",
+        "HealthAssist (healthcare.kz) — автоматты ақылды медициналық өлшеу станциясы және Қазақстанның денсаулық сақтау саласына арналған AI-платформасы. Белгілерді тексеріңіз, жақын маңдағы дәріханалар мен емханаларды табыңыз және QR-код арқылы температура мен пульсті өлшеңіз.",
     },
     en: {
       title: "HealthAssist — Smart Medical Station and AI Platform | Kazakhstan",
       description:
-        "HealthAssist — automated smart medical station. Check symptoms with AI, use a 3D body map, and measure temperature and pulse via QR code in clinics.",
+        "HealthAssist (healthcare.kz) — automated smart medical station and AI healthcare platform. Check symptoms with AI, find nearby pharmacies and clinics, and measure temperature and pulse via QR code.",
     },
   },
   "/body": {
