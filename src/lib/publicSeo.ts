@@ -25,19 +25,19 @@ export const PRERENDER_ROUTES: PublicSeoRoute[] = [
 const publicSeoMap: PublicSeoMap = {
   "/": {
     ru: {
-      title: "HealthAssist — Умная медицинская станция / Smart Medical Station | Казахстан",
+      title: "HealthAssist — Digital Healthcare Kazakhstan | Медицинский сайт Казахстана | Hospital Helper",
       description:
-        "HealthAssist (healthcare.kz / хелзкер) — автоматическая умная медицинская станция (smart medical station) и AI-платформа для здравоохранения (healthcare) Казахстана. Проверяйте симптомы с AI, находите ближайшие аптеки (pharmacies) и клиники.",
+        "HealthAssist (healthcare.kz / хелзкер) — digital healthcare платформа и hospital helper для Казахстана. Медицинская помощь (medical assistance), поиск клиник и больниц (Kazakhstan hospitals). Умная медицинская станция для клиник и пациентов.",
     },
     kk: {
-      title: "HealthAssist — Ақылды медициналық станция / Smart Medical Station / Умная медицинская станция",
+      title: "HealthAssist — Digital Healthcare Kazakhstan | Медициналық сайт | Hospital Helper",
       description:
-        "HealthAssist (healthcare.kz) — автоматты ақылды медициналық өлшеу станциясы (умная медицинская станция) және Қазақстанның денсаулық сақтау (healthcare) саласына арналған AI-платформасы. Белгілерді тексеріңіз, дәріханалар (аптека) мен емханаларды табыңыз.",
+        "HealthAssist (healthcare.kz) — digital healthcare платформасы және hospital helper Қазақстан үшін. Medical assistance, Kazakhstan hospitals іздеу. Ақылды медициналық өлшеу станциясы (умная медицинская станция) емханалар мен науқастарға арналған.",
     },
     en: {
-      title: "healthcare.kz — Smart Medical Station / Умная медицинская станция | Kazakhstan",
+      title: "healthcare.kz — Digital Healthcare Kazakhstan | Hospital Helper | Medical Assistance",
       description:
-        "HealthAssist (healthcare.kz) — automated smart medical station (умная медицинская станция) and AI healthcare platform for medicine and pharmacies (здравоохранение, аптека) in Kazakhstan.",
+        "HealthAssist (healthcare.kz, hca kz) — digital healthcare platform for Kazakhstan. Hospital helper, medical assistance, health care support for Kazakhstan hospitals. Smart medical station for clinics and patients.",
     },
   },
   "/body": {

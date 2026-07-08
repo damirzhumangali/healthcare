@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- Primary SEO -->
-    <title>HealthAssist — Умная медицинская станция | Казахстан</title>
-    <meta name="description" content="HealthAssist — автоматическая медицинская станция измерений. Температура, пульс, SpO₂ через QR-код и смартфон. Для клиник и пациентов Казахстана." />
-    <meta name="keywords" content="медицинская станция, измерение пульса, температура тела, SpO2, здоровье, HealthAssist, AIMAR, Казахстан, денсаулық, өлшеу станциясы, healthcare.kz, хелзкер, хелскеа, здравоохранение, аптека, медицина" />
+    <title>HealthAssist — Digital Healthcare Kazakhstan | Smart Medical Station | Hospital Helper</title>
+    <meta name="description" content="HealthAssist — digital healthcare platform for Kazakhstan. Smart medical station and hospital helper for clinics, patients, and medical assistance. healthcare.kz — медицинский сайт Казахстана. Find Kazakhstan hospitals, get medical assistance and health care support powered by AI." />
+    <meta name="keywords" content="digital healthcare kazakhstan, healthcare, health care, medical, medical assistance, hca kz, kazakhstan hospitals, kazakhstan hospital, hospital helper, медицинский сайт казахстана, медицинская станция, измерение пульса, температура тела, SpO2, здоровье, HealthAssist, AIMAR, Казахстан, денсаулық, өлшеу станциясы, healthcare.kz, хелзкер, хелскеа, здравоохранение, аптека, медицина" />
     <meta name="author" content="HealthAssist" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#0b0f14" />
@@ -20,8 +20,8 @@
 
     <!-- Open Graph (соцсети: Telegram, WhatsApp, Facebook) -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="HealthAssist — Умная медицинская станция" />
-    <meta property="og:description" content="Автоматическое измерение температуры и пульса через QR-станцию. Для клиник Казахстана." />
+    <meta property="og:title" content="HealthAssist — Digital Healthcare Kazakhstan | Smart Medical Station" />
+    <meta property="og:description" content="Digital healthcare platform and hospital helper for Kazakhstan. Smart medical station for clinics, medical assistance, and health care. Медицинский сайт Казахстана — healthcare.kz" />
     <meta property="og:image" content="https://healthcare.kz/favicon-healthassist-20260521.webp" />
     <meta property="og:locale" content="ru_KZ" />
     <meta property="og:locale:alternate" content="kk_KZ" />
@@ -31,24 +31,56 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="HealthAssist — Умная медицинская станция" />
-    <meta name="twitter:description" content="Автоматическое измерение температуры и пульса через QR-станцию." />
+    <meta name="twitter:title" content="HealthAssist — Digital Healthcare Kazakhstan | Hospital Helper" />
+    <meta name="twitter:description" content="Digital healthcare platform for Kazakhstan. Smart medical station, hospital helper, medical assistance. healthcare.kz" />
     <meta name="twitter:image" content="https://healthcare.kz/favicon-healthassist-20260521.webp" />
 
     <!-- Icons -->
     <link rel="icon" type="image/webp" sizes="192x192" href="/favicon-healthassist-20260521.webp" />
     <link rel="apple-touch-icon" href="/favicon-healthassist-20260521.webp" />
 
+    <!-- Google Fonts: preconnect + non-blocking load -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+    </noscript>
+
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
+      "@type": "MedicalOrganization",
       "name": "HealthAssist",
-      "applicationCategory": "HealthApplication",
-      "operatingSystem": "Web",
-      "description": "Система автоматических медицинских измерений с QR-станцией для клиник и пациентов Казахстана.",
+      "alternateName": ["healthcare.kz", "hca kz", "HCA KZ"],
+      "description": "Digital healthcare platform and hospital helper for Kazakhstan. Smart medical station providing medical assistance for clinics and patients.",
+      "url": "https://healthcare.kz",
       "inLanguage": ["ru", "kk", "en"],
+      "areaServed": {
+        "@type": "Country",
+        "name": "Kazakhstan"
+      },
+      "availableService": [
+        {
+          "@type": "MedicalTherapy",
+          "name": "Medical Assistance"
+        },
+        {
+          "@type": "MedicalTherapy",
+          "name": "Hospital Helper"
+        },
+        {
+          "@type": "MedicalTherapy",
+          "name": "Digital Healthcare"
+        }
+      ],
+      "keywords": "digital healthcare kazakhstan, medical assistance, health care, healthcare, kazakhstan hospitals, hospital helper, медицинский сайт казахстана",
       "author": {
         "@type": "Organization",
         "name": "HealthAssist",
@@ -62,8 +94,8 @@
     }
     </script>
 
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Preload critical hero image for faster LCP -->
+    <link rel="preload" as="image" href="/images/doctor-hero.webp" fetchpriority="high" />
   </head>
   <body>
     <div id="root"></div>

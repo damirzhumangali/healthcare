@@ -41,6 +41,8 @@ export default function CinematicHero({
               className="cinematic-hero__image"
               src={heroImage}
               alt="Doctor under dramatic studio lighting"
+              width={600}
+              height={800}
               fetchPriority="high"
               loading="eager"
               decoding="async"

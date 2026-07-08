@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ChevronDown,
@@ -14,28 +14,6 @@ import {
 } from "lucide-react";
 import CinematicHero from "./components/CinematicHero";
 import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import BodyMap from "./pages/BodyMap";
-import AuthCallback from "./pages/AuthCallback";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ScanDevice from "./pages/ScanDevice";
-import DevicePairing from "./pages/DevicePairing";
-import MeasurementDetails from "./pages/MeasurementDetails";
-import AppointmentForm from "./pages/AppointmentForm";
-import DoctorDashboard from "./pages/DoctorDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
-import AimarControl from "./pages/AimarControl";
-import WardConsultationsPage from "./pages/WardConsultationsPage";
-import DoctorSchedulePage from "./pages/DoctorSchedulePage";
-import AdminRequestPage from "./pages/AdminRequestPage";
-import RobotTerminal from "./pages/RobotTerminal";
-import LegalDocumentPage from "./pages/LegalDocumentPage";
-import VkAuthCallback from "./pages/VkAuthCallback";
-import NotFound from "./pages/NotFound";
-import AppLayout from "./layouts/AppLayout";
-import SessionIdleManager from "./components/SessionIdleManager";
-import RequireAuth from "./lib/RequireAuth";
 import { hasSession, logout, requiresServerSessionValidation, syncSessionFromServer } from "./lib/auth";
 import { isAdminAccount } from "./lib/adminAccess";
 import LanguageSwitcher from "./components/LanguageSwitcher";
@@ -44,6 +22,30 @@ import { useSyncedLocale } from "./lib/useSyncedLocale";
 import { getPublicSeo } from "./lib/publicSeo";
 import { usePageSeo } from "./lib/seo";
 import { buildPublicAppUrl } from "./lib/publicAppUrl";
+import AppLayout from "./layouts/AppLayout";
+import SessionIdleManager from "./components/SessionIdleManager";
+import RequireAuth from "./lib/RequireAuth";
+
+// Lazy-loaded pages — loaded only when the user navigates to them
+const BodyMap = lazy(() => import("./pages/BodyMap"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ScanDevice = lazy(() => import("./pages/ScanDevice"));
+const DevicePairing = lazy(() => import("./pages/DevicePairing"));
+const MeasurementDetails = lazy(() => import("./pages/MeasurementDetails"));
+const AppointmentForm = lazy(() => import("./pages/AppointmentForm"));
+const DoctorDashboard = lazy(() => import("./pages/DoctorDashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminAnalyticsPage = lazy(() => import("./pages/AdminAnalyticsPage"));
+const AimarControl = lazy(() => import("./pages/AimarControl"));
+const WardConsultationsPage = lazy(() => import("./pages/WardConsultationsPage"));
+const DoctorSchedulePage = lazy(() => import("./pages/DoctorSchedulePage"));
+const AdminRequestPage = lazy(() => import("./pages/AdminRequestPage"));
+const RobotTerminal = lazy(() => import("./pages/RobotTerminal"));
+const LegalDocumentPage = lazy(() => import("./pages/LegalDocumentPage"));
+const VkAuthCallback = lazy(() => import("./pages/VkAuthCallback"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 type Locale = AppLocale;
 type Theme = "dark" | "light";
@@ -923,6 +925,7 @@ export default function App() {
   return (
     <>
       <SessionIdleManager />
+      <Suspense fallback={<div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',background:'#0b0f14',color:'#22d3ee',fontSize:'14px'}}>Загрузка...</div>}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -1017,6 +1020,7 @@ export default function App() {
         <Route path="/pair/:deviceId/:pairingToken" element={<DevicePairing />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </>
   );
 }
